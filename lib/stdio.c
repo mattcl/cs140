@@ -87,7 +87,7 @@ printf (const char *format, ...)
 
   return retval;
 }
-
+
 /* printf() formatting internals. */
 
 /* A printf() conversion. */
