@@ -336,6 +336,7 @@ void thread_set_nice (int nice UNUSED){
 /* Returns the current thread's nice value. */
 int thread_get_nice (void){
 	/* Not yet implemented. */
+	/*Nice threads are always better*/
 	return 0;
 }
 
