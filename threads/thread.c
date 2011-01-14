@@ -558,7 +558,8 @@ void thread_check_sleeping(int64_t current_tick) {
 		     e->prev, t->elem.prev, 
 		     e, &t->elem, 
 		     e->next, t->elem.next);
-	      ASSERT(e!=NULL);
+		     ASSERT(e!=NULL);
+	      printList(&sleep_list);
 	      list_remove(e);
 	      
 	      thread_unblock(t);
@@ -574,11 +575,12 @@ void thread_sleep(int64_t wake_time) {
 	
 	list_push_back(&sleep_list, &thread_current()->elem);
 	printf("Thread Sleep %d \n", thread_current()->tid);
-	 printf("Elem Prev  %p, elem %p, Elem Next %p\n", 
+	printf("Elem Prev  %p, elem %p, Elem Next %p\n", 
 	       thread_current()->elem.prev, 
 	       &thread_current()->elem, 
 	       thread_current()->elem.next);
 	//printf(list_size(&sleep_list));
+	printList(&sleep_list);
 	thread_block();
 	intr_set_level(old_level);
 }
