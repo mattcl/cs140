@@ -560,6 +560,7 @@ void thread_check_sleeping(int64_t current_tick) {
 			e = list_next(e);
 		}
 	}
+	schedule();
 }
 
 void thread_sleep(int64_t wake_time) {
