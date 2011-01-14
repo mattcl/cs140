@@ -90,12 +90,16 @@ struct thread {
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
+	
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
+	// ------------ BEGIN CHANGES -------------//
 
+	int64_t wake_time;
+
+	// ------------- END CHANGES --------------//
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 };
@@ -136,4 +140,8 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+// ------------ BEGIN CHANGES -------------- //
+void thread_check_sleeping(int64_t current_tick);
+void thread_sleep(int64_t wake_time);
+// ------------- END CHANGES --------------- //
 #endif /* threads/thread.h */

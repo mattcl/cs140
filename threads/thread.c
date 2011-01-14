@@ -24,6 +24,10 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// ---------- BEGIN CHANGES --------- //
+static struct list sleep_list;
+// ----------- END CHANGES ---------- //
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -89,6 +93,10 @@ void thread_init (void){
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&all_list);
+	
+	// --------- BEGIN CHANGES --------- //
+	list_init (&sleep_list);
+	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
 	 * We are now running in the current thread. */
@@ -536,3 +544,26 @@ static tid_t allocate_tid (void){
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+// --------------- BEGIN CHANGES --------------- //
+
+void thread_check_sleeping(int64_t current_tick) {
+	struct list_elem *e;
+	for(e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e)) {
+		struct thread *t = list_entry(e, struct thread, elem);
+		if(t->wake_time < current_tick) {
+			list_remove(e);
+			thread_unblock(t);
+		}	
+	}
+	
+}
+
+void thread_sleep(int64_t wake_time) {
+	enum intr_level old_level = intr_disable();
+	thread_current()->wake_time = wake_time;
+	list_push_back(&sleep_list, &thread_current()->elem);
+	thread_block();
+	intr_set_level(old_level);
+}
+// ---------------- END CHANGES ---------------- //
