@@ -549,12 +549,21 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 void thread_check_sleeping(int64_t current_tick) {
 	struct list_elem *e;
-	for(e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e)) {
-		struct thread *t = list_entry(e, struct thread, elem);
-		if(t->wake_time < current_tick) {
-			list_remove(e);
-			thread_unblock(t);
-		}	
+	if(list_begin(&sleep_list) != list_end(&sleep_list)){
+	  for(e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e)) {
+	    struct thread *t = list_entry(e, struct thread, elem);
+	    if(t->wake_time < current_tick) {
+	      printf("Thread Waking up %d\n", t->tid);
+	      printf("Elem Prev %p %p, elem %p %p, Elem Next %p %p\n", 
+		     e->prev, t->elem.prev, 
+		     e, &t->elem, 
+		     e->next, t->elem.next);
+	      ASSERT(e!=NULL);
+	      list_remove(e);
+	      
+	      thread_unblock(t);
+	    }	
+	  }
 	}
 	
 }
@@ -562,7 +571,14 @@ void thread_check_sleeping(int64_t current_tick) {
 void thread_sleep(int64_t wake_time) {
 	enum intr_level old_level = intr_disable();
 	thread_current()->wake_time = wake_time;
+	
 	list_push_back(&sleep_list, &thread_current()->elem);
+	printf("Thread Sleep %d \n", thread_current()->tid);
+	 printf("Elem Prev  %p, elem %p, Elem Next %p\n", 
+	       thread_current()->elem.prev, 
+	       &thread_current()->elem, 
+	       thread_current()->elem.next);
+	//printf(list_size(&sleep_list));
 	thread_block();
 	intr_set_level(old_level);
 }
