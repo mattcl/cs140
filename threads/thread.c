@@ -460,7 +460,12 @@ static struct thread *next_thread_to_run (void){
 	if (list_empty (&ready_list)){
 		return idle_thread;
 	} else {
-		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+		//======== Begin Changes =========//
+		return list_entry(  list_max(&ready_list, &threadCompare, NULL),
+							struct thread,
+							elem);
+		//return list_entry (list_pop_front (&ready_list), struct thread, elem);
+		//========= End Changes ========//
 	}
 }
 
@@ -571,4 +576,12 @@ void thread_sleep(int64_t wake_time) {
 	thread_block();
 	intr_set_level(old_level);
 }
+
+
+bool threadCompare (list_elem *a, list_elem *b, void *aux){
+		struct thread *t1 = list_entry(a, struct thread, elem);
+		struct thread *t2 = list_entry(b, struct thread, elem);
+		return (t1->priority < t2->priority);
+}
+
 // ---------------- END CHANGES ---------------- //
