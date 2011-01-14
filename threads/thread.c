@@ -565,7 +565,6 @@ void thread_check_sleeping(int64_t current_tick) {
 	      thread_unblock(t);
 	    }	
 	  }
-	  printf("For Loop finish\n");
 	}
 	
 }
