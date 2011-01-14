@@ -178,7 +178,7 @@ struct list_elem *list_max (struct list *, list_less_func *, void *aux);
 struct list_elem *list_min (struct list *, list_less_func *, void *aux);
 
 // ----------- Begin Changes --------//
-static void printList(struct list *list);
+void printList(struct list *list);
 
 // ------------End Changes --------//
 

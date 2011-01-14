@@ -473,7 +473,7 @@ return min;
 }
 
 //---------Begin Changes ----------------//
-static void printList(struct list *list){
+void printList(struct list *list){
 	struct list_elem *e;
 	for (e = list_begin(list);e != list_end(list); e = list_next (e)){
 		if(is_head(e)) {
