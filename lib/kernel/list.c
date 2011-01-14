@@ -83,21 +83,6 @@ struct list_elem * list_end (struct list *list){
   return &list->tail;
 }
 
-
-static void printList(struct list *list){
-	struct list_elem *e;
-	for (e = list_begin(list);e != list_end(list); e = list_next (e)){
-		if(is_head(e)) {
-			printf("Is head prev %p, %p, next %p\n", e->prev, e, e->next);
-		} else if(is_tail(e)){
-			printf("Is tail prev %p, %p, next %p\n",e->prev, e, e->next);
-		} else {
-			printf("Regular Previous %p, %p, Next %p\n", e->prev, e, e-next);
-		}
-	}
-}
-
-
 /* Returns the LIST's reverse beginning, for iterating through
    LIST in reverse order, from back to front. */
 struct list_elem * list_rbegin (struct list *list) {
@@ -486,3 +471,19 @@ struct list_elem *list_min (struct list *list, list_less_func *less, void *aux){
 	}
 return min;
 }
+
+//---------Begin Changes ----------------//
+static void printList(struct list *list){
+	struct list_elem *e;
+	for (e = list_begin(list);e != list_end(list); e = list_next (e)){
+		if(is_head(e)) {
+			printf("Is head prev %p, %p, next %p\n", e->prev, e, e->next);
+		} else if(is_tail(e)){
+			printf("Is tail prev %p, %p, next %p\n",e->prev, e, e->next);
+		} else {
+			printf("Regular Previous %p, %p, Next %p\n", e->prev, e, e-next);
+		}
+	}
+}
+
+//------------End Changes -------------//
