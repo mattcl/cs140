@@ -481,7 +481,7 @@ static void printList(struct list *list){
 		} else if(is_tail(e)){
 			printf("Is tail prev %p, %p, next %p\n",e->prev, e, e->next);
 		} else {
-			printf("Regular Previous %p, %p, Next %p\n", e->prev, e, e-next);
+			printf("Regular Previous %p, %p, Next %p\n", e->prev, e, e->next);
 		}
 	}
 }
