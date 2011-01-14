@@ -545,14 +545,16 @@ static tid_t allocate_tid (void){
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
+
 // --------------- BEGIN CHANGES --------------- //
 
 void thread_check_sleeping(int64_t current_tick) {
+
 	struct list_elem *e;
 	if(list_begin(&sleep_list) != list_end(&sleep_list)){
 		for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
 			struct thread *t = list_entry(e, struct thread, elem);
-			if(t->wake_time < current_tick) {
+			if(t->wake_time <= current_tick) {
 				e = list_remove(e);
 				thread_unblock(t);
 				continue;
@@ -560,7 +562,6 @@ void thread_check_sleeping(int64_t current_tick) {
 			e = list_next(e);
 		}
 	}
-	schedule();
 }
 
 void thread_sleep(int64_t wake_time) {
