@@ -317,15 +317,14 @@ bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value)
    If CNT is zero, returns 0.
    Bits are set atomically, but testing bits is not atomic with
    setting them. */
-size_t
-bitmap_scan_and_flip (struct bitmap *b, size_t start, size_t cnt, bool value)
-{
-  size_t idx = bitmap_scan (b, start, cnt, value);
-  if (idx != BITMAP_ERROR) 
-    bitmap_set_multiple (b, idx, cnt, !value);
-  return idx;
+size_t bitmap_scan_and_flip (struct bitmap *b, size_t start, size_t cnt, bool value) {
+	size_t idx = bitmap_scan (b, start, cnt, value);
+	if (idx != BITMAP_ERROR){
+		bitmap_set_multiple (b, idx, cnt, !value);
+	}
+	return idx;
 }
-
+
 /* File input and output. */
 
 #ifdef FILESYS

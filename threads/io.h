@@ -62,11 +62,9 @@ insl (uint16_t port, void *addr, size_t cnt)
 }
 
 /* Writes byte DATA to PORT. */
-static inline void
-outb (uint16_t port, uint8_t data)
-{
-  /* See [IA32-v2b] "OUT". */
-  asm volatile ("outb %b0, %w1" : : "a" (data), "Nd" (port));
+static inline void outb (uint16_t port, uint8_t data){
+	/* See [IA32-v2b] "OUT". */
+	asm volatile ("outb %b0, %w1" : : "a" (data), "Nd" (port));
 }
 
 /* Writes to PORT each byte of data in the CNT-byte buffer

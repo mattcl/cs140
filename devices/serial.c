@@ -47,7 +47,7 @@
 /* Line Status Register. */
 #define LSR_DR 0x01             /* Data Ready: received data byte is in RBR. */
 #define LSR_THRE 0x20           /* THR Empty. */
-
+
 /* Transmission mode. */
 static enum { UNINIT, POLL, QUEUE } mode;
 
@@ -78,13 +78,12 @@ init_poll (void)
 /* Initializes the serial port device for queued interrupt-driven
    I/O.  With interrupt-driven I/O we don't waste CPU time
    waiting for the serial device to become ready. */
-void
-serial_init_queue (void) 
-{
+void serial_init_queue (void){
   enum intr_level old_level;
 
-  if (mode == UNINIT)
+  if (mode == UNINIT){
     init_poll ();
+  }
   ASSERT (mode == POLL);
 
   intr_register_ext (0x20 + 4, serial_interrupt, "serial");
@@ -173,24 +172,24 @@ set_serial (int bps)
 }
 
 /* Update interrupt enable register. */
-static void
-write_ier (void) 
-{
-  uint8_t ier = 0;
+static void write_ier (void){
+	uint8_t ier = 0;
 
-  ASSERT (intr_get_level () == INTR_OFF);
+	ASSERT (intr_get_level () == INTR_OFF);
 
-  /* Enable transmit interrupt if we have any characters to
-     transmit. */
-  if (!intq_empty (&txq))
-    ier |= IER_XMIT;
+	/* Enable transmit interrupt if we have any characters to
+	transmit. */
+	if (!intq_empty (&txq)){
+		ier |= IER_XMIT;
+	}
 
-  /* Enable receive interrupt if we have room to store any
-     characters we receive. */
-  if (!input_full ())
-    ier |= IER_RECV;
-  
-  outb (IER_REG, ier);
+	/* Enable receive interrupt if we have room to store any
+	characters we receive. */
+	if (!input_full ()){
+		ier |= IER_RECV;
+	}
+
+	outb (IER_REG, ier);
 }
 
 /* Polls the serial port until it's ready,

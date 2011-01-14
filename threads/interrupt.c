@@ -171,7 +171,8 @@ static void register_handler (uint8_t vec_no, int dpl, enum intr_level level,
 /* Registers external interrupt VEC_NO to invoke HANDLER, which
    is named NAME for debugging purposes.  The handler will
    execute with interrupts disabled. */
-void intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
+void intr_register_ext (uint8_t vec_no,
+						intr_handler_func *handler,
                         const char *name){
 
 	ASSERT (vec_no >= 0x20 && vec_no <= 0x2f);

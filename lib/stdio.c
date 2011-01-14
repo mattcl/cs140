@@ -75,17 +75,15 @@ snprintf (char *buffer, size_t buf_size, const char *format, ...)
    In the kernel, the console is both the video display and first
    serial port.
    In userspace, the console is file descriptor 1. */
-int
-printf (const char *format, ...) 
-{
-  va_list args;
-  int retval;
+int printf (const char *format, ...) {
+	va_list args;
+	int retval;
 
-  va_start (args, format);
-  retval = vprintf (format, args);
-  va_end (args);
+	va_start (args, format);
+	retval = vprintf (format, args);
+	va_end (args);
 
-  return retval;
+	return retval;
 }
 
 /* printf() formatting internals. */

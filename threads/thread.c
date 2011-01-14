@@ -90,11 +90,12 @@ void thread_init (void){
 	list_init (&ready_list);
 	list_init (&all_list);
 
-	/* Set up a thread structure for the running thread. */
+	/* Set up a thread structure for the running thread.
+	 * We are now running in the current thread. */
 	initial_thread = running_thread ();
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
-	initial_thread->tid = allocate_tid ();
+	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -108,12 +109,13 @@ void thread_start (void){
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
 
-	/* Wait for the idle thread to initialize idle_thread. */
+	/* Wait for the idle thread to initialize idle_thread.
+	 * This will block main thread. Then call schedule */
 	sema_down (&idle_started);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
-   Thus, this function runs in an external interrupt context. */
+   Thus, this function RUNS IN AN EXTERNAL INTERRUPT CONTEXT. */
 void thread_tick (void){
 	struct thread *t = thread_current ();
 
@@ -169,7 +171,8 @@ tid_t thread_create (const char *name, int priority,
 
 	ASSERT (function != NULL);
 
-	/* Allocate thread. */
+	/* Allocate thread. Each of which has a limited stack size of one page.
+	 * Palloc_get_page allocates whole pages of memory*/
 	t = palloc_get_page (PAL_ZERO);
 	if (t == NULL){
 		return TID_ERROR;

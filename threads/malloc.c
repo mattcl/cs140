@@ -68,20 +68,17 @@ static struct arena *block_to_arena (struct block *);
 static struct block *arena_to_block (struct arena *, size_t idx);
 
 /* Initializes the malloc() descriptors. */
-void
-malloc_init (void) 
-{
-  size_t block_size;
+void malloc_init (void){
+	size_t block_size;
 
-  for (block_size = 16; block_size < PGSIZE / 2; block_size *= 2)
-    {
-      struct desc *d = &descs[desc_cnt++];
-      ASSERT (desc_cnt <= sizeof descs / sizeof *descs);
-      d->block_size = block_size;
-      d->blocks_per_arena = (PGSIZE - sizeof (struct arena)) / block_size;
-      list_init (&d->free_list);
-      lock_init (&d->lock);
-    }
+	for (block_size = 16; block_size < PGSIZE / 2; block_size *= 2){
+		struct desc *d = &descs[desc_cnt++];
+		ASSERT (desc_cnt <= sizeof descs / sizeof *descs);
+		d->block_size = block_size;
+		d->blocks_per_arena = (PGSIZE - sizeof (struct arena)) / block_size;
+		list_init (&d->free_list);
+		lock_init (&d->lock);
+	}
 }
 
 /* Obtains and returns a new block of at least SIZE bytes.

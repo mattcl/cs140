@@ -42,23 +42,22 @@ static bool page_from_pool (const struct pool *, void *page);
 
 /* Initializes the page allocator.  At most USER_PAGE_LIMIT
    pages are put into the user pool. */
-void
-palloc_init (size_t user_page_limit)
-{
-  /* Free memory starts at 1 MB and runs to the end of RAM. */
-  uint8_t *free_start = ptov (1024 * 1024);
-  uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
-  size_t free_pages = (free_end - free_start) / PGSIZE;
-  size_t user_pages = free_pages / 2;
-  size_t kernel_pages;
-  if (user_pages > user_page_limit)
-    user_pages = user_page_limit;
-  kernel_pages = free_pages - user_pages;
+void palloc_init (size_t user_page_limit){
+	/* Free memory starts at 1 MB and runs to the end of RAM. */
+	uint8_t *free_start = ptov (1024 * 1024);
+	uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
+	size_t free_pages = (free_end - free_start) / PGSIZE;
+	size_t user_pages = free_pages / 2;
+	size_t kernel_pages;
+	if (user_pages > user_page_limit){
+		user_pages = user_page_limit;
+	}
+	kernel_pages = free_pages - user_pages;
 
-  /* Give half of memory to kernel, half to user. */
-  init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
-  init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
-             user_pages, "user pool");
+	/* Give half of memory to kernel, half to user. */
+	init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
+	init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
+			 user_pages, "user pool");
 }
 
 /* Obtains and returns a group of PAGE_CNT contiguous free pages.
@@ -67,37 +66,36 @@ palloc_init (size_t user_page_limit)
    then the pages are filled with zeros.  If too few pages are
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
-void *
-palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
-{
-  struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
-  void *pages;
-  size_t page_idx;
+void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
+	struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
+	void *pages;
+	size_t page_idx;
 
-  if (page_cnt == 0)
-    return NULL;
+	if (page_cnt == 0){
+		return NULL;
+	}
 
-  lock_acquire (&pool->lock);
-  page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
-  lock_release (&pool->lock);
+	lock_acquire (&pool->lock);
+	page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
+	lock_release (&pool->lock);
 
-  if (page_idx != BITMAP_ERROR)
-    pages = pool->base + PGSIZE * page_idx;
-  else
-    pages = NULL;
+	if (page_idx != BITMAP_ERROR){
+		pages = pool->base + PGSIZE * page_idx;
+	}else{
+		pages = NULL;
+	}
 
-  if (pages != NULL) 
-    {
-      if (flags & PAL_ZERO)
-        memset (pages, 0, PGSIZE * page_cnt);
-    }
-  else 
-    {
-      if (flags & PAL_ASSERT)
-        PANIC ("palloc_get: out of pages");
-    }
+	if (pages != NULL){
+		if (flags & PAL_ZERO){
+			memset (pages, 0, PGSIZE * page_cnt);
+		}
+	}else{
+		if (flags & PAL_ASSERT){
+			PANIC ("palloc_get: out of pages");
+		}
+	}
 
-  return pages;
+	return pages;
 }
 
 /* Obtains a single free page and returns its kernel virtual
@@ -107,9 +105,7 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
    then the page is filled with zeros.  If no pages are
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
-void *
-palloc_get_page (enum palloc_flags flags) 
-{
+void *palloc_get_page (enum palloc_flags flags){
   return palloc_get_multiple (flags, 1);
 }
 
