@@ -561,7 +561,7 @@ void thread_check_sleeping(int64_t current_tick) {
 		     ASSERT(e!=NULL);
 	      printList(&sleep_list);
 	      list_remove(e);
-	      
+	      printf("list_next(e) %p \n",list_next(e));
 	      thread_unblock(t);
 	    }	
 	  }
