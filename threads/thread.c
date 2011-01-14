@@ -560,7 +560,7 @@ void thread_check_sleeping(int64_t current_tick) {
 							 e, &t->elem,
 							 e->next, t->elem.next);
 							 ASSERT(e!=NULL);*/
-					  printList(&sleep_list);
+					  //printList(&sleep_list);
 					  e = list_remove(e);
 					  //printf("list_next(e) %p \n",e);
 					  thread_unblock(t);
@@ -582,7 +582,7 @@ void thread_sleep(int64_t wake_time) {
 	       &thread_current()->elem, 
 	       thread_current()->elem.next);*/
 	//printf(list_size(&sleep_list));
-	printList(&sleep_list);
+	//printList(&sleep_list);
 	thread_block();
 	intr_set_level(old_level);
 }
