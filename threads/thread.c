@@ -466,13 +466,9 @@ static struct thread *next_thread_to_run (void){
 	} else {
 
 		//======== Begin Changes =========//
-
 		struct list_elem *e = list_max(&ready_list, &threadCompare, NULL);
-
 		list_remove(e);
-
 		return list_entry(e, struct thread,elem);
-		//return list_entry (list_pop_front (&ready_list), struct thread, elem);
 		//========= End Changes ========//
 	}
 }
@@ -586,9 +582,14 @@ void thread_sleep(int64_t wake_time) {
 }
 
 
+/**
+ * This function takes as parameters list_elem *a, which is a memeber of a
+ * thread and list_elem *b which is a member of a thread and return true
+ * if thread A has priority LESS than that of thread b
+ */
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
-					void *aux){
+					void *aux UNUSED){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
 		return (t1->priority < t2->priority);
