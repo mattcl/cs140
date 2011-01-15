@@ -39,6 +39,9 @@ bool lockCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED);
 
+bool condCompare (const struct list_elem *a,
+			      const struct list_elem *b,
+			      void *aux UNUSED)
 //======== End Changes ========//
 
 
