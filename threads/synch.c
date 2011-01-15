@@ -405,7 +405,7 @@ bool lockCompare (const struct list_elem *a,
 					void *aux UNUSED){
 		struct lock *l1 = list_entry(a, struct lock, elem);
 		struct lock *l2 = list_entry(b, struct lock, elem);
-		return l1->lock_priority < l2->lock_pritory;
+		return l1->lock_priority < l2->lock_priority;
 }
 
 void update_temp_priority(struct thread *t){
