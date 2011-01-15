@@ -257,7 +257,7 @@ void thread_unblock (struct thread *t){
 	list_push_back (&ready_list, &t->elem);
 	t->status = THREAD_READY;
 	if (t->tmp_priority > thread_current()->tmp_priority) {
-		thread_yeild();
+		thread_yield();
 	}
 	intr_set_level (old_level);
 }
