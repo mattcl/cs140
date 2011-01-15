@@ -437,7 +437,10 @@ void cond_broadcast (struct condition *cond, struct lock *lock){
 bool lockCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
-
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	ASSERT((list_entry(a, struct lock, elem)) != NULL);
+	ASSERT((list_entry(b, struct lock, elem)) != NULL);
 	return ((list_entry(a, struct lock, elem)->lock_priority) <
 		    (list_entry(b, struct lock, elem)->lock_priority));
 }
