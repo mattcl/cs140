@@ -96,8 +96,12 @@ struct thread {
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 	// ------------ BEGIN CHANGES -------------//
-
+	
+	// time used by thread sleep 
 	int64_t wake_time;
+
+	// priority used for priority donation
+	int tmp_pritory;
 
 	// ------------- END CHANGES --------------//
     /* Owned by thread.c. */
