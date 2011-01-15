@@ -16,21 +16,24 @@ bool sema_try_down (struct semaphore *);
 void sema_up (struct semaphore *);
 void sema_self_test (void);
 
-/* Lock. */
+//========== Begin Changes =========//
+
+/* Lock. No longer layered over a semaphore
+ * It has a holder, a boolean value telling
+ * whether it is held or not, and a list of waiters,
+ * The lock_priority. */
 struct lock {
     struct thread *holder;      /* Thread holding lock . */
-    struct semaphore semaphore; /* Binary semaphore controlling access. */
-
-    //========== Begin Changes =========//
-    struct list_elem elem;
-    bool held;
-    struct list waiters;
-    int lock_priority; //The priority which is max over
-    				   // all threads which are waiting on this
-    				   // Will be the priority that that thread
-    				   // Which is holding the lock must have
-    //========== End Changes ===========//
+    struct list_elem elem;		/* element in a held locks list */
+    bool held;					/* Whether this lock is held */
+    struct list waiters;		/* List of waiting threads */
+	int lock_priority; 			/* The priority which is max over
+							     * all threads which are waiting on this
+							     * Will be the priority that that thread
+							     * Which is holding the lock must have */
 };
+
+//========== End Changes ===========//
 
 void lock_init (struct lock *);
 void lock_acquire (struct lock *);
