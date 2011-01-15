@@ -221,12 +221,6 @@ tid_t thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-
-	struct thread *tHigh = list_entry(
-						list_max(&ready_list, &threadCompare, NULL),
-						struct thread, elem);
-	printf("cur %d and high %d", thread_current()->tmp_priority, tHigh->tmp_priority);
-
 	thread_preempt();
 
 	return tid;
@@ -350,12 +344,6 @@ void thread_set_priority (int new_priority){
 	t->priority = new_priority;
 	t->tmp_priority = new_priority;
 	update_temp_priority(t);
-
-	struct thread *tHigh = list_entry(
-						list_max(&ready_list, &threadCompare, NULL),
-						struct thread, elem);
-	printf("cur %d and high %d", thread_current()->tmp_priority, tHigh->tmp_priority);
-
 	thread_preempt();
 }
 
