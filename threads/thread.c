@@ -495,7 +495,7 @@ static struct thread *next_thread_to_run (void){
 
 		//Select the item off the queue with the highest priority
 		struct list_elem *e =
-				remove_list_max(&ready_list, &threadCompare, NULL);
+				remove_list_max(&ready_list, &threadCompare);
 		ASSERT(e != NULL);
 		return list_entry(e, struct thread,elem);
 		//========= End Changes ========//
