@@ -120,6 +120,7 @@ int main (void){
   /* Start thread scheduler and enable interrupts. */
   printf("Thread Start \n");
   thread_start ();
+  printf("Thread end\n");
   serial_init_queue ();
   timer_calibrate ();
 
