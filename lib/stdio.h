@@ -22,6 +22,7 @@ int vprintf (const char *, va_list) PRINTF_FORMAT (1, 0);
 int vsnprintf (char *, size_t, const char *, va_list) PRINTF_FORMAT (3, 0);
 int putchar (int);
 int puts (const char *);
+int max (int a, int b);
 
 /* Nonstandard functions. */
 void hex_dump (uintptr_t ofs, const void *, size_t size, bool ascii);

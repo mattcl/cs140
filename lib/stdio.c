@@ -651,3 +651,7 @@ print_human_readable_size (uint64_t size)
       printf ("%"PRIu64" %s", size, *fp);
     }
 }
+
+int max(int a, int b) {
+	return a > b ? a : b;
+}

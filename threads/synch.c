@@ -31,7 +31,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-#include <math.h>
+
 
 //========= Begin Changes ======//
 
