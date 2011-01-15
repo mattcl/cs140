@@ -221,7 +221,9 @@ tid_t thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
+
 	thread_preempt();
+
 	return tid;
 }
 
@@ -627,7 +629,8 @@ bool threadCompare (const struct list_elem *a,
 					void *aux UNUSED){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
-		return (max(t1->priority, t1->tmp_priority) < max(t2->priority, t2->tmp_priority));
+		printf("t1 p %d, t2 p %d\n", t1->tmp_priority , t2->tmp_priority);
+		return (t1->tmp_priority < t2->tmp_priority);
 }
 
 // ---------------- END CHANGES ---------------- //
