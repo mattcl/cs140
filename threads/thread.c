@@ -74,7 +74,9 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-bool threadCompare (list_elem *a, list_elem *b, void *aux);
+bool threadCompare (const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -580,7 +582,9 @@ void thread_sleep(int64_t wake_time) {
 }
 
 
-bool threadCompare (list_elem *a, list_elem *b, void *aux){
+bool threadCompare (const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
 		return (t1->priority < t2->priority);
