@@ -172,7 +172,7 @@ void lock_init (struct lock *lock){
 	ASSERT (lock != NULL);
 	lock->holder = NULL;
 	//sema_init (&lock->semaphore, 1);
-	lock->held = 0;
+	lock->held = false;
 	list_init (&lock->waiters);
 }
 
@@ -200,16 +200,17 @@ void lock_acquire (struct lock *lock) {
 	// the lock priority is given this current priority
 	lock->lock_priority = max(lock->lock_priority, t->priority);
 
-	while (lock->held == 0) {
+	while (lock->held) {
 		list_push_back (&lock->waiters, &t->elem);
 		update_temp_priority(lock->holder);
 		thread_block ();
 	}
+
 	intr_set_level (old_level);
 
 	//sema_down (&lock->semaphore);
 	lock->holder = t;
-
+	lock->held = true;
 	list_push_back(&t->held_locks, &lock->elem);
 
 	update_temp_priority(t);
@@ -235,11 +236,11 @@ bool lock_try_acquire (struct lock *lock) {
 
 	old_level = intr_disable ();
 
-	if (lock->held == 1){
-		lock->held = 0;
-		success = true;
-	} else {
+	if (lock->held){
 		success = false;
+	} else {
+		lock->held = true;
+		success = true;
 	}
 
 	intr_set_level (old_level);
@@ -247,6 +248,7 @@ bool lock_try_acquire (struct lock *lock) {
 	if (success){
 		struct thread *t = thread_current ();
 		lock->holder = t;
+		// not atomically because we are only updating thread specific data
 		list_push_back(&t->held_locks, &lock->elem);
 		update_temp_priority(t);
 	}
@@ -265,13 +267,14 @@ void lock_release (struct lock *lock){
 
 	enum intr_level old_level;
 
+	// turn off interrupts to atomically remove from list
 	old_level = intr_disable ();
 	if (!list_empty (&lock->waiters)) {
 		// Change here to be able to pop off only the highest priority waiter
 		thread_unblock (list_entry (list_pop_front (&lock->waiters),
 								struct thread, elem));
 	}
-	lock->held = 1;
+	lock->held = false;
 	intr_set_level (old_level);
 
 	list_remove(&lock->elem);
