@@ -101,7 +101,7 @@ struct thread {
 	int64_t wake_time;
 
 	// priority used for priority donation
-	int tmp_pritory;
+	int tmp_priority;
 	struct list held_locks;
 
 	// ------------- END CHANGES --------------//

@@ -413,7 +413,7 @@ bool lockCompare (const struct list_elem *a,
 void update_temp_priority(struct thread *t){
 
 	if(list_empty(&t->held_locks)){
-		t->tmp_pritory = t->priority;
+		t->tmp_priority = t->priority;
 	} else {
 
 		struct lock *l = list_entry(list_max(&t->held_locks, &lockCompare, NULL),
@@ -423,7 +423,7 @@ void update_temp_priority(struct thread *t){
 		//Set the priority of this thread to the highest priority
 		// of all the threads waiting on any of the locks that this
 		// thread currently holds
-		t->tmp_pritory = l->lock_priority;
+		t->tmp_priority = l->lock_priority;
 
 	}
 }

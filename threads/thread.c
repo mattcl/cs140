@@ -339,12 +339,22 @@ void thread_foreach (thread_action_func *func, void *aux){
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority (int new_priority){
-	thread_current ()->priority = new_priority;
+	struct thread *t = thread_current ();
+	t->priority = new_priority;
+	t->tmp_priority = new_priority;
+	update_temp_priority(t);
+	struct thread *tHigh = list_entry(
+			list_max(&ready_list, &threadCompare, NULL),
+			struct thread, elem);
+	if (tHigh->priority > t->tmp_priority){
+		thread_yield();
+	}
 }
 
 /* Returns the current thread's priority. */
 int thread_get_priority (void){
-	return thread_current ()->priority;
+	struct thread *t = thread_current ();
+	return max(t->priority, t->tmp_priority);
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -609,7 +619,7 @@ bool threadCompare (const struct list_elem *a,
 					void *aux UNUSED){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
-		return (max(t1->priority, t1->tmp_pritory) < max(t2->priority, t2->tmp_pritory));
+		return (max(t1->priority, t1->tmp_priority) < max(t2->priority, t2->tmp_priority));
 }
 
 // ---------------- END CHANGES ---------------- //
