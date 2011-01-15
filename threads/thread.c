@@ -221,7 +221,9 @@ tid_t thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	if (priority > max(thread_current()->tmp_priority)){
+		thread_yield();
+	}
 	return tid;
 }
 
