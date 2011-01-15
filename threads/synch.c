@@ -201,6 +201,8 @@ void lock_acquire (struct lock *lock) {
 
 	old_level = intr_disable ();
 
+	t->lockWaitedOn = lock;
+
 	// On threads that have high priority but need to wait on this lock
 	// the lock priority is given this current priority
 
@@ -211,6 +213,8 @@ void lock_acquire (struct lock *lock) {
 		update_temp_priority(lock->holder);
 		thread_block ();
 	}
+
+	t->lockWaitedOn = NULL;
 
 	intr_set_level (old_level);
 
@@ -442,6 +446,14 @@ void update_temp_priority(struct thread *t){
 		// thread currently holds
 		t->tmp_priority = max(l->lock_priority, t->priority);
 
+	}
+
+	/*Update all the neccessary dependent threads so that the thread
+	 * with the first lock that has blocked a nest of locks will run
+	 * first.
+	 */
+	if(t->lockWaitedOn =! NULL){
+		update_temp_priority(t->lockWaitedOn);
 	}
 }
 

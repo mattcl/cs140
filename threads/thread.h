@@ -90,23 +90,23 @@ struct thread {
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct list_elem lockElem;              /* List element. */
-	
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 	// ------------ BEGIN CHANGES -------------//
 	
-	// time used by thread sleep 
-	int64_t wake_time;
 
-	// priority used for priority donation
-	int tmp_priority;
-	struct list held_locks;
+	int64_t wake_time;           /* time used by thread sleep */
+
+	int tmp_priority;            /* priority used for priority donation */
+	struct list held_locks;		 /*Locks that this thread currently owns*/
+	struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
 
 	// ------------- END CHANGES --------------//
-    /* Owned by thread.c. */
+
+	/* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 };
 

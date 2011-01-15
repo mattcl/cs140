@@ -451,6 +451,7 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
 	t->tmp_priority = priority;
+	t->lockWaitedOn = NULL;
 	t->magic = THREAD_MAGIC;
 
 	//====== Begin changes=========//
