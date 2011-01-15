@@ -414,7 +414,7 @@ void update_temp_priority(struct thread *t){
 		t->tmp_pritory = t->priority;
 	} else {
 
-		struct lock *l = list_entry(list_max(&t->held_locks, &lockCompare),
+		struct lock *l = list_entry(list_max(&t->held_locks, &lockCompare, NULL),
 									struct lock,
 									elem);
 
