@@ -295,6 +295,7 @@ void lock_release (struct lock *lock){
 		struct list_elem *highest =
 				remove_list_max(&lock->waiters, &threadCompare);
 		ASSERT(highest != NULL);
+
 		//The thread that is still waiting with the highest priority
 		if(!list_empty(&lock->waiters)){
 			// Reset the lock priority to the next highest priority waiting on
@@ -304,8 +305,6 @@ void lock_release (struct lock *lock){
 		// Change here to be able to pop off only the highest priority waiter
 		thread_unblock (list_entry (highest, struct thread, elem));
 	}
-
-	lock->held = false;
 
 	//Needs to be with interrupts disabled because it is used
 	//by many other threads when they update their tmp priority
@@ -318,9 +317,6 @@ void lock_release (struct lock *lock){
 	list_remove(&lock->elem);
 
 	intr_set_level (old_level);
-
-
-
 
 	// Revert back to whatever donated priority was acquired
 	// before acquiring this lock
