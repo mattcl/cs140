@@ -210,7 +210,7 @@ void lock_acquire (struct lock *lock) {
 		list_push_back (&lock->waiters, &t->elem);
 		//Blocking on the lock is the only thing that will increase the locks priority
 
-		update_temp_priority(lock->holder);
+		update_temp_priority(t);
 		thread_block ();
 	}
 
@@ -463,7 +463,7 @@ void update_temp_priority(struct thread *t){
 	 */
 	if(t->lockWaitedOn != NULL){
 
-		t->lockWaitedOn->lock_priority = max(t->lockWaitedOn->lock_priority, t->priority);
+		t->lockWaitedOn->lock_priority = max(t->lockWaitedOn->lock_priority, t->tmp_priority);
 
 		update_temp_priority(t->lockWaitedOn->holder);
 	}
