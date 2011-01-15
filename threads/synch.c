@@ -419,14 +419,14 @@ bool condCompare (const struct list_elem *a,
 
 	struct semaphore_elem *se1 = list_entry(a, struct semaphore_elem, elem);
 	struct semaphore_elem *se2 = list_entry(b, struct semaphore_elem, elem);
-	struct list_elem *t1 = list_pop_front(se1->semaphore->waiters);
-	struct list_elem *t2 = list_pop_front(se1->semaphore->waiters);
+	struct list_elem *t1 = list_pop_front(&se1->semaphore->waiters);
+	struct list_elem *t2 = list_pop_front(&se1->semaphore->waiters);
 
 	bool aLessB = list_entry(t1,struct thread, elem)->tmp_priority <
 				  list_entry(t2,struct thread, elem)->tmp_priority;
 
-	list_push_back(se1->semaphore->waiters, t1);
-	list_push_back(se2->semaphore->waiters, t2);
+	list_push_back(&se1->semaphore->waiters, t1);
+	list_push_back(&se2->semaphore->waiters, t2);
 
 	return (aLessB);
 }
