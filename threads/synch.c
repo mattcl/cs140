@@ -410,14 +410,15 @@ void update_temp_priority(struct thread *t){
 		t->tmp_priority = t->priority;
 	} else {
 
-		struct lock *l = list_entry(list_max(&t->held_locks, &lockCompare, NULL),
-									struct lock,
-									elem);
+		struct lock *l = list_entry(
+				list_max(&t->held_locks, &lockCompare, NULL),
+						  struct lock,
+						  elem);
 
 		//Set the priority of this thread to the highest priority
 		// of all the threads waiting on any of the locks that this
 		// thread currently holds
-		t->tmp_priority = l->lock_priority;
+		t->tmp_priority = max(l->lock_priority, t->priority);
 
 	}
 }
