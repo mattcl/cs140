@@ -91,8 +91,10 @@ static tid_t allocate_tid (void);
    finishes. */
 void thread_init (void){
 	ASSERT (intr_get_level () == INTR_OFF);
-
+	printf("Lock before\n");
 	lock_init (&tid_lock);
+	printf("Lock good\n");
+
 	list_init (&ready_list);
 	list_init (&all_list);
 	
