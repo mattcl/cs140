@@ -225,9 +225,13 @@ bool lock_held_by_current_thread (const struct lock *lock){
 	bool held = lock->holder == t; 
 	if(!held) {
 		// we want to assign the thread that holds the lock the highest priority of the requesting thread
-		int max_request_priority = max(t->priority, t->temp_priority);
-		if(max(lock->holder->priority, lock->holder->temp_priority) < max_request_priority) {
-			lock->holder->temp_priority = max_request_priority;
+		int max_request_priority = max(t->priority, t->tmp_priority);
+		if(max(lock->holder->priority, lock->holder->tmp_priority) < max_request_priority) {
+			lock->holder->tmp_priority = max_request_priority;
+			// we need to wake this thread if it's blocked
+			if(lock->holder->status == THREAD_BLOCKED) {
+				thread_unblock(lock->holder);
+			}
 		}	
 	}
 	// ----------------- END CHANGES ------------------ //
