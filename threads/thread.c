@@ -587,6 +587,7 @@ bool threadCompare (const struct list_elem *a,
 					void *aux){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
+		printf("T1 num %d and pri %d, T2 num %d, and pri %d\n",t1->tid, t1->priority, t2->tid, t2->priority);
 		return (t1->priority < t2->priority);
 }
 
