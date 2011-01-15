@@ -658,9 +658,9 @@ void thread_preempt(void){
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
-		struct thread *t1 = list_entry(a, struct thread, elem);
-		struct thread *t2 = list_entry(b, struct thread, elem);
-		return (t1->tmp_priority < t2->tmp_priority);
+
+		return ((list_entry(a, struct thread, elem)->tmp_priority) <
+				(list_entry(b, struct thread, elem)->tmp_priority));
 }
 
 // ---------------- END CHANGES ---------------- //

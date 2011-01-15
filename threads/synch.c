@@ -280,30 +280,35 @@ void lock_release (struct lock *lock){
 	old_level = intr_disable ();
 	if (!list_empty (&lock->waiters)) {
 
-		//The thread with highest priority
+		//Remove the thread with highest priority O(n) in threads
+		// waiting on this lock
 		struct list_elem *highest =
 				list_max(&lock->waiters, &threadCompare, NULL);
 		list_remove (highest);
 
 		//The thread that is still waiting with the highest priority
-		struct list_elem *nextHighest =
-				list_max(&lock->waiters, &threadCompare, NULL);
-
-		// Reset the lock priority to the next highest priority waiting on
-		// the lock So that the next acquisition will be raised if necessary
-		lock->lock_priority =
-				list_entry(nextHighest, struct thread, elem)->tmp_priority;
-
+		if(!list_empty(&lock->waiters)){
+			// Reset the lock priority to the next highest priority waiting on
+			// the lock So that the next acquisition will be raised if necessary
+			lock->lock_priority =
+					list_entry( list_max(&lock->waiters, &threadCompare, NULL),
+							    struct thread, elem)->tmp_priority;
+		}
 		// Change here to be able to pop off only the highest priority waiter
 		thread_unblock (list_entry (highest, struct thread, elem));
 	}
 
 	lock->held = false;
 
+	//Needs to be with interrupts disabled because it is used
+	//by many other threads when they update their tmp priority
+	// if it is not null it will cause recursion to occur
+	lock->holder = NULL;
+
 	intr_set_level (old_level);
 
 	list_remove(&lock->elem);
-	lock->holder = NULL;
+
 
 	// Revert back to whatever donated priority was acquired
 	// before acquiring this lock
@@ -384,7 +389,7 @@ void cond_wait (struct condition *cond, struct lock *lock){
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to signal a condition variable within an
    interrupt handler. */
-void cond_signal (struct condition *cond, struct lock *lock UNUSED){
+void cond_signal (struct condition *cond, struct lock *lock){
 	ASSERT (cond != NULL);
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
@@ -393,7 +398,7 @@ void cond_signal (struct condition *cond, struct lock *lock UNUSED){
 	if (!list_empty (&cond->waiters)){
 		//------ Begin Changes -----//
 		// We are only going to unblock the thread with the
-		// highest priority
+		// highest priority.
 		struct list_elem *e = list_max(&cond->waiters, &condCompare, NULL);
 		list_remove(e);
 		sema_up (&list_entry (e, struct semaphore_elem, elem)->semaphore);
@@ -426,9 +431,9 @@ void cond_broadcast (struct condition *cond, struct lock *lock){
 bool lockCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
-		struct lock *l1 = list_entry(a, struct lock, elem);
-		struct lock *l2 = list_entry(b, struct lock, elem);
-		return l1->lock_priority < l2->lock_priority;
+
+	return ((list_entry(a, struct lock, elem)->lock_priority) <
+		    (list_entry(b, struct lock, elem)->lock_priority));
 }
 
 /**
@@ -442,9 +447,8 @@ bool condCompare (const struct list_elem *a,
 			      const struct list_elem *b,
 			      void *aux UNUSED){
 
-	struct semaphore_elem *se1 = list_entry(a, struct semaphore_elem, elem);
-	struct semaphore_elem *se2 = list_entry(b, struct semaphore_elem, elem);
-	return se1->thread->tmp_priority < se2->thread->tmp_priority;
+	return ((list_entry(a, struct semaphore_elem, elem)->thread->tmp_priority)<
+		    (list_entry(b, struct semaphore_elem, elem)->thread->tmp_priority));
 }
 
 
@@ -464,6 +468,12 @@ bool condCompare (const struct list_elem *a,
  * This function will recursively update all threads which hold a lock
  * on which this thread is dependent giving the appropriate priority to
  * each one.
+ *
+ *  This function runs in O(m) to calculate the max from the locks it
+ *  holds and O(n) which is the number of locks the threads is implicitly
+ *  waiting on, for a total of O(nm) this would be reduced to O(nlogm) if
+ *  We used a max heap priority queue. Though the number of locks each thread
+ *  holds should be less than thousands so this shouldn't be too painful.
  */
 void update_temp_priority(struct thread *t){
 
