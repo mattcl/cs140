@@ -257,15 +257,6 @@ void thread_unblock (struct thread *t){
 	list_push_back (&ready_list, &t->elem);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
-
-
-	//Change
-	if (!intr_context && (t->tmp_priority > thread_current()->tmp_priority)){
-		thread_yield();
-	}
-	//end change
-
-
 }
 
 /* Returns the name of the running thread. */
