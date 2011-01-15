@@ -214,7 +214,7 @@ static char ** read_command_line (void) {
 			printf (" '%s'", argv[i]);
 		}
 	}
-	printf ("\n");
+	printf ("Return\n");
 
 	return argv;
 }
