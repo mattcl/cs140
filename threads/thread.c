@@ -557,6 +557,12 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 // --------------- BEGIN CHANGES --------------- //
 
+/**
+ * This function takes as a parameter the current tick of the system.
+ * It iterates through the list of sleeping threads and checks to see
+ * if that threads wake up time is less than or equal to the current tick.
+ * If so it will unblock the thread, putting it on the ready list
+ */
 void thread_check_sleeping(int64_t current_tick) {
 
 	struct list_elem *e;
@@ -572,6 +578,7 @@ void thread_check_sleeping(int64_t current_tick) {
 		}
 	}
 }
+
 
 void thread_sleep(int64_t wake_time) {
 	enum intr_level old_level = intr_disable();
@@ -592,7 +599,7 @@ bool threadCompare (const struct list_elem *a,
 					void *aux UNUSED){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
-		return (t1->priority < t2->priority);
+		return (max(t1->priority, t1->tmp_pritory) < max(t2->priority, t2->tmp_pritory));
 }
 
 // ---------------- END CHANGES ---------------- //
