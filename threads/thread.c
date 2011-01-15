@@ -256,10 +256,16 @@ void thread_unblock (struct thread *t){
 	ASSERT (t->status == THREAD_BLOCKED);
 	list_push_back (&ready_list, &t->elem);
 	t->status = THREAD_READY;
-	if (t->tmp_priority > thread_current()->tmp_priority) {
+	intr_set_level (old_level);
+
+
+	//Change
+	if (!intr_context && (t->tmp_priority > thread_current()->tmp_priority)){
 		thread_yield();
 	}
-	intr_set_level (old_level);
+	//end change
+
+
 }
 
 /* Returns the name of the running thread. */
