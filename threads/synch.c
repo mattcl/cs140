@@ -270,8 +270,8 @@ void lock_release (struct lock *lock){
 	old_level = intr_disable ();
 	if (!list_empty (&lock->waiters)) {
 
-		struct list_elem *highest =
-				list_remove (list_max(&lock->waiters, &threadCompare, NULL));
+		struct list_elem *highest = list_max(&lock->waiters, &threadCompare, NULL);
+		list_remove (highest);
 
 		struct thread *highestWaiting =
 				list_entry(list_max(&lock->waiters, &threadCompare, NULL), struct thread, elem);
