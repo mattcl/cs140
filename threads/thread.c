@@ -464,10 +464,14 @@ static struct thread *next_thread_to_run (void){
 	if (list_empty (&ready_list)){
 		return idle_thread;
 	} else {
+
 		//======== Begin Changes =========//
-		return list_entry(  list_max(&ready_list, &threadCompare, NULL),
-							struct thread,
-							elem);
+
+		struct list_elem *e = list_max(&ready_list, &threadCompare, NULL);
+
+		list_remove(e);
+
+		return list_entry(e, struct thread,elem);
 		//return list_entry (list_pop_front (&ready_list), struct thread, elem);
 		//========= End Changes ========//
 	}
@@ -587,7 +591,6 @@ bool threadCompare (const struct list_elem *a,
 					void *aux){
 		struct thread *t1 = list_entry(a, struct thread, elem);
 		struct thread *t2 = list_entry(b, struct thread, elem);
-		printf("T1 num %d and pri %d, T2 num %d, and pri %d\n",t1->tid, t1->priority, t2->tid, t2->priority);
 		return (t1->priority < t2->priority);
 }
 
