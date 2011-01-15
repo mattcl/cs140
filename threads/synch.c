@@ -209,7 +209,7 @@ void lock_acquire (struct lock *lock) {
 	while (lock->held) {
 		list_push_back (&lock->waiters, &t->elem);
 		//Blocking on the lock is the only thing that will increase the locks priority
-		lock->lock_priority = max(lock->lock_priority, t->priority);
+
 		update_temp_priority(lock->holder);
 		thread_block ();
 	}
@@ -429,7 +429,16 @@ bool condCompare (const struct list_elem *a,
 	struct semaphore_elem *se2 = list_entry(b, struct semaphore_elem, elem);
 	return se1->thread->tmp_priority < se2->thread->tmp_priority;
 }
-
+/* Takes the thread to update the tmp value of and the lock that
+ * It is currently waiting on. Then it updates both by looking at
+ * all of the locks that t currently is holding and assigning the
+ * highest tmp value between the effective priorities of all of the
+ * threads waiting on the locks that are held by this thread and this
+ * threads current priority. Then it updates the lock's effective
+ * priority to be the max between its priority and the priority of
+ * this thread. Then it recurisively calls all other threads on which
+ * this thread is currently dependent. ONly updates lock if it is not null
+ */
 void update_temp_priority(struct thread *t){
 
 	if(list_empty(&t->held_locks)){
@@ -453,6 +462,9 @@ void update_temp_priority(struct thread *t){
 	 * first.
 	 */
 	if(t->lockWaitedOn != NULL){
+
+		t->lockWaitedOn->lock_priority = max(t->lockWaitedOn->lock_priority, t->priority);
+
 		update_temp_priority(t->lockWaitedOn->holder);
 	}
 }
