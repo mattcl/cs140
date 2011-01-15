@@ -280,7 +280,7 @@ void lock_release (struct lock *lock){
 
 	// Revert back to whatever donated priority was acquired
 	// before acquiring this lock
-	update_temp_priority(t);
+	update_temp_priority(thread_current());
 }
 
 /* Returns true if the current thread holds LOCK, false
