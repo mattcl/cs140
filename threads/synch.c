@@ -41,8 +41,18 @@ bool lockCompare (const struct list_elem *a,
 
 bool condCompare (const struct list_elem *a,
 			      const struct list_elem *b,
-			      void *aux UNUSED);
 
+			      void *aux UNUSED);
+/* Returns the maximum priority lock out of this list of locks */
+inline struct lock *max_lock(struct list *locks){
+	return list_entry(list_max(locks, &lockCompare, NULL),
+					  struct lock,  elem);
+}
+/* Returns the maximum priority thread out of this list of threads */
+inline struct thread *max_thread(struct list *threads){
+	return list_entry(list_max(threads, &threadCompare, NULL),
+					  struct thread, elem);
+}
 //======== End Changes ========//
 
 

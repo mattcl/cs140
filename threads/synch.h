@@ -44,16 +44,6 @@ bool lock_held_by_current_thread (const struct lock *);
 // --------- Begin Changes -------- //
 void update_temp_priority(struct thread *t);
 
-/* Returns the maximum priority lock out of this list of locks */
-inline struct lock *max_lock(struct list *locks){
-	return list_entry(list_max(locks, &lockCompare, NULL),
-					  struct lock,  elem);
-}
-/* Returns the maximum priority thread out of this list of threads */
-inline struct thread *max_thread(struct list *threads){
-	return list_entry(list_max(threads, &threadCompare, NULL),
-					  struct thread, elem);
-}
 // --------- End Changes ----------//
 
 
