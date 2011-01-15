@@ -453,7 +453,7 @@ void update_temp_priority(struct thread *t){
 	 * first.
 	 */
 	if(t->lockWaitedOn =! NULL){
-		update_temp_priority(t->lockWaitedOn);
+		update_temp_priority(t->lockWaitedOn->holder);
 	}
 }
 
