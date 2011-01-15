@@ -609,6 +609,19 @@ void thread_sleep(int64_t wake_time) {
 	intr_set_level(old_level);
 }
 
+void thread_preempt(void){
+	// yield if the thread we just released had higher priority
+	// or if some other thread is higher
+	// preempt this thread cause we are no longer the highest
+	struct thread *tHigh = list_entry(
+				list_max(&ready_list, &threadCompare, NULL),
+				struct thread, elem);
+
+	if (tHigh->tmp_priority > thread_current()->tmp_priority){
+		thread_yield();
+	}
+}
+
 /**
  * This function takes as parameters list_elem *a, which is a memeber of a
  * thread and list_elem *b which is a member of a thread and return true

@@ -271,10 +271,10 @@ void lock_release (struct lock *lock){
 	if (!list_empty (&lock->waiters)) {
 
 		struct list_elem *highest =
-				list_remove (list_max(&lock->waiters), threadCompare, NULL);
+				list_remove (list_max(&lock->waiters, &threadCompare, NULL));
 
 		struct thread *highestWaiting =
-				list_entry(list_max(&lock->waiters), struct thread, elem);
+				list_entry(list_max(&lock->waiters, &threadCompare, NULL), struct thread, elem);
 
 		// Reset the lock priority to the next highest priority waiting on
 		// the lock So that the next acquisition will be raised if necessary
@@ -293,16 +293,7 @@ void lock_release (struct lock *lock){
 	// before acquiring this lock
 	update_temp_priority(thread_current());
 
-	// yield if the thread we just released had higher priority
-	// or if some other thread is higher
-	// preempt this thread cause we are no longer the highest
-	struct thread *tHigh = list_entry(
-				list_max(&ready_list, &threadCompare, NULL),
-				struct thread, elem);
-
-	if (tHigh->priority > thread_current()->tmp_priority){
-		thread_yield();
-	}
+	thread_preempt();
 }
 
 /* Returns true if the current thread holds LOCK, false

@@ -151,6 +151,6 @@ void thread_sleep(int64_t wake_time);
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
-
+void thread_preempt(void);
 // ------------- END CHANGES --------------- //
 #endif /* threads/thread.h */
