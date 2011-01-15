@@ -345,6 +345,12 @@ void thread_set_priority (int new_priority){
 	t->priority = new_priority;
 	t->tmp_priority = new_priority;
 	update_temp_priority(t);
+
+	struct thread *tHigh = list_entry(
+						list_max(&ready_list, &threadCompare, NULL),
+						struct thread, elem);
+	printf("cur %d and high %d", thread_current()->tmp_priority, tHigh->tmp_priority);
+
 	thread_preempt();
 }
 
@@ -611,11 +617,9 @@ void thread_preempt(void){
 	// or if some other thread is higher
 	// preempt this thread cause we are no longer the highest
 	if(!list_empty(&ready_list)){
-		printf("Ready_list size %d", list_size(&ready_list));
 		struct thread *tHigh = list_entry(
 					list_max(&ready_list, &threadCompare, NULL),
 					struct thread, elem);
-		printf("cur %d and high %d", thread_current()->tmp_priority, tHigh->tmp_priority);
 		if (tHigh->tmp_priority > thread_current()->tmp_priority){
 			thread_yield();
 		}
