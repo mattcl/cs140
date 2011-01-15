@@ -189,7 +189,6 @@ void lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-
 	//========= Begin Changes ========//
 
 	enum intr_level old_level;

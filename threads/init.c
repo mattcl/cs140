@@ -85,6 +85,7 @@ int main (void){
 
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
+  printf("Thread Init\n");
   thread_init ();
   console_init (); /*Dependent on the lock system being up*/
 
@@ -114,6 +115,7 @@ int main (void){
 #endif
 
   /* Start thread scheduler and enable interrupts. */
+  printf("Thread Start \n");
   thread_start ();
   serial_init_queue ();
   timer_calibrate ();

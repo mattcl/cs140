@@ -98,7 +98,6 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
-
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
