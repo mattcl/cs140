@@ -350,7 +350,14 @@ void thread_set_priority (int new_priority){
 	struct thread *t = thread_current ();
 	t->priority = new_priority;
 	t->tmp_priority = new_priority;
+
+	// Make sure that our tmp_priority is the max of all the
+	// threads waiting on one of our locks and the currently
+	// updated priority
+	enum intr_level old_level = intr_disable ();
 	update_temp_priority(t);
+	intr_set_level (old_level);
+
 	thread_preempt();
 }
 
@@ -642,6 +649,12 @@ void thread_preempt(void){
 	ASSERT(is_thread(cur));
 	ASSERT(cur->status == THREAD_RUNNING);
 
+	// Needs to be run with intr_disabled because
+	// it interacts with the ready list and with
+	// the tmp priorities are global data susceptible to
+	// race conditions
+	enum intr_level old_level = intr_disable();
+
 	if(!list_empty(&ready_list)){
 		struct thread *tHigh = list_entry(
 					list_max(&ready_list, &threadCompare, NULL),
@@ -650,6 +663,8 @@ void thread_preempt(void){
 			thread_yield();
 		}
 	}
+
+	intr_set_level (old_level);
 }
 
 /**

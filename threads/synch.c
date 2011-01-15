@@ -236,7 +236,7 @@ void lock_acquire (struct lock *lock) {
 	// update the temp priority because acquiring this lock may have
 	// also acquired the group of people waiting on this lock which
 	// may have higher priority than t
-	update_temp_priority(t);
+	//update_temp_priority(t);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -284,10 +284,8 @@ void lock_release (struct lock *lock){
 	ASSERT (lock_held_by_current_thread (lock));
 	ASSERT (!intr_context ());
 
-	enum intr_level old_level;
-
 	// turn off interrupts to atomically remove from list
-	old_level = intr_disable ();
+	enum intr_level old_level = intr_disable ();
 	if (!list_empty (&lock->waiters)) {
 
 		//Remove the thread with highest priority O(n) in threads
@@ -316,11 +314,11 @@ void lock_release (struct lock *lock){
 	// its correct list, all bad
 	list_remove(&lock->elem);
 
-	intr_set_level (old_level);
-
 	// Revert back to whatever donated priority was acquired
 	// before acquiring this lock
 	update_temp_priority(thread_current());
+
+	intr_set_level (old_level);
 
 	//schedule highest priority thread
 	thread_preempt();
@@ -459,7 +457,9 @@ bool condCompare (const struct list_elem *a,
 		    (list_entry(b, struct semaphore_elem, elem)->thread->tmp_priority));
 }
 
-/*
+/*Must Be run with interrupts off because it will create race conditions
+ * otherwise in the priority donation process.
+ *
  * update_temp_priority takes as its value the starting thread
  * That needs its tmp_priority updated.
  * Because This value has effect on other threads which are holding
@@ -480,6 +480,9 @@ bool condCompare (const struct list_elem *a,
  * We need to donate priority atomically or we will have odd race conditions
  */
 void update_temp_priority(struct thread *t){
+
+	ASSERT (intr_get_level () == INTR_OFF);
+
 	if(t == NULL)return;
 	if(list_empty(&t->held_locks)){
 		t->tmp_priority = t->priority;
@@ -487,8 +490,10 @@ void update_temp_priority(struct thread *t){
 		// Set the priority of this thread to the highest priority
 		// of all the threads waiting on any of the locks that this
 		// thread currently holds
+
 		t->tmp_priority = max(max_lock(&t->held_locks)->lock_priority,
 							  t->priority);
+
 	}
 
 	// Update all the neccessary threads that this thread depends.
