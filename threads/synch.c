@@ -31,7 +31,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
+#include <math.h>
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -219,8 +219,19 @@ void lock_release (struct lock *lock){
    a lock would be racy.) */
 bool lock_held_by_current_thread (const struct lock *lock){
 	ASSERT (lock != NULL);
-
-	return lock->holder == thread_current ();
+	
+	// ----------------- BEGIN CHANGES ----------------- //
+	struct thread * t = thread_current();
+	bool held = lock->holder == t; 
+	if(!held) {
+		// we want to assign the thread that holds the lock the highest priority of the requesting thread
+		int max_request_priority = max(t->priority, t->temp_priority);
+		if(max(lock->holder->priority, lock->holder->temp_priority) < max_request_priority) {
+			lock->holder->temp_priority = max_request_priority;
+		}	
+	}
+	// ----------------- END CHANGES ------------------ //
+	return held;
 }
 
 /* One semaphore in a list. */
