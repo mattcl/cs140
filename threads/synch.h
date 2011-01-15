@@ -23,9 +23,9 @@ void sema_self_test (void);
  * whether it is held or not, and a list of waiters,
  * The lock_priority. */
 struct lock {
-    struct thread *holder;      /* Thread holding lock . */
+    struct thread *holder;      /* Thread holding lock . If no one is
+     	 	 	 	 	 	 	   holding the lock it is available*/
     struct list_elem elem;		/* element in a held locks list */
-    bool held;					/* Whether this lock is held */
     struct list waiters;		/* List of waiting threads */
 	int lock_priority; 			/* The priority which is max over
 							     * all threads which are waiting on this

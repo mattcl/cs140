@@ -438,7 +438,7 @@ void list_unique (struct list *list, struct list *duplicates,
 /* Returns the element in LIST with the largest value according
    to LESS given auxiliary data AUX.  If there is more than one
    maximum, returns the one that appears earlier in the list.  If
-   the list is empty, returns its tail. */
+   the list is empty, returns NULL. */
 struct list_elem * list_max (struct list *list, list_less_func *less, void *aux){
 
 	struct list_elem *max = list_begin (list);
@@ -450,6 +450,8 @@ struct list_elem * list_max (struct list *list, list_less_func *less, void *aux)
 			  max = e;
 			}
 		}
+	} else {
+		return NULL;
 	}
 	return max;
 }
@@ -457,7 +459,7 @@ struct list_elem * list_max (struct list *list, list_less_func *less, void *aux)
 /* Returns the element in LIST with the smallest value according
    to LESS given auxiliary data AUX.  If there is more than one
    minimum, returns the one that appears earlier in the list.  If
-   the list is empty, returns its tail. */
+   the list is empty, returns NULL. */
 struct list_elem *list_min (struct list *list, list_less_func *less, void *aux){
 	struct list_elem *min = list_begin (list);
 	if (min != list_end (list)){
@@ -468,11 +470,25 @@ struct list_elem *list_min (struct list *list, list_less_func *less, void *aux){
 				min = e;
 			}
 		}
+	} else{
+		return NULL;
 	}
 return min;
 }
 
 //---------Begin Changes ----------------//
+
+/*
+ * Takes the list and the less function for that list and returns the
+ * maximum element of the list, removing it from the list. Will return
+ * NULL if the list is empty.
+ */
+struct list_elem *remove_list_max (struct list *list, list_less_func *less){
+	struct list_elem *e = list_max(list, less, NULL);
+	if (e!= NULL) list_remove(e);
+	return e;
+}
+
 void printList(struct list *list){
 	struct list_elem *e;
 	for (e = list_begin(list);e != list_end(list); e = list_next (e)){

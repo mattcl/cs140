@@ -494,8 +494,9 @@ static struct thread *next_thread_to_run (void){
 		//======== Begin Changes =========//
 
 		//Select the item off the queue with the highest priority
-		struct list_elem *e = list_max(&ready_list, &threadCompare, NULL);
-		list_remove(e);
+		struct list_elem *e =
+				remove_list_max(&ready_list, &threadCompare, NULL);
+		ASSERT(e != NULL);
 		return list_entry(e, struct thread,elem);
 		//========= End Changes ========//
 	}
@@ -616,7 +617,8 @@ void thread_check_sleeping(int64_t current_tick) {
 
 /**
  * Puts the thread to sleep, and starts a new thread on the ready
- * list
+ * list Takes as a parameter the wake_time which is the system ticks
+ * Plus the desired number of ticks to sleep
  */
 void thread_sleep(int64_t wake_time) {
 	enum intr_level old_level = intr_disable();
