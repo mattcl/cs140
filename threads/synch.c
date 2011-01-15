@@ -452,7 +452,7 @@ void update_temp_priority(struct thread *t){
 	 * with the first lock that has blocked a nest of locks will run
 	 * first.
 	 */
-	if(t->lockWaitedOn =! NULL){
+	if(t->lockWaitedOn != NULL){
 		update_temp_priority(t->lockWaitedOn->holder);
 	}
 }
