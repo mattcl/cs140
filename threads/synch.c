@@ -32,6 +32,16 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include <math.h>
+
+//========= Begin Changes ======//
+
+bool lockCompare (const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux UNUSED);
+
+//======== End Changes ========//
+
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -160,9 +170,10 @@ static void sema_test_helper (void *sema_) {
    instead of a lock. */
 void lock_init (struct lock *lock){
 	ASSERT (lock != NULL);
-
 	lock->holder = NULL;
-	sema_init (&lock->semaphore, 1);
+	//sema_init (&lock->semaphore, 1);
+	lock->held = 0;
+	list_init (&lock->waiters);
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -178,8 +189,33 @@ void lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
+
+	//========= Begin Changes ========//
+
+	enum intr_level old_level;
+	struct thread *t = thread_current();
+
+	old_level = intr_disable ();
+
+	// On threads that have high priority but need to wait on this lock
+	// the lock priority is given this current priority
+	lock->lock_priority = max(lock->lock_priority, t->priority);
+
+	while (lock->held == 0) {
+		list_push_back (&lock->waiters, &t->elem);
+		update_temp_priority(lock->holder);
+		thread_block ();
+	}
+	intr_set_level (old_level);
+
+	//sema_down (&lock->semaphore);
+	lock->holder = t;
+
+	list_push_back(&t->held_locks, &lock->elem);
+
+	update_temp_priority(t);
+
+	//====== End Changes =========//
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -194,10 +230,28 @@ bool lock_try_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	success = sema_try_down (&lock->semaphore);
-	if (success){
-		lock->holder = thread_current ();
+	//success = sema_try_down (&lock->semaphore);
+
+	enum intr_level old_level;
+
+	old_level = intr_disable ();
+
+	if (lock->held == 1){
+		lock->held = 0;
+		success = true;
+	} else {
+		success = false;
 	}
+
+	intr_set_level (old_level);
+
+	if (success){
+		struct thread *t = thread_current ();
+		lock->holder = t;
+		list_push_back(&t->held_locks, &lock->elem);
+		update_temp_priority(t);
+	}
+
 	return success;
 }
 
@@ -210,8 +264,23 @@ void lock_release (struct lock *lock){
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+	enum intr_level old_level;
+
+	old_level = intr_disable ();
+	if (!list_empty (&lock->waiters)) {
+		// Change here to be able to pop off only the highest priority waiter
+		thread_unblock (list_entry (list_pop_front (&lock->waiters),
+								struct thread, elem));
+	}
+	lock->held = 1;
+	intr_set_level (old_level);
+
+	list_remove(&lock->elem);
 	lock->holder = NULL;
-	sema_up (&lock->semaphore);
+
+	// Revert back to whatever donated priority was acquired
+	// before acquiring this lock
+	update_temp_priority(t);
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -223,6 +292,7 @@ bool lock_held_by_current_thread (const struct lock *lock){
 	// ----------------- BEGIN CHANGES ----------------- //
 	struct thread * t = thread_current();
 	bool held = lock->holder == t; 
+	/*
 	if(!held) {
 		// we want to assign the thread that holds the lock the highest priority of the requesting thread
 		int max_request_priority = max(t->priority, t->tmp_priority);
@@ -233,7 +303,7 @@ bool lock_held_by_current_thread (const struct lock *lock){
 				thread_unblock(lock->holder);
 			}
 		}	
-	}
+	}*/
 	// ----------------- END CHANGES ------------------ //
 	return held;
 }
@@ -321,3 +391,40 @@ void cond_broadcast (struct condition *cond, struct lock *lock){
 		cond_signal (cond, lock);
 	}
 }
+
+//----- Begin Changes ------//
+
+/**
+ * This function takes as parameters list_elem *a, which is a memeber of a
+ * lock and list_elem *b which is a member of a lock and return true
+ * if lock A has priority LESS than that of lock b. Could be more efficient
+ * To get the max priority through a priority queue
+ */
+bool lockCompare (const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux UNUSED){
+		struct lock *l1 = list_entry(a, struct lock, elem);
+		struct lock *l2 = list_entry(b, struct lock, elem);
+		return l1->lock_priority < l2->lock_pritory;
+}
+
+void update_temp_priority(struct thread *t){
+
+	if(list_empty(&t->held_locks)){
+		t->tmp_pritory = t->priority;
+	} else {
+
+		struct lock *l = list_entry(list_max(&t->held_locks, &lockCompare),
+									struct lock,
+									elem);
+
+		//Set the priority of this thread to the highest priority
+		// of all the threads waiting on any of the locks that this
+		// thread currently holds
+		t->tmp_pritory = l->lock_priority;
+
+	}
+}
+
+
+// ------ End Changes ------//

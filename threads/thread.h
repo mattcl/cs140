@@ -102,6 +102,7 @@ struct thread {
 
 	// priority used for priority donation
 	int tmp_pritory;
+	struct list held_locks;
 
 	// ------------- END CHANGES --------------//
     /* Owned by thread.c. */
@@ -147,5 +148,9 @@ int thread_get_load_avg (void);
 // ------------ BEGIN CHANGES -------------- //
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
+bool threadCompare (const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux);
+
 // ------------- END CHANGES --------------- //
 #endif /* threads/thread.h */

@@ -75,9 +75,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-bool threadCompare (const struct list_elem *a,
-					const struct list_elem *b,
-					void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -101,6 +98,7 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
+
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -442,6 +440,13 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	//====== Begin changes=========//
+
+	list_init (&t->held_locks);
+
+	//====== End changes=========//
+
 	list_push_back (&all_list, &t->allelem);
 }
 
@@ -588,7 +593,6 @@ void thread_sleep(int64_t wake_time) {
 	thread_block();
 	intr_set_level(old_level);
 }
-
 
 /**
  * This function takes as parameters list_elem *a, which is a memeber of a
