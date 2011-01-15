@@ -101,9 +101,7 @@ static struct thread *mlfqs_get_next_thread_to_run(struct thread *);
    finishes. */
 void thread_init (void){
 	ASSERT (intr_get_level () == INTR_OFF);
-	printf("Lock before\n");
 	lock_init (&tid_lock);
-	printf("Lock good\n");
 
 	list_init (&ready_list);
 	list_init (&all_list);
@@ -115,13 +113,9 @@ void thread_init (void){
 	/* Set up a thread structure for the running thread.
 	 * We are now running in the current thread. */
 	initial_thread = running_thread ();
-	printf("init Thread\n");
 	init_thread (initial_thread, "main", PRI_DEFAULT);
-	printf("init finished\n");
 	initial_thread->status = THREAD_RUNNING;
-	printf("Tid\n");
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
-	printf("Tid fini\n");
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
