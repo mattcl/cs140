@@ -27,6 +27,8 @@ static struct list ready_list;
 
 // ---------- BEGIN CHANGES --------- //
 static struct list sleep_list;
+
+static struct list mlfqs_queue[64];
 // ----------- END CHANGES ---------- //
 
 /* List of all processes.  Processes are added to this list
@@ -75,6 +77,14 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+// --------------- BEGIN CHANGES ------------------ //
+
+static void mlfqs_insert(struct thread *t);
+static void mlfqs_remove(struct thread *t);
+static void mlfqs_update();
+static struct thread *mlfqs_get_next_thread_to_run(struct thread *);
+
+// ---------------- END CHANGES ------------------- //
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
