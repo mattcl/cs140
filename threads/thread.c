@@ -351,7 +351,7 @@ void thread_set_priority (int new_priority){
 /* Returns the current thread's priority. */
 int thread_get_priority (void){
 	struct thread *t = thread_current ();
-	return max(t->priority, t->tmp_priority);
+	return t->tmp_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -610,12 +610,15 @@ void thread_preempt(void){
 	// yield if the thread we just released had higher priority
 	// or if some other thread is higher
 	// preempt this thread cause we are no longer the highest
-	struct thread *tHigh = list_entry(
-				list_max(&ready_list, &threadCompare, NULL),
-				struct thread, elem);
-
-	if (tHigh->tmp_priority > thread_current()->tmp_priority){
-		thread_yield();
+	printf("Ready_list size %d", list_size(&ready_list));
+	if(!list_empty(&ready_list)){
+		struct thread *tHigh = list_entry(
+					list_max(&ready_list, &threadCompare, NULL),
+					struct thread, elem);
+		printf("cur %d and high %d", thread_current()->tmp_priority, tHigh->tmp_priority);
+		if (tHigh->tmp_priority > thread_current()->tmp_priority){
+			thread_yield();
+		}
 	}
 }
 
