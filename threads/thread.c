@@ -221,6 +221,9 @@ tid_t thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
+
+	// This thread may be the highest so we need to see
+	// if preemption is necessary
 	thread_preempt();
 
 	return tid;
@@ -338,7 +341,11 @@ void thread_foreach (thread_action_func *func, void *aux){
 	}
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
+/* Sets the current thread's priority to NEW_PRIORITY.
+ * Then updates any threads that this thread is
+ * waiting on and if necessary preempts the running thread because
+ * it's priority may be lower or higher now than another different
+ * thread */
 void thread_set_priority (int new_priority){
 	struct thread *t = thread_current ();
 	t->priority = new_priority;
@@ -485,6 +492,8 @@ static struct thread *next_thread_to_run (void){
 	} else {
 
 		//======== Begin Changes =========//
+
+		//Select the item off the queue with the highest priority
 		struct list_elem *e = list_max(&ready_list, &threadCompare, NULL);
 		list_remove(e);
 		return list_entry(e, struct thread,elem);
@@ -580,16 +589,23 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
  * This function takes as a parameter the current tick of the system.
  * It iterates through the list of sleeping threads and checks to see
  * if that threads wake up time is less than or equal to the current tick.
- * If so it will unblock the thread, putting it on the ready list
+ * If so it will unblock the thread, putting it on the ready list.
+ * This should be only run from the interrupt timer!
  */
 void thread_check_sleeping(int64_t current_tick) {
-
+	ASSERT (intr_context ());
 	struct list_elem *e;
 	if(list_begin(&sleep_list) != list_end(&sleep_list)){
 		for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
 			struct thread *t = list_entry(e, struct thread, elem);
 			if(t->wake_time <= current_tick) {
+
+				// This needs to happen first because
+				// thread_unblock moves e to the ready list
+				// leaving the sleep list in an inconsistent state
+				// if e isn't removed first
 				e = list_remove(e);
+
 				thread_unblock(t);
 				continue;
 			}
@@ -598,24 +614,37 @@ void thread_check_sleeping(int64_t current_tick) {
 	}
 }
 
-
+/**
+ * Puts the thread to sleep, and starts a new thread on the ready
+ * list
+ */
 void thread_sleep(int64_t wake_time) {
 	enum intr_level old_level = intr_disable();
+
+	//The time that the thread should wake up
 	thread_current()->wake_time = wake_time;
 	list_push_back(&sleep_list, &thread_current()->elem);
 	thread_block();
 	intr_set_level(old_level);
 }
 
+/*
+ * Determines if this thread is the highest priority thread
+ * to be running and if it isn't it immediately yeilds
+ * This will cause the scheduler to choose the highest priority
+ * thread to run and everything will be great!
+ * Does nothing if this thread is the highest priority
+ */
 void thread_preempt(void){
-	// yield if the thread we just released had higher priority
-	// or if some other thread is higher
-	// preempt this thread cause we are no longer the highest
+	struct thread *cur = running_thread ();
+	ASSERT(is_thread(cur));
+	ASSERT(cur->status != THREAD_RUNNING);
+
 	if(!list_empty(&ready_list)){
 		struct thread *tHigh = list_entry(
 					list_max(&ready_list, &threadCompare, NULL),
 					struct thread, elem);
-		if (tHigh->tmp_priority > thread_current()->tmp_priority){
+		if (tHigh->tmp_priority > cur->tmp_priority){
 			thread_yield();
 		}
 	}
