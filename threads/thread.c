@@ -638,7 +638,7 @@ void thread_sleep(int64_t wake_time) {
 void thread_preempt(void){
 	struct thread *cur = running_thread ();
 	ASSERT(is_thread(cur));
-	ASSERT(cur->status != THREAD_RUNNING);
+	ASSERT(cur->status == THREAD_RUNNING);
 
 	if(!list_empty(&ready_list)){
 		struct thread *tHigh = list_entry(
