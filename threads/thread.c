@@ -169,7 +169,9 @@ void thread_tick (void){
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
-			intr_yield_on_return();
+			if(thread_get_highest_priority() > t->priority) {
+				intr_yield_on_return();
+			}
 		}
 	}
 
@@ -744,7 +746,7 @@ bool threadCompare (const struct list_elem *a,
 static int thread_get_highest_priority() {
 	int i = PRI_MAX;
 	for(; i >= 0; i--) {
-		if(!list_empty(mlfqs_queue[i])) {
+		if(!list_empty(&mlfqs_queue[i])) {
 			return i;
 		}
 	}
