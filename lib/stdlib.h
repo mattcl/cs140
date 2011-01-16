@@ -21,5 +21,6 @@ void *binary_search (const void *key, const void *array, size_t cnt,
 
 int max (int a, int b);
 
+int min (int a, int b);
 
 #endif /* lib/stdlib.h */
