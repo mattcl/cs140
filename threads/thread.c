@@ -748,7 +748,7 @@ static void mlfqs_insert(struct thread *t, bool reset) {
  * removes the thread from the mlfqs_queue
  */
 static void mlfqs_remove(struct thread *t) {
-	list_remove(&t->elem);
+	list_remove(&t->mlfqs_elem);
 }
 
 /**
