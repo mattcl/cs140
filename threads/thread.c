@@ -15,7 +15,6 @@
 #include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
-#include "lib/fixed-point.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
