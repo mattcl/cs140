@@ -78,6 +78,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
+
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t, bool reset);
 static void mlfqs_remove(struct thread *t);
@@ -85,7 +86,6 @@ static bool mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static int mlfqs_compute_allotted_time(int priority);
 static struct thread *mlfqs_get_next_thread_to_run(void);
-
 
 // ---------------- END CHANGES ------------------- //
 
@@ -163,6 +163,7 @@ void thread_tick (void){
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
+			intr_yield_on_return();
 		}
 	}
 
@@ -774,7 +775,7 @@ static bool mlfqs_check_thread(struct thread *t) {
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	mlfqs_remove(t);
 	t->priority = max(min(new_priority, PRI_MAX), PRI_MIN);
-	mlfqs_insert(t, true);
+	//mlfqs_insert(t, true);
 }
 
 /**
