@@ -721,6 +721,10 @@ void thread_preempt(void){
 	intr_set_level (old_level);
 }
 
+void recalculate_loads (void){
+
+}
+
 /**
  * This function takes as parameters list_elem *a, which is a memeber of a
  * thread and list_elem *b which is a member of a thread and return true
@@ -824,4 +828,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 	}
 	return idle_thread;
 }
+
+
+
 // ---------------- END CHANGES ---------------- //
