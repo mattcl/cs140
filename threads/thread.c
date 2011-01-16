@@ -29,6 +29,8 @@ static struct list ready_list;
 static struct list sleep_list;
 
 static struct list mlfqs_queue[64];
+
+static FIXED_POINT load_avg;
 // ----------- END CHANGES ---------- //
 
 /* List of all processes.  Processes are added to this list
@@ -560,6 +562,9 @@ static struct thread *next_thread_to_run (void){
 void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
 
+	/* prev and cur can't be the same and dying or we will
+	 * reach Non-reachable code as a thread that is dying
+	 * now is running and will try to resume execution*/
 	ASSERT (prev != cur && cur ->status != THREAD_DYING);
 
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -690,8 +695,6 @@ void thread_preempt(void){
 	enum intr_level old_level = intr_disable();
 
 
-
-
 	if (!thread_mlfqs) {
 		if(!list_empty(&ready_list)){
 			struct thread *tHigh = list_entry(
@@ -720,8 +723,6 @@ bool threadCompare (const struct list_elem *a,
 		return ((list_entry(a, struct thread, elem)->tmp_priority) <
 				(list_entry(b, struct thread, elem)->tmp_priority));
 }
-
-
 
 /**
  * init the mlfqs queue
