@@ -745,7 +745,7 @@ bool threadCompare (const struct list_elem *a,
 static int thread_get_highest_priority() {
 	int i = PRI_MAX;
 	for(; i >= 0; i--) {
-		if(!list_empty(mlfqs_queue[i])) {
+		if(!list_empty(&mlfqs_queue[i])) {
 			return i;
 		}
 	}
