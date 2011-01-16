@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "lib/fixed-point.h"
@@ -84,7 +85,7 @@ static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
 
-static int thread_get_highest_priority();   
+static int thread_get_highest_priority(void);
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t, bool reset);
 static void mlfqs_remove(struct thread *t);
@@ -169,7 +170,9 @@ void thread_tick (void){
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
-			intr_yield_on_return();
+			if(thread_get_highest_priority() > t->priority) {
+				intr_yield_on_return();
+			}
 		}
 	}
 
@@ -713,7 +716,7 @@ void thread_preempt(void){
 				thread_yield();
 			}
 		}
-	} else if(thread_get_highest_priority() > t->priority) {
+	} else if(thread_get_highest_priority() > cur->priority) {
 		thread_yield();
 	}
 
@@ -721,6 +724,10 @@ void thread_preempt(void){
 }
 
 void recalculate_loads (void){
+
+}
+
+void recalculate_priorities (void){
 
 }
 
@@ -741,10 +748,10 @@ bool threadCompare (const struct list_elem *a,
 /**
  * returns the highest priority in the queue
  */
-static int thread_get_highest_priority() {
+static int thread_get_highest_priority(void) {
 	int i = PRI_MAX;
 	for(; i >= 0; i--) {
-		if(!list_empty(mlfqs_queue[i])) {
+		if(!list_empty(&mlfqs_queue[i])) {
 			return i;
 		}
 	}
@@ -754,7 +761,7 @@ static int thread_get_highest_priority() {
 /**
  * init the mlfqs queue
  */
-static void mlfqs_init() {
+static void mlfqs_init(void) {
 	int i = 0;
 	for(; i < PRI_MAX+1; i++) {
 		list_init(&mlfqs_queue[i]);
