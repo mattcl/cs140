@@ -29,6 +29,10 @@ static struct list ready_list;
 static struct list sleep_list;
 
 static struct list mlfqs_queue[64];
+
+/*Variable to track the load avg of the system*/
+static fixed_point load_avg;
+
 // ----------- END CHANGES ---------- //
 
 /* List of all processes.  Processes are added to this list
@@ -79,6 +83,7 @@ static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
 
+static int thread_get_highest_priority();   
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t, bool reset);
 static void mlfqs_remove(struct thread *t);
@@ -163,7 +168,9 @@ void thread_tick (void){
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
-			intr_yield_on_return();
+			if(thread_get_highest_priority() > t->priority) {
+				intr_yield_on_return();
+			}
 		}
 	}
 
@@ -394,19 +401,24 @@ void thread_set_priority (int new_priority){
 /* Returns the current thread's priority. */
 int thread_get_priority (void){
 	struct thread *t = thread_current ();
+	if(thread_mlfqs) {
+		return t->priority;
+	}
 	return t->tmp_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
-void thread_set_nice (int nice UNUSED){
-	/* Not yet implemented. */
+void thread_set_nice (int nice){
+	struct thread *t = thread_current ();
+	t->nice = nice;
+
+	// recompute priority	
+	thread_set_priority(max(min(t->priority - nice, PRI_MAX), PRI_MIN));
 }
 
 /* Returns the current thread's nice value. */
 int thread_get_nice (void){
-	/* Not yet implemented. */
-	/*Nice threads are always better*/
-	return 0;
+	return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -561,6 +573,9 @@ static struct thread *next_thread_to_run (void){
 void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
 
+	/* prev and cur can't be the same and dying or we will
+	 * reach Non-reachable code as a thread that is dying
+	 * now is running and will try to resume execution*/
 	ASSERT (prev != cur && cur ->status != THREAD_DYING);
 
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -690,9 +705,6 @@ void thread_preempt(void){
 	// race conditions
 	enum intr_level old_level = intr_disable();
 
-
-
-
 	if (!thread_mlfqs) {
 		if(!list_empty(&ready_list)){
 			struct thread *tHigh = list_entry(
@@ -702,11 +714,15 @@ void thread_preempt(void){
 				thread_yield();
 			}
 		}
-	} else {
+	} else if(thread_get_highest_priority() > t->priority) {
 		thread_yield();
 	}
 
 	intr_set_level (old_level);
+}
+
+void recalculate_loads (void){
+
 }
 
 /**
@@ -723,6 +739,18 @@ bool threadCompare (const struct list_elem *a,
 }
 
 
+/**
+ * returns the highest priority in the queue
+ */
+static int thread_get_highest_priority() {
+	int i = PRI_MAX;
+	for(; i >= 0; i--) {
+		if(!list_empty(mlfqs_queue[i])) {
+			return i;
+		}
+	}
+	return 0; // we should only get here when there is one thread
+}
 
 /**
  * init the mlfqs queue
@@ -800,4 +828,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 	}
 	return idle_thread;
 }
+
+
+
 // ---------------- END CHANGES ---------------- //

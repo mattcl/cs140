@@ -107,6 +107,9 @@ struct thread {
 
 	int64_t allocated_ticks;     /* Number of ticks allocated for mlfqs */
 	//struct list_elem mlfqs_elem; /* element for the mlfqs */
+
+	int nice ;                   /* Nice value */
+
 	// ------------- END CHANGES --------------//
 
 	/* Owned by thread.c. */
@@ -152,6 +155,9 @@ int thread_get_load_avg (void);
 // ------------ BEGIN CHANGES -------------- //
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
+
+void recalculate_loads (void);
+
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
