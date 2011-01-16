@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -712,7 +713,7 @@ void thread_preempt(void){
 				thread_yield();
 			}
 		}
-	} else if(thread_get_highest_priority() > t->priority) {
+	} else if(thread_get_highest_priority() > cur->priority) {
 		thread_yield();
 	}
 
