@@ -108,7 +108,7 @@ struct thread {
 	int64_t allocated_ticks;     /* Number of ticks allocated for mlfqs */
 	//struct list_elem mlfqs_elem; /* element for the mlfqs */
 
-	int nice                     /* Nice value */
+	int nice;                     /* Nice value */
 	// ------------- END CHANGES --------------//
 
 	/* Owned by thread.c. */
