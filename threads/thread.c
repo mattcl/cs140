@@ -81,8 +81,11 @@ static tid_t allocate_tid (void);
 
 static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
-static void mlfqs_update();
-static struct thread *mlfqs_get_next_thread_to_run(struct thread *);
+static void mlfqs_check_thread(struct thread *t);
+static void mlfqs_switch_queue(struct thread *t, int new_priority);
+static int mlfqs_compute_allotted_time(int priority);
+static struct thread *mlfqs_get_next_thread_to_run(struct thread *t);
+
 
 // ---------------- END CHANGES ------------------- //
 
@@ -151,6 +154,18 @@ void thread_tick (void){
 	else{
 		kernel_ticks++;
 	}
+
+	// ------------ BEGIN CHANGES ------------- //
+	
+	if(thread_mlfqs) {
+		t->allotted_time--;
+		if(mlfqs_check_thread(t)) {
+			// do something when thread was switched
+			// to a different priority
+		}
+	}
+
+	// ------------- END CHANGES -------------- //
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE){
@@ -684,4 +699,66 @@ bool threadCompare (const struct list_elem *a,
 				(list_entry(b, struct thread, elem)->tmp_priority));
 }
 
+/**
+ * inserts the thread into the mlfqs queue based on its priority
+ * also sets the allotted time to the specified thread.
+ */
+static void mlfqs_insert(struct thread *t) {
+	list_push_back(&mlfqs_queue[t->priority], t->mlfqs_elem);
+	t->allotted_time = mlfqs_compute_allotted_time(t->priority);
+}
+
+/**
+ * removes the thread from the mlfqs_queue
+ */
+static void mlfqs_remove(struct thread *t) {
+	list_remove(&mlfqs_queue[t->priority], t);	
+}
+
+/**
+ * switches the thread to a lower priority if it has exceeded
+ * its allotted time
+ * returns true if the thread was switched
+ */
+static bool mlfqs_check_thread(struct thread *t) {
+	if(t->allotted_time <= 0) {
+		mlfqs_switch_queue(t, t->priority - 1);
+		return 1;
+	}
+	return 0;
+}
+
+/**
+ * switched the indicated thread to the mlfqs queue for the
+ * new_priority. Limits the min priority to PRI_MIN and the
+ * maximum priority to PRI_MAX.
+ */
+static void mlfqs_switch_queue(struct thread *t, int new_priority) {
+	mlfqs_remove(t);
+	t->priority = max(min(new_priority, PRI_MAX), PRI_MIN);
+	mlfqs_insert(t);
+}
+
+/**
+ * computes the allocated time for a thread with the given
+ * priority
+ */
+static int mlfqs_compute_allotted_time(int priority) {
+	return PRI_MAX - priority;
+}
+
+/**
+ * returns the next thread to be scheduled as determined
+ * by mlfqs
+ */
+static struct thread *mlfqs_get_next_thread_to_run(struct thread *t) {
+	int i = PRI_MAX;
+	for(; i >= 0; i--) {
+		if(!list_empty(&mlfqs_queue[i])) {
+			struct list_elem *e = list_pop_front(&mlfqs_queue[i]);
+			return list_entry(e, struct thread, mlfqs_elem);
+		}
+	}
+	return NULL;
+}
 // ---------------- END CHANGES ---------------- //

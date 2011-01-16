@@ -652,6 +652,3 @@ print_human_readable_size (uint64_t size)
     }
 }
 
-int max(int a, int b) {
-	return a > b ? a : b;
-}

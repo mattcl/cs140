@@ -19,4 +19,7 @@ void *binary_search (const void *key, const void *array, size_t cnt,
                      int (*compare) (const void *, const void *, void *aux),
                      void *aux);
 
+int max (int a, int b);
+
+
 #endif /* lib/stdlib.h */
