@@ -30,7 +30,9 @@ static struct list sleep_list;
 
 static struct list mlfqs_queue[64];
 
+/*Variable to track the load avg of the system*/
 static FIXED_POINT load_avg;
+
 // ----------- END CHANGES ---------- //
 
 /* List of all processes.  Processes are added to this list
