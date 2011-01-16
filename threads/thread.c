@@ -78,7 +78,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
-
+static void mlfqs_init();
 static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
 static void mlfqs_check_thread(struct thread *t);
@@ -111,6 +111,7 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
+	mlfqs_init();
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -697,6 +698,16 @@ bool threadCompare (const struct list_elem *a,
 
 		return ((list_entry(a, struct thread, elem)->tmp_priority) <
 				(list_entry(b, struct thread, elem)->tmp_priority));
+}
+
+/**
+ * init the mlfqs queue
+ */
+static void mlfqs_init() {
+	int i = 0;
+	for(; i < PRI_MAX+1; i++) {
+		list_init(&mlfqs_queue[i]);
+	}
 }
 
 /**
