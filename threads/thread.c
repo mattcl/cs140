@@ -157,7 +157,13 @@ void thread_tick (void){
 
 	// ------------ BEGIN CHANGES ------------- //
 	
-	
+	if(thread_mlfqs) {
+		t->allotted_time--;
+		if(mlfqs_check_thread(t)) {
+			// do something when thread was switched
+			// to a different priority
+		}
+	}
 
 	// ------------- END CHANGES -------------- //
 
@@ -695,9 +701,11 @@ bool threadCompare (const struct list_elem *a,
 
 /**
  * inserts the thread into the mlfqs queue based on its priority
+ * also sets the allotted time to the specified thread.
  */
 static void mlfqs_insert(struct thread *t) {
 	list_push_back(&mlfqs_queue[t->priority], t->mlfqs_elem);
+	t->allotted_time = mlfqs_compute_allotted_time(t->priority);
 }
 
 /**
