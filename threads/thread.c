@@ -732,10 +732,9 @@ bool threadCompare (const struct list_elem *a,
 				(list_entry(b, struct thread, elem)->tmp_priority));
 }
 
-<<<<<<< HEAD
-=======
+
 /**
- * returns the highest priority in the queueu
+ * returns the highest priority in the queue
  */
 static int thread_get_highest_priority() {
 	int i = PRI_MAX;
@@ -747,7 +746,6 @@ static int thread_get_highest_priority() {
 	return 0; // we should only get here when there is one thread
 }
 
->>>>>>> 8e81dae6a70609bfc4dd7551aba672a9ccd05148
 /**
  * init the mlfqs queue
  */
