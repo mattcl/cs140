@@ -78,8 +78,13 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
+<<<<<<< HEAD
 
 static void mlfqs_insert(struct thread *t, bool reset);
+=======
+static void mlfqs_init();
+static void mlfqs_insert(struct thread *t);
+>>>>>>> d6566ba5598917aced1d5da8138c33210dab3bdf
 static void mlfqs_remove(struct thread *t);
 static void mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
@@ -111,6 +116,7 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
+	mlfqs_init();
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -719,6 +725,16 @@ bool threadCompare (const struct list_elem *a,
 }
 
 
+
+/**
+ * init the mlfqs queue
+ */
+static void mlfqs_init() {
+	int i = 0;
+	for(; i < PRI_MAX+1; i++) {
+		list_init(&mlfqs_queue[i]);
+	}
+}
 
 /**
  * inserts the thread into the mlfqs queue based on its priority
