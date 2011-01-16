@@ -699,11 +699,15 @@ bool threadCompare (const struct list_elem *a,
 				(list_entry(b, struct thread, elem)->tmp_priority));
 }
 
+
+
 /**
  * inserts the thread into the mlfqs queue based on its priority
  * also sets the allotted time to the specified thread.
  */
 static void mlfqs_insert(struct thread *t) {
+	ASSERT(is_thread(t));
+	ASSERT(t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 	list_push_back(&mlfqs_queue[t->priority], t->mlfqs_elem);
 	t->allotted_time = mlfqs_compute_allotted_time(t->priority);
 }
