@@ -86,8 +86,9 @@ static tid_t allocate_tid (void);
 
 static int thread_get_highest_priority(void);
 static void mlfqs_init(void);
-static void mlfqs_insert(struct thread *t, bool reset);
+static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
+static void mlfqs_update_queue(void);
 static bool mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static int mlfqs_compute_allotted_time(int priority);
@@ -162,10 +163,11 @@ void thread_tick (void){
 		kernel_ticks++;
 	}
 
+
 	// ------------ BEGIN CHANGES ------------- //
 	
+	
 	if((t != idle_thread) && thread_mlfqs) {
-		t->allocated_ticks--;
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
@@ -291,7 +293,7 @@ void thread_unblock (struct thread *t){
 	if(!thread_mlfqs){
 		list_push_back (&ready_list, &t->elem);
 	} else {
-		mlfqs_insert(t, true);
+		mlfqs_insert(t);
 	}
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
@@ -357,7 +359,7 @@ void thread_yield (void){
 		if (!thread_mlfqs){
 			list_push_back (&ready_list, &cur->elem);
 		} else {
-			mlfqs_insert(cur, false);
+			mlfqs_insert(cur);
 		}
 	}
 
@@ -771,13 +773,10 @@ static void mlfqs_init(void) {
  * inserts the thread into the mlfqs queue based on its priority
  * also sets the allotted time to the specified thread.
  */
-static void mlfqs_insert(struct thread *t, bool reset) {
+static void mlfqs_insert(struct thread *t) {
 	ASSERT(is_thread(t));
 	ASSERT(t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 	list_push_back(&mlfqs_queue[t->priority], &t->elem);
-	if(reset) {
-		t->allocated_ticks = mlfqs_compute_allotted_time(t->priority);
-	}
 }
 
 /**
@@ -793,7 +792,9 @@ static void mlfqs_remove(struct thread *t) {
  * returns true if the thread was switched
  */
 static bool mlfqs_check_thread(struct thread *t) {
-	if(t->allocated_ticks <= 0) {
+	int cur_priority = t->priority;
+	recalculate_priority(t);
+	if(cur_priority != t->priority) {
 		mlfqs_switch_queue(t, (t->priority - 1));
 		return 1;
 	}
@@ -808,7 +809,6 @@ static bool mlfqs_check_thread(struct thread *t) {
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	mlfqs_remove(t);
 	t->priority = max(min(new_priority, PRI_MAX), PRI_MIN);
-	//mlfqs_insert(t, true);
 }
 
 /**

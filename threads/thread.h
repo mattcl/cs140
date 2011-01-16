@@ -105,7 +105,6 @@ struct thread {
 	struct list held_locks;		 /* Locks that this thread currently owns*/
 	struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
 
-	int64_t allocated_ticks;     /* Number of ticks allocated for mlfqs */
 	//struct list_elem mlfqs_elem; /* element for the mlfqs */
 
 	int nice ;                   /* Nice value */
