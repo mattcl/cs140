@@ -775,7 +775,7 @@ static bool mlfqs_check_thread(struct thread *t) {
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	mlfqs_remove(t);
 	t->priority = max(min(new_priority, PRI_MAX), PRI_MIN);
-	mlfqs_insert(t, true);
+	//mlfqs_insert(t, true);
 }
 
 /**
