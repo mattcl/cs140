@@ -210,3 +210,7 @@ binary_search (const void *key, const void *array, size_t cnt, size_t size,
 int max(int a, int b) {
 	return a > b ? a : b;
 }
+
+int min (int a, int b){
+	return a < b ? a : b;
+}
