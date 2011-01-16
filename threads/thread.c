@@ -343,12 +343,12 @@ void thread_yield (void){
 
 	old_level = intr_disable ();
 
-	if (!thread_mlfqs){
-		if (cur != idle_thread){
+	if (cur != idle_thread){
+		if (!thread_mlfqs){
 			list_push_back (&ready_list, &cur->elem);
+		} else {
+			mlfqs_insert(cur, false);
 		}
-	} else {
-		mlfqs_insert(cur, false);
 	}
 
 	cur->status = THREAD_READY;
@@ -686,18 +686,20 @@ void thread_preempt(void){
 	// race conditions
 	enum intr_level old_level = intr_disable();
 
-	if (thread_mlfqs) {
-		thread_yield();
-		return;
-	}
 
-	if(!list_empty(&ready_list)){
-		struct thread *tHigh = list_entry(
+
+
+	if (!thread_mlfqs) {
+		if(!list_empty(&ready_list)){
+			struct thread *tHigh = list_entry(
 					list_max(&ready_list, &threadCompare, NULL),
 					struct thread, elem);
-		if (tHigh->tmp_priority > cur->tmp_priority){
-			thread_yield();
+			if (tHigh->tmp_priority > cur->tmp_priority){
+				thread_yield();
+			}
 		}
+	} else {
+		thread_yield();
 	}
 
 	intr_set_level (old_level);
