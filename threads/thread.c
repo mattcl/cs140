@@ -738,7 +738,7 @@ static void mlfqs_init() {
 static void mlfqs_insert(struct thread *t, bool reset) {
 	ASSERT(is_thread(t));
 	ASSERT(t->priority >= PRI_MIN && t->priority <= PRI_MAX);
-	list_push_back(&mlfqs_queue[t->priority], &t->mlfqs_elem);
+	list_push_back(&mlfqs_queue[t->priority], &t->elem);
 	if(reset) {
 		t->allocated_ticks = mlfqs_compute_allotted_time(t->priority);
 	}
@@ -748,7 +748,7 @@ static void mlfqs_insert(struct thread *t, bool reset) {
  * removes the thread from the mlfqs_queue
  */
 static void mlfqs_remove(struct thread *t) {
-	list_remove(&t->mlfqs_elem);
+	list_remove(&t->elem);
 }
 
 /**
@@ -792,7 +792,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 	for(; i >= 0; i--) {
 		if(!list_empty(&mlfqs_queue[i])) {
 			struct list_elem *e = list_pop_front(&mlfqs_queue[i]);
-			return list_entry(e, struct thread, mlfqs_elem);
+			return list_entry(e, struct thread, elem);
 		}
 	}
 	return idle_thread;
