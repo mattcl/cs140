@@ -560,6 +560,8 @@ static struct thread *next_thread_to_run (void){
 void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
 
+	ASSERT (prev != cur && cur ->status != THREAD_DYING);
+
 	ASSERT (intr_get_level () == INTR_OFF);
 
 	/* Mark us as running. */
