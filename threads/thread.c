@@ -78,13 +78,13 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
-
-static void mlfqs_insert(struct thread *t);
+static void mlfqs_init();
+static void mlfqs_insert(struct thread *t, bool reset);
 static void mlfqs_remove(struct thread *t);
 static void mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static int mlfqs_compute_allotted_time(int priority);
-static struct thread *mlfqs_get_next_thread_to_run(struct thread *t);
+static struct thread *mlfqs_get_next_thread_to_run(void);
 
 
 // ---------------- END CHANGES ------------------- //
@@ -111,6 +111,7 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
+	mlfqs_init();
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -197,6 +198,8 @@ void thread_print_stats (void){
 tid_t thread_create (const char *name, int priority,
                      thread_func *function, void *aux){
 
+	if (thread_mlfqs) priority = PRI_MAX;
+
 	struct thread *t;
 	struct kernel_thread_frame *kf;
 	struct switch_entry_frame *ef;
@@ -257,7 +260,6 @@ tid_t thread_create (const char *name, int priority,
 void thread_block (void){
 	ASSERT (!intr_context ());
 	ASSERT (intr_get_level () == INTR_OFF);
-
 	thread_current ()->status = THREAD_BLOCKED;
 	schedule ();
 }
@@ -277,7 +279,11 @@ void thread_unblock (struct thread *t){
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	if(!thread_mlfqs){
+		list_push_back (&ready_list, &t->elem);
+	} else {
+		mlfqs_insert(t, true);
+	}
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -339,7 +345,11 @@ void thread_yield (void){
 	old_level = intr_disable ();
 
 	if (cur != idle_thread){
-		list_push_back (&ready_list, &cur->elem);
+		if (!thread_mlfqs){
+			list_push_back (&ready_list, &cur->elem);
+		} else {
+			mlfqs_insert(cur, false);
+		}
 	}
 
 	cur->status = THREAD_READY;
@@ -513,18 +523,21 @@ static void *alloc_frame (struct thread *t, size_t size){
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
 static struct thread *next_thread_to_run (void){
-	if (list_empty (&ready_list)){
-		return idle_thread;
+	if (!thread_mlfqs){
+		if (list_empty (&ready_list)){
+			return idle_thread;
+		} else {
+			//======== Begin Changes =========//
+
+			//Select the item off the queue with the highest priority
+			struct list_elem *e =
+					remove_list_max(&ready_list, &threadCompare);
+			ASSERT(e != NULL);
+			return list_entry(e, struct thread,elem);
+			//========= End Changes ========//
+		}
 	} else {
-
-		//======== Begin Changes =========//
-
-		//Select the item off the queue with the highest priority
-		struct list_elem *e =
-				remove_list_max(&ready_list, &threadCompare);
-		ASSERT(e != NULL);
-		return list_entry(e, struct thread,elem);
-		//========= End Changes ========//
+		return mlfqs_get_next_thread_to_run();
 	}
 }
 
@@ -674,13 +687,20 @@ void thread_preempt(void){
 	// race conditions
 	enum intr_level old_level = intr_disable();
 
-	if(!list_empty(&ready_list)){
-		struct thread *tHigh = list_entry(
+
+
+
+	if (!thread_mlfqs) {
+		if(!list_empty(&ready_list)){
+			struct thread *tHigh = list_entry(
 					list_max(&ready_list, &threadCompare, NULL),
 					struct thread, elem);
-		if (tHigh->tmp_priority > cur->tmp_priority){
-			thread_yield();
+			if (tHigh->tmp_priority > cur->tmp_priority){
+				thread_yield();
+			}
 		}
+	} else {
+		thread_yield();
 	}
 
 	intr_set_level (old_level);
@@ -699,11 +719,25 @@ bool threadCompare (const struct list_elem *a,
 				(list_entry(b, struct thread, elem)->tmp_priority));
 }
 
+
+
+/**
+ * init the mlfqs queue
+ */
+static void mlfqs_init() {
+	int i = 0;
+	for(; i < PRI_MAX+1; i++) {
+		list_init(&mlfqs_queue[i]);
+	}
+}
+
 /**
  * inserts the thread into the mlfqs queue based on its priority
  * also sets the allotted time to the specified thread.
  */
-static void mlfqs_insert(struct thread *t) {
+static void mlfqs_insert(struct thread *t, bool reset) {
+	ASSERT(is_thread(t));
+	ASSERT(t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 	list_push_back(&mlfqs_queue[t->priority], t->mlfqs_elem);
 	t->allotted_time = mlfqs_compute_allotted_time(t->priority);
 }
@@ -751,7 +785,7 @@ static int mlfqs_compute_allotted_time(int priority) {
  * returns the next thread to be scheduled as determined
  * by mlfqs
  */
-static struct thread *mlfqs_get_next_thread_to_run(struct thread *t) {
+static struct thread *mlfqs_get_next_thread_to_run(void) {
 	int i = PRI_MAX;
 	for(; i >= 0; i--) {
 		if(!list_empty(&mlfqs_queue[i])) {
@@ -759,6 +793,6 @@ static struct thread *mlfqs_get_next_thread_to_run(struct thread *t) {
 			return list_entry(e, struct thread, mlfqs_elem);
 		}
 	}
-	return NULL;
+	return idle_thread;
 }
 // ---------------- END CHANGES ---------------- //

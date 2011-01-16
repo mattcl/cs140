@@ -13,4 +13,6 @@
 
 #define INT_FIELD_SIZE 17
 #define FRAC_FIELD_SIZE 14
+
+#define CONVERSION_VAL (pow(INT_FIELD_SIZE, 2)) 
 #endif /* fixed-point.h */
