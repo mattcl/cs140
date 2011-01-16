@@ -158,7 +158,7 @@ void thread_tick (void){
 
 	// ------------ BEGIN CHANGES ------------- //
 	
-	if(thread_mlfqs) {
+	if((t != idle_thread) && thread_mlfqs) {
 		t->allocated_ticks--;
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
