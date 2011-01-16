@@ -163,7 +163,7 @@ void thread_tick (void){
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
-			thread_yield();
+			intr_yield_on_return();
 		}
 	}
 
