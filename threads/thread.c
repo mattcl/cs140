@@ -78,13 +78,8 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
-<<<<<<< HEAD
-
-static void mlfqs_insert(struct thread *t, bool reset);
-=======
 static void mlfqs_init();
-static void mlfqs_insert(struct thread *t);
->>>>>>> d6566ba5598917aced1d5da8138c33210dab3bdf
+static void mlfqs_insert(struct thread *t, bool reset);
 static void mlfqs_remove(struct thread *t);
 static void mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
