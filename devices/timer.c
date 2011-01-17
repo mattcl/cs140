@@ -82,11 +82,8 @@ void timer_sleep (int64_t ticks){
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-
 	// ---------- BEGIN CHANGES -----------//
-
 	thread_sleep(start + ticks);
-	
 	// ------------ END CHANGES -----------//
 }
 
@@ -161,6 +158,11 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 			recalculate_loads();
 			recalculate_all_recent_cpu();
 		}
+
+		if(mlfqs_get_highest_priority() > thread_current()->priority) {
+			intr_yield_on_return();
+		}
+
 	}
 }
 
