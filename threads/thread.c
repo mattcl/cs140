@@ -454,9 +454,9 @@ int thread_get_load_avg (void){
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
-	printf("recent %d mult 100 %d\n", running_thread()->recent_cpu, itof(100));
+
 	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	printf("fixed point recent cpu times 100 = %d\n", fpCPU);
+	printf("%d(recent_cpu) x %d(100) = %d\n", running_thread()->recent_cpu, itof(100), fpCPU);
 	printf("FtoI of that %d\n", ftoi(fpCPU));
 	//return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
 	return ftoi(fpCPU);
