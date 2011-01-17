@@ -756,7 +756,7 @@ int count_ready_threads (){
 
 void count_thread_if_ready(struct thread *t, void *count){
 	if(t->status == THREAD_RUNNING || t->status == THREAD_READY){
-		*((int*)count) ++;
+		(*((int*)count)) ++;
 	}
 }
 
