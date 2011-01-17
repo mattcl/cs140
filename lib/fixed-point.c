@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include "fixed-point.h"
 
 inline fixed_point itof(int n){
   assert(n <= MAX_INT_CONV_VAL);
@@ -34,7 +35,7 @@ inline fixed_point fp_int_sub(fixed_point f, int n){
 }
 
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){
-  return (((int64_t f1) * f2) / CONVERSION_VAL);
+  return ((((int64_t) f1) * f2) / CONVERSION_VAL);
 }
 
 inline fixed_point fp_int_mult(fixed_point f, int n){
@@ -42,7 +43,7 @@ inline fixed_point fp_int_mult(fixed_point f, int n){
 }
 
 inline fixed_point fp_div(fixed_point f1, fixed_point f2){
-  return (((int64_t f1) * (CONVERSION_VAL)) / f2);
+  return ((((int64_t) f1) * (CONVERSION_VAL)) / f2);
 }
 
 inline fixed_point fp_int_div(fixed_point f, int n){
