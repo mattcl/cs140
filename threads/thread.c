@@ -100,10 +100,8 @@ void recalculate_recent_cpu (struct thread *t, void *none UNUSED);
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
-static void mlfqs_update_queue(void);
 static bool mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
-static int mlfqs_compute_allotted_time(int priority);
 static struct thread *mlfqs_get_next_thread_to_run(void);
 
 // ---------------- END CHANGES ------------------- //
@@ -748,6 +746,7 @@ void recalculate_loads (void){
 int count_ready_threads (){
 	int count = 0;
 	thread_foreach(&count_thread_if_ready, &count);
+	return count;
 }
 
 void count_thread_if_ready(struct thread *t, void *count){
@@ -854,7 +853,7 @@ static void mlfqs_remove(struct thread *t) {
  */
 static bool mlfqs_check_thread(struct thread *t) {
 	int cur_priority = t->priority;
-	recalculate_priority(t, 1);
+	recalculate_priority(t, NO_SWITCH);
 	if(cur_priority != t->priority) {
 		mlfqs_switch_queue(t, (t->priority));
 		return 1;
@@ -871,14 +870,6 @@ static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	if (new_priority == t->priority) return;
 	mlfqs_remove(t);
 	t->priority = new_priority;
-}
-
-/**
- * computes the allocated time for a thread with the given
- * priority
- */
-static int mlfqs_compute_allotted_time(int priority) {
-	return PRI_MAX - priority;
 }
 
 /**

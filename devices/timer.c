@@ -151,10 +151,12 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 	ticks++;
 	thread_tick ();
 	thread_check_sleeping(ticks);
-	if (ticks % 4 == 0 && ticks %TIMER_FREQ != 0){
-		recalculate_priorities();
-	} else if (ticks % TIMER_FREQ == 0){
-		recalculate_loads();
+	if (thread_mlfqs){
+		if (ticks % 4 == 0 && ticks %TIMER_FREQ != 0){
+			recalculate_priorities();
+		} else if (ticks % TIMER_FREQ == 0){
+			recalculate_loads();
+		}
 	}
 }
 
