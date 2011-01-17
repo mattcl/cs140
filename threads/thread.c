@@ -622,7 +622,6 @@ void thread_schedule_tail (struct thread *prev){
 	 * reach Non-reachable code as a thread that is dying
 	 * now is running and will try to resume execution*/
 	ASSERT (prev != cur && cur ->status != THREAD_DYING);
-
 	ASSERT (intr_get_level () == INTR_OFF);
 
 	/* Mark us as running. */
@@ -850,8 +849,15 @@ void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	if (!thread_mlfqs){
 		return ((list_entry(a, struct thread, elem)->tmp_priority) <
 				(list_entry(b, struct thread, elem)->tmp_priority));
+	} else {
+		return ((list_entry(a, struct thread, elem)->priority) <
+				(list_entry(b, struct thread, elem)->priority));
+	}
 }
 
 
