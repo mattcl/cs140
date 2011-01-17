@@ -31,13 +31,14 @@ inline fixed_point fp_div(fixed_point f1, fixed_point f2);
 inline fixed_point fp_int_div(fixed_point f, int n);
 
 
-#define INT_TO_FP(n) ((n) * (CONVERSION_VAL))
-#define FP_TO_INT(f) ((f) / (CONVERSION_VAL))
+
+#define itof(n) ((n) * (CONVERSION_VAL))
+#define ftoi(f) ((n) / (CONVERSION_VAL))
 #define FP_ADD(f1, f2) ((f1)+(f2))
-#define FP_SUBTRACT(f1, f2) ((f1) -(f2))
-#define FP_INT_ADD(f,n) ((f) + (INT_TO_FP(n)))
-#define FP_INT_SUBTRACT(f, n) ((f) - (INT_TO_FP(n)))
-#define FP_MULT(f1,f2) (((int64_t (f1)) * (f2))/CONVERSTION_VAL)
+#define FP_SUB(f1, f2) ((f1) -(f2))
+#define FP_INT_ADD(f,n) ((f) + (itof(n)))
+#define FP_INT_SUBTRACT(f, n) ((f) - (itof(n)))
+#define FP_MULT(f1,f2) (((int64_t (f1)) * (f2))/CONVERSION_VAL)
 #define FP_INT_MULT(f,n) ((f) * (n))
 #define FP_DIV(f1, f2) (((int64_t (f1)) * (CONVERSION_VAL)) / (f2))
 #define FP_INT_DIV(f, n) ( (f) / (n) )

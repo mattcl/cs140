@@ -12,7 +12,6 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -85,9 +84,17 @@ static tid_t allocate_tid (void);
 // --------------- BEGIN CHANGES ------------------ //
 
 static int thread_get_highest_priority(void);
+
+int count_ready_threads (void);
+void count_thread_if_ready(struct thread *t, void *count);
+
+void recalculate_priority(struct thread *t, void *switchQueues);
+void recalculate_recent_cpu (struct thread *t, void *none UNUSED);
+
 static void mlfqs_init(void);
-static void mlfqs_insert(struct thread *t, bool reset);
+static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
+static void mlfqs_update_queue(void);
 static bool mlfqs_check_thread(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static int mlfqs_compute_allotted_time(int priority);
@@ -162,10 +169,11 @@ void thread_tick (void){
 		kernel_ticks++;
 	}
 
+
 	// ------------ BEGIN CHANGES ------------- //
 	
+	
 	if((t != idle_thread) && thread_mlfqs) {
-		t->allocated_ticks--;
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
@@ -291,7 +299,7 @@ void thread_unblock (struct thread *t){
 	if(!thread_mlfqs){
 		list_push_back (&ready_list, &t->elem);
 	} else {
-		mlfqs_insert(t, true);
+		mlfqs_insert(t);
 	}
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
@@ -357,7 +365,7 @@ void thread_yield (void){
 		if (!thread_mlfqs){
 			list_push_back (&ready_list, &cur->elem);
 		} else {
-			mlfqs_insert(cur, false);
+			mlfqs_insert(cur);
 		}
 	}
 
@@ -408,13 +416,17 @@ int thread_get_priority (void){
 	return t->tmp_priority;
 }
 
+#define NO_SWITCH ((void*)1)
+
 /* Sets the current thread's nice value to NICE. */
 void thread_set_nice (int nice){
 	struct thread *t = thread_current ();
 	t->nice = nice;
 
 	// recompute priority	
-	thread_set_priority(max(min(t->priority - nice, PRI_MAX), PRI_MIN));
+	recalculate_priority(t, NO_SWITCH);
+	//check if thread is still the highest if not
+	// then switch t->priority has been changed
 }
 
 /* Returns the current thread's nice value. */
@@ -425,13 +437,14 @@ int thread_get_nice (void){
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
 	/* Not yet implemented. */
-	return 0;
+	return fp_mult(itof(100),load_avg);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
-	return 0;
+	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
+	return ftoi(fpCPU);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -723,11 +736,57 @@ void thread_preempt(void){
 }
 
 void recalculate_loads (void){
-
+	load_avg = fp_add(
+			fp_mult(fp_div(itof(59),itof(60)),(load_avg)),
+			   fp_mult(fp_div(itof(1),itof(60)), itof(count_ready_threads())));
 }
 
-void recalculate_priorities (void){
+int count_ready_threads (){
+	int count = 0;
+	thread_foreach(&count_thread_if_ready, &count);
+}
 
+void count_thread_if_ready(struct thread *t, void *count){
+	if(t->status == THREAD_RUNNING || t->status == THREAD_READY){
+		&((int*)count) ++;
+	}
+}
+
+// returns the number of running or ready threads
+void recalculate_priorities (void){
+	thread_foreach(&recalculate_priority, NULL);
+}
+
+void recalculate_priority(struct thread *t, void *switchQueues){
+	/* Calculates PRI_MAX - (recent_cpu/4)-(nice*2) */
+	fixed_point newP =
+			fp_sub(itof(PRI_MAX), fp_int_div(t->recent_cpu,4));
+	newP = fp_sub(newP, itof(t->nice*2));
+	int newPriority = ftoi(newP);
+
+	if (newPriority < PRI_MIN){
+		newPriority = PRI_MIN;
+	} else if (newPriority > PRI_MAX){
+		newPriority = PRI_MAX;
+	}
+
+	if (switchQueues == NULL){
+		mlfqs_switch_queue(t,newPriority);
+	}
+}
+
+void recalculate_all_recent_cpu (void){
+	thread_foreach(&recalculate_recent_cpu, NULL);
+}
+
+void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
+	fixed_point coefficient =
+			fp_div(fp_int_mult(load_avg,2),
+				   fp_int_add(fp_int_mult(load_avg,2), 1));
+
+	t->recent_cpu = fp_int_add(
+			fp_mult(coefficient, t->recent_cpu),
+			t->nice);
 }
 
 /**
@@ -771,13 +830,10 @@ static void mlfqs_init(void) {
  * inserts the thread into the mlfqs queue based on its priority
  * also sets the allotted time to the specified thread.
  */
-static void mlfqs_insert(struct thread *t, bool reset) {
+static void mlfqs_insert(struct thread *t) {
 	ASSERT(is_thread(t));
 	ASSERT(t->priority >= PRI_MIN && t->priority <= PRI_MAX);
 	list_push_back(&mlfqs_queue[t->priority], &t->elem);
-	if(reset) {
-		t->allocated_ticks = mlfqs_compute_allotted_time(t->priority);
-	}
 }
 
 /**
@@ -793,8 +849,10 @@ static void mlfqs_remove(struct thread *t) {
  * returns true if the thread was switched
  */
 static bool mlfqs_check_thread(struct thread *t) {
-	if(t->allocated_ticks <= 0) {
-		mlfqs_switch_queue(t, (t->priority - 1));
+	int cur_priority = t->priority;
+	recalculate_priority(t, 1);
+	if(cur_priority != t->priority) {
+		mlfqs_switch_queue(t, (t->priority));
 		return 1;
 	}
 	return 0;
@@ -806,9 +864,9 @@ static bool mlfqs_check_thread(struct thread *t) {
  * maximum priority to PRI_MAX.
  */
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
+	if (new_priority == t->priority) return;
 	mlfqs_remove(t);
-	t->priority = max(min(new_priority, PRI_MAX), PRI_MIN);
-	//mlfqs_insert(t, true);
+	t->priority = new_priority;
 }
 
 /**
