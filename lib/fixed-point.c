@@ -17,7 +17,6 @@
  * if this is changed MAX_INT_COV_VAL must also
  * be changed
  */
-
 #define CONVERSION_VAL (16384)
 
 
