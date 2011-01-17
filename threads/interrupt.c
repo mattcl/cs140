@@ -356,9 +356,6 @@ void intr_handler (struct intr_frame *frame){
 		pic_end_of_interrupt (frame->vec_no);
 
 		if (yield_on_return){
-			if (thread_current()->ticks_left == 0){
-				printf("Ran out of time on time slice\n");
-			}
 			thread_yield ();
 		}
 	}
