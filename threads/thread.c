@@ -178,6 +178,9 @@ void thread_tick (void){
 	
 	
 	if((t != idle_thread) && thread_mlfqs) {
+
+		t->recent_cpu = fp_add(t->recent_cpu, itof(1));
+
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
