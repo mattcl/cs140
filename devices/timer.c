@@ -156,6 +156,7 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 			recalculate_priorities();
 		} else if (ticks % TIMER_FREQ == 0){
 			recalculate_loads();
+			recalculate_all_recent_cpu();
 		}
 	}
 }
