@@ -904,7 +904,9 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 	for(; i >= 0; i--) {
 		if(!list_empty(&mlfqs_queue[i])) {
 			struct list_elem *e = list_pop_front(&mlfqs_queue[i]);
-			return list_entry(e, struct thread, elem);
+			struct thread *next= list_entry(e, struct thread, elem);
+			ASSERT (next->status == THREAD_READY);
+			return next;
 		}
 	}
 	return idle_thread;
