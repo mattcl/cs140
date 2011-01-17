@@ -11,12 +11,12 @@
 
 inline fixed_point itof(int n){
   ASSERT(n <= MAX_INT_CONV_VAL);
-  return n * CONVERSION_VAL;
+  return n * F_VALUE_17_14;
 }
 
 inline int ftoi(fixed_point f){
   ASSERT(CONVERSION_VAL != 0);
-  return f / CONVERSION_VAL;
+  return f / F_VALUE_17_14;
 }
 
 inline fixed_point fp_add(fixed_point f1, fixed_point f2){
