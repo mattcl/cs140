@@ -750,7 +750,6 @@ void recalculate_loads (void){
 int count_ready_threads (){
 	int count = 0;
 	thread_foreach(&count_thread_if_ready, &count);
-	printf("Count was %d\n", count);
 	return count;
 }
 
