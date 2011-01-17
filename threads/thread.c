@@ -742,7 +742,7 @@ void thread_preempt(void){
 
 void recalculate_loads (void){
 	load_avg = fp_add(
-			fp_mult(fp_div(itof(59),itof(60)),(load_avg)),
+			fp_add(fp_div(itof(59),itof(60)),(load_avg)),
 			   fp_mult(fp_div(itof(1),itof(60)), itof(count_ready_threads())));
 }
 
