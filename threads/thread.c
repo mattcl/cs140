@@ -128,9 +128,10 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
-	mlfqs_init();
-
-	load_avg = 0;
+	if (thread_mlfqs){
+		mlfqs_init();
+		load_avg = 0;
+	}
 
 	// ---------- END CHANGES ---------- //
 
@@ -529,12 +530,13 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	strlcpy (t->name, name, sizeof t->name);
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
-	t->tmp_priority = priority;
+
 	t->lockWaitedOn = NULL;
 	t->magic = THREAD_MAGIC;
 
 	//====== Begin changes=========//
 
+	t->tmp_priority = priority;
 	list_init (&t->held_locks);
 	t->recent_cpu = running_thread()->recent_cpu;
 

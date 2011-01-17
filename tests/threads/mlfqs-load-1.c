@@ -31,28 +31,37 @@ test_mlfqs_load_1 (void)
       load_avg = thread_get_load_avg ();
       ASSERT (load_avg >= 0);
       elapsed = timer_elapsed (start_time) / TIMER_FREQ;
-      if (load_avg > 100)
-        fail ("load average is %d.%02d "
-              "but should be between 0 and 1 (after %d seconds)",
+      if (load_avg > 100){
+    	  printf("load average is %d.%02d but should be between 0 and 1 (after %d seconds)",
+                  load_avg / 100, load_avg % 100, elapsed);
+        fail ("load average is %d.%02d but should be between 0 and 1 (after %d seconds)",
               load_avg / 100, load_avg % 100, elapsed);
-      else if (load_avg > 50)
+      }else if (load_avg > 50){
         break;
-      else if (elapsed > 45)
+      }else if (elapsed > 45){
+    	printf ("load average stayed below 0.5 for more than 45 seconds");
         fail ("load average stayed below 0.5 for more than 45 seconds");
+      }
     }
 
-  if (elapsed < 38)
-    fail ("load average took only %d seconds to rise above 0.5", elapsed);
+  if (elapsed < 38){
+	  printf("load average took only %d seconds to rise above 0.5", elapsed);
+	  fail ("load average took only %d seconds to rise above 0.5", elapsed);
+  }
   msg ("load average rose to 0.5 after %d seconds", elapsed);
 
   msg ("sleeping for another 10 seconds, please wait...");
   timer_sleep (TIMER_FREQ * 10);
 
   load_avg = thread_get_load_avg ();
-  if (load_avg < 0)
+  if (load_avg < 0){
     fail ("load average fell below 0");
-  if (load_avg > 50)
+    printf ("load average fell below 0");
+  }
+  if (load_avg > 50){
     fail ("load average stayed above 0.5 for more than 10 seconds");
+    printf ("load average stayed above 0.5 for more than 10 seconds");
+  }
   msg ("load average fell back below 0.5 (to %d.%02d)",
        load_avg / 100, load_avg % 100);
 
