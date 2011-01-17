@@ -888,8 +888,11 @@ static bool mlfqs_check_thread(struct thread *t) {
  */
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	if (new_priority == t->priority) return;
-	mlfqs_remove(t);
 	t->priority = new_priority;
+	if ( t->status != THREAD_RUNNING && t->status != THREAD_BLOCKED){
+		mlfqs_remove(t);
+		mlfqs_insert(t);
+	}
 }
 
 /**
