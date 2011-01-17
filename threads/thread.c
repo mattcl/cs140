@@ -435,9 +435,9 @@ void thread_set_nice (int nice){
 	t->nice = nice;
 
 	// recompute priority	
-	recalculate_priority(t, NO_SWITCH);
+	recalculate_priority(t, NULL);
 	//check if thread is still the highest if not
-	// then switch t->priority has been changed
+	// then switch
 }
 
 /* Returns the current thread's nice value. */
@@ -447,18 +447,12 @@ int thread_get_nice (void){
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
-	/* Not yet implemented. */
 	return ftoi(fp_mult(itof(100),load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
-	/* Not yet implemented. */
-
-	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	//printf("%d(recent_cpu) x %d(100) = %d ftoi of that is %d\n", running_thread()->recent_cpu, itof(100), fpCPU,  ftoi(fpCPU));
-	//return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
-	return ftoi(fpCPU);
+	return ftoi(fp_mult(running_thread()->recent_cpu, itof(100)));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
