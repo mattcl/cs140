@@ -17,7 +17,7 @@
 
 #define CONVERSION_VAL (1 << (INT_FIELD_SIZE))
 
-typedef int64_t fixed_point;
+typedef int32_t fixed_point;
 
 inline fixed_point itof(int n);
 inline int ftoi(fixed_point f);
