@@ -145,7 +145,7 @@ void thread_init (void){
 	// Set the default value for the fields used by the mlfqs
 	initial_thread->recent_cpu = 0;
 	initial_thread->nice = 0;
-	initial_thread->ticks_left = TICKS_PER_TIME_SLICE;
+	//initial_thread->ticks_left = TICKS_PER_TIME_SLICE;
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
