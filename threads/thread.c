@@ -22,24 +22,28 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
-/* Don't switch when you recalculate the
- * priority of a thread in mlfqs
- */
+// ------- BEGIN CHANGES ------//
+
+/*The value passed to recalculate priority
+ * In order to prevent it from moving a thread
+ * from one ready queue to another ready queue*/
 #define NO_SWITCH ((void*)1)
 
-/* List of processes in THREAD_READY state, that is, processes
-   that are ready to run but not actually running. */
-static struct list ready_list;
-
-// ---------- BEGIN CHANGES --------- //
+/* A list of blocked threads which are blocked
+ * on a certain tick to transpire*/
 static struct list sleep_list;
 
+/* Queues used by the multi level feedback
+ * queue scheduler */
 static struct list mlfqs_queue[64];
 
 /*Variable to track the load avg of the system*/
 static fixed_point load_avg;
-
 // ----------- END CHANGES ---------- //
+
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
+static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -89,14 +93,13 @@ static tid_t allocate_tid (void);
 
 // --------------- BEGIN CHANGES ------------------ //
 
+//Prototypes for defined functions in this file that were changed
+// in the threads assignment
 static int thread_get_highest_priority(void);
-
 int count_ready_threads (void);
 void count_thread_if_ready(struct thread *t, void *count);
-
 void recalculate_priority(struct thread *t, void *switchQueues);
 void recalculate_recent_cpu (struct thread *t, void *none UNUSED);
-
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t);
 static void mlfqs_remove(struct thread *t);
@@ -128,18 +131,22 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
+
+	// init the mlfqs
 	if (thread_mlfqs){
 		mlfqs_init();
 		load_avg = 0;
 	}
-
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
 	 * We are now running in the current thread. */
 	initial_thread = running_thread ();
+
+	// Set the default value for the fields used by the mlfqs
 	initial_thread->recent_cpu = 0;
 	initial_thread->nice = 0;
+
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
@@ -175,27 +182,28 @@ void thread_tick (void){
 		user_ticks++;
 	}
 #endif
-	else{
+	else {
 		kernel_ticks++;
 	}
 
 
 	// ------------ BEGIN CHANGES ------------- //
 	
-	
 	if((t != idle_thread) && thread_mlfqs) {
 
 		t->recent_cpu = fp_add(t->recent_cpu, itof(1));
-
+/*
 		if(mlfqs_check_thread(t)) {
 			// do something when thread was switched
 			// to a different priority
+
+			 */
 			if(thread_get_highest_priority() > t->priority) {
 				intr_yield_on_return();
 			}
-		}
-	}
+		//}
 
+	}
 	// ------------- END CHANGES -------------- //
 
 	/* Enforce preemption. */
@@ -431,13 +439,23 @@ int thread_get_priority (void){
 
 /* Sets the current thread's nice value to NICE. */
 void thread_set_nice (int nice){
+	// This function is not defined when not running
+	// mlfqs
+	if (!thread_mlfqs){
+		return;
+	}
+
+	// set nice value
 	struct thread *t = thread_current ();
 	t->nice = nice;
 
 	// recompute priority	
 	recalculate_priority(t, NO_SWITCH);
+
 	//check if thread is still the highest if not
-	// then switch t->priority has been changed
+	// then yield the cpu and go to the back of
+	// the correct priority queue
+	thread_preempt();
 }
 
 /* Returns the current thread's nice value. */
@@ -447,18 +465,12 @@ int thread_get_nice (void){
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
-	/* Not yet implemented. */
 	return ftoi(fp_mult(itof(100),load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
-	/* Not yet implemented. */
-
-	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	//printf("%d(recent_cpu) x %d(100) = %d ftoi of that is %d\n", running_thread()->recent_cpu, itof(100), fpCPU,  ftoi(fpCPU));
-	//return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
-	return ftoi(fpCPU);
+	return ftoi(fp_mult(running_thread()->recent_cpu, itof(100)));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
