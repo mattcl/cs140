@@ -101,9 +101,7 @@ void recalculate_priority(struct thread *t, void *switchQueues);
 void recalculate_recent_cpu (struct thread *t, void *none UNUSED);
 static void mlfqs_init(void);
 static void mlfqs_insert(struct thread *t);
-static void mlfqs_remove(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
-static int mlfqs_get_highest_priority(void);
 static struct thread *mlfqs_get_next_thread_to_run(void);
 
 // ---------------- END CHANGES ------------------- //
@@ -765,7 +763,7 @@ void thread_preempt(void){
 				thread_yield();
 			}
 		}
-	} else if(thread_get_highest_priority() > cur->priority) {
+	} else if(mlfqs_get_highest_priority() > cur->priority) {
 		thread_yield();
 	}
 	intr_set_level (old_level);
@@ -883,7 +881,7 @@ static void mlfqs_insert(struct thread *t) {
  * System. This is defined as the first thread in the
  * highest priority bucket
  */
-static int mlfqs_get_highest_priority(void) {
+int mlfqs_get_highest_priority(void) {
 	int i = PRI_MAX;
 	for(; i >= 0; i--) {
 		if(!list_empty(&mlfqs_queue[i])) {
