@@ -12,12 +12,14 @@
 #include <stdint.h> //int32_t                                                                
 
 #define INT_FIELD_SIZE 17
+#define INT_BITS 32
 #define FRAC_FIELD_SIZE 14
 #define MAX_INT_CONV_VAL 262143 
 
 #define CONVERSION_VAL (1 << (INT_FIELD_SIZE))
+#define CONVERSION_VAL_32 (1 << (INT_BITS))
 
-typedef int64_t fixed_point;
+typedef int32_t fixed_point;
 
 inline fixed_point itof(int n);
 inline int ftoi(fixed_point f);
