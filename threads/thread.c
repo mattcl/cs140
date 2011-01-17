@@ -447,7 +447,7 @@ int thread_get_nice (void){
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
 	/* Not yet implemented. */
-	return fp_mult(itof(100),load_avg);
+	return ftoi(fp_mult(itof(100),load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
