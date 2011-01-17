@@ -454,8 +454,11 @@ int thread_get_load_avg (void){
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
-	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	return ftoi(fpCPU);
+	//printf("recent %d and 100 %d\n", running_thread()->recent_cpu, itof(100));
+	//fixed_point fpCPU = fp_mult(itof(100), running_thread()->recent_cpu);
+	//printf("fixed point recent cpu times 100 %d\n", fpCPU);
+	//printf("FtoI of that %d\n", ftoi(fpCPU));
+	return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -803,10 +806,9 @@ void recalculate_all_recent_cpu (void){
 }
 
 void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
-	fixed_point coefficient =
-			fp_div(fp_int_mult(load_avg,2),
-				   fp_int_add(fp_int_mult(load_avg,2), 1));
-
+	fixed_point enumer = fp_int_mult(load_avg,2);
+	fixed_point denom = fp_int_add(enumer, 1);
+	fixed_point coefficient =fp_div(enumer,denom);
 	t->recent_cpu = fp_int_add(
 			fp_mult(coefficient, t->recent_cpu),
 			t->nice);
