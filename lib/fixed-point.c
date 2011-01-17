@@ -5,8 +5,8 @@
  * conversions of numbers to big or small
  */
 
-#include <assert.h>
 #include <stdint.h>
+#include <debug.h>
 #include "fixed-point.h"
 
 inline fixed_point itof(int n){
