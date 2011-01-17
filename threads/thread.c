@@ -128,9 +128,10 @@ void thread_init (void){
 	
 	// --------- BEGIN CHANGES --------- //
 	list_init (&sleep_list);
-	mlfqs_init();
-
-	load_avg = 0;
+	if (thread_mlfqs){
+		mlfqs_init();
+		load_avg = 0;
+	}
 
 	// ---------- END CHANGES ---------- //
 
@@ -138,6 +139,7 @@ void thread_init (void){
 	 * We are now running in the current thread. */
 	initial_thread = running_thread ();
 	initial_thread->recent_cpu = 0;
+	initial_thread->nice = 0;
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
@@ -446,7 +448,7 @@ int thread_get_nice (void){
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
 	/* Not yet implemented. */
-	return fp_mult(itof(100),load_avg);
+	return ftoi(fp_mult(itof(100),load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -529,14 +531,19 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	strlcpy (t->name, name, sizeof t->name);
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
-	t->tmp_priority = priority;
+
 	t->lockWaitedOn = NULL;
 	t->magic = THREAD_MAGIC;
 
 	//====== Begin changes=========//
+	if (thread_mlfqs){
+		struct thread *t = running_thread();
+		t->recent_cpu = t->recent_cpu;
+		t->nice = t->nice;
+	}
+	t->tmp_priority = priority;
 
 	list_init (&t->held_locks);
-	t->recent_cpu = running_thread()->recent_cpu;
 
 	//====== End changes=========//
 
@@ -759,7 +766,7 @@ int count_ready_threads (){
 }
 
 void count_thread_if_ready(struct thread *t, void *count){
-	if(t->status == THREAD_RUNNING || t->status == THREAD_READY){
+	if(t != idle_thread && (t->status == THREAD_RUNNING || t->status == THREAD_READY)){
 		(*((int*)count)) ++;
 	}
 }
@@ -881,8 +888,11 @@ static bool mlfqs_check_thread(struct thread *t) {
  */
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
 	if (new_priority == t->priority) return;
-	mlfqs_remove(t);
 	t->priority = new_priority;
+	if ( t->status != THREAD_RUNNING && t->status != THREAD_BLOCKED){
+		mlfqs_remove(t);
+		mlfqs_insert(t);
+	}
 }
 
 /**
@@ -894,7 +904,9 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 	for(; i >= 0; i--) {
 		if(!list_empty(&mlfqs_queue[i])) {
 			struct list_elem *e = list_pop_front(&mlfqs_queue[i]);
-			return list_entry(e, struct thread, elem);
+			struct thread *next= list_entry(e, struct thread, elem);
+			ASSERT (next->status == THREAD_READY);
+			return next;
 		}
 	}
 	return idle_thread;
