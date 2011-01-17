@@ -31,3 +31,4 @@ inline fixed_point fp_div(fixed_point f1, fixed_point f2);
 inline fixed_point fp_int_div(fixed_point f, int n);
 
 
+#endif
