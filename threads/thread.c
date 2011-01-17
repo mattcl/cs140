@@ -742,19 +742,21 @@ void thread_preempt(void){
 
 void recalculate_loads (void){
 	load_avg = fp_add(
-			fp_add(fp_div(itof(59),itof(60)),(load_avg)),
-			   fp_mult(fp_div(itof(1),itof(60)), itof(count_ready_threads())));
+					fp_mult(fp_div(itof(59),itof(60)), (load_avg) ),
+					fp_div(( itof(count_ready_threads()) , itof(60) ))
+			);
 }
 
 int count_ready_threads (){
 	int count = 0;
 	thread_foreach(&count_thread_if_ready, &count);
+	printf("Count was %d\n", count);
 	return count;
 }
 
 void count_thread_if_ready(struct thread *t, void *count){
 	if(t->status == THREAD_RUNNING || t->status == THREAD_READY){
-		(*((int*)count)) ++;
+		*((int*)count) ++;
 	}
 }
 
