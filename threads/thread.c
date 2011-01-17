@@ -456,8 +456,7 @@ int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
 
 	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	printf("%d(recent_cpu) x %d(100) = %d\n", running_thread()->recent_cpu, itof(100), fpCPU);
-	printf("FtoI of that %d\n", ftoi(fpCPU));
+	printf("%d(recent_cpu) x %d(100) = %d ftoi of that is %d\n", running_thread()->recent_cpu, itof(100), fpCPU,  ftoi(fpCPU));
 	//return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
 	return ftoi(fpCPU);
 }
@@ -541,9 +540,9 @@ static void init_thread (struct thread *t, const char *name, int priority){
 
 	//====== Begin changes=========//
 	if (thread_mlfqs){
-		struct thread *t = running_thread();
-		t->recent_cpu = t->recent_cpu;
-		t->nice = t->nice;
+		struct thread *running = running_thread();
+		t->recent_cpu = running->recent_cpu;
+		t->nice = running->nice;
 	}
 	t->tmp_priority = priority;
 
