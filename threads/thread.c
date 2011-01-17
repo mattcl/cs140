@@ -22,6 +22,11 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+/* Don't switch when you recalculate the
+ * priority of a thread in mlfqs
+ */
+#define NO_SWITCH ((void*)1)
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -416,8 +421,6 @@ int thread_get_priority (void){
 	}
 	return t->tmp_priority;
 }
-
-#define NO_SWITCH ((void*)1)
 
 /* Sets the current thread's nice value to NICE. */
 void thread_set_nice (int nice){
