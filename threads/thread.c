@@ -189,10 +189,15 @@ void thread_tick (void){
 	if( thread_mlfqs ) {
 		//Increase recent cpu of active thread on every tick
 		t->recent_cpu = fp_add(t->recent_cpu, itof(1));
+
+		// For preemptive round robin
+		// preempt if this time quantum has
+		// expired
+		/*
 		t->ticks_left --;
 		if (t->ticks_left == 0){
 			intr_yield_on_return();
-		}
+		}*/
 	}
 	// ------------- END CHANGES -------------- //
 
@@ -559,7 +564,6 @@ static void init_thread (struct thread *t, const char *name, int priority){
 		struct thread *running = running_thread();
 		t->recent_cpu = running->recent_cpu;
 		t->nice = running->nice;
-		t->ticks_left = 0;
 	} else {
 		t->tmp_priority = priority;
 	}
@@ -934,7 +938,12 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 			struct thread *next= list_entry(e, struct thread, elem);
 			ASSERT (is_thread(next));
 			ASSERT (next->status == THREAD_READY);
-			next->ticks_left = TICKS_PER_TIME_SLICE ;
+
+			// For preemptive round robin
+			// preempt if this time quantum has
+			// expired
+			//next->ticks_left = TICKS_PER_TIME_SLICE ;
+
 			return next;
 		}
 	}
