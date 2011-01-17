@@ -10,7 +10,7 @@
 #include "fixed-point.h"
 
 inline fixed_point itof(int n){
-  assert(n <= MAX_INT_CONV_VAL);
+  ASSERT(n <= MAX_INT_CONV_VAL);
   return n * CONVERSION_VAL;
 }
 
@@ -22,16 +22,16 @@ inline fixed_point fp_add(fixed_point f1, fixed_point f2){
   return f1 + f2;
 }
 
-inline fixed_point fp_subtract(fixed_point f1, fixed_point f2){
+inline fixed_point fp_sub(fixed_point f1, fixed_point f2){
   return f1 - f2;
 }
 
 inline fixed_point fp_int_add(fixed_point f, int n){
-  return f + i_to_f(n);
+  return f + itof(n);
 }
 
 inline fixed_point fp_int_sub(fixed_point f, int n){
-  return f - i_to_f(n);
+  return f - itof(n);
 }
 
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){

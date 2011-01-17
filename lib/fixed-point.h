@@ -22,7 +22,7 @@ typedef int32_t fixed_point;
 inline fixed_point itof(int n);
 inline int ftoi(fixed_point f);
 inline fixed_point fp_add(fixed_point f1, fixed_point f2);
-inline fixed_point fp_subtract(fixed_point f1, fixed_point f2);
+inline fixed_point fp_sub(fixed_point f1, fixed_point f2);
 inline fixed_point fp_int_add(fixed_point f, int n);
 inline fixed_point fp_int_sub(fixed_point f, int n);
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2);
