@@ -11,12 +11,12 @@
 
 inline fixed_point itof(int n){
   ASSERT(n <= MAX_INT_CONV_VAL);
-  return n * CONVERSION_VAL;
+  return n * F_VALUE_17_14;
 }
 
 inline int ftoi(fixed_point f){
   ASSERT(CONVERSION_VAL != 0);
-  return f / CONVERSION_VAL;
+  return f / F_VALUE_17_14;
 }
 
 inline fixed_point fp_add(fixed_point f1, fixed_point f2){
@@ -39,7 +39,6 @@ inline fixed_point fp_int_sub(fixed_point f, int n){
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){
   ASSERT(CONVERSION_VAL != 0);
   return ((int64_t) f1 * f2 / CONVERSION_VAL);
-
 }
 
 inline fixed_point fp_int_mult(fixed_point f, int n){
@@ -47,7 +46,7 @@ inline fixed_point fp_int_mult(fixed_point f, int n){
 }
 
 inline fixed_point fp_div(fixed_point f1, fixed_point f2){
-  ASSERT(f2 != 0);
+
   return ((int64_t) f1 * CONVERSION_VAL / f2);
 }
 
