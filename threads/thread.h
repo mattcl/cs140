@@ -107,7 +107,8 @@ struct thread {
 	struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
 
 	int nice ;                   /* Nice value */
-	fixed_point recent_cpu;
+	fixed_point recent_cpu;      /* The recent amount of cpu this thread
+	 	 	 	 	 	 	 	 	has used.*/
 	// ------------- END CHANGES --------------//
 
 	/* Owned by thread.c. */
@@ -153,16 +154,14 @@ int thread_get_load_avg (void);
 // ------------ BEGIN CHANGES -------------- //
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
-
 void recalculate_priorities (void);
 void recalculate_all_recent_cpu (void);
 void recalculate_loads (void);
-
 int mlfqs_get_highest_priority(void);
-
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
 // ------------- END CHANGES --------------- //
+
 #endif /* threads/thread.h */

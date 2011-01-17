@@ -183,7 +183,6 @@ void thread_tick (void){
 		kernel_ticks++;
 	}
 
-
 	// ------------ BEGIN CHANGES ------------- //
 	if( thread_mlfqs ) {
 		//Increase recent cpu of active thread on every tick
@@ -684,7 +683,6 @@ static tid_t allocate_tid (void){
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-
 // --------------- BEGIN CHANGES --------------- //
 
 /**
@@ -917,7 +915,9 @@ static void mlfqs_switch_queue(struct thread *t, int new_priority) {
  * Returns the next thread to be scheduled as determined
  * by mlfqs or idle_thread if there is no thread to be run
  * yet. This will be defined as the first thread in the
- * highest priority bucket
+ * highest priority bucket.
+ * This function removes the thread from any mlfqs priority
+ * bucket that it was in.
  */
 static struct thread *mlfqs_get_next_thread_to_run(void) {
 	int i = PRI_MAX;

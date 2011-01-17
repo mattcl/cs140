@@ -499,7 +499,6 @@ void update_temp_priority(struct thread *t){
 
 		t->tmp_priority = max(max_lock(&t->held_locks)->lock_priority,
 							  t->priority);
-
 	}
 
 	// Update all the neccessary threads that this thread depends.

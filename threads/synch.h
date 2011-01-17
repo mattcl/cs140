@@ -43,9 +43,7 @@ bool lock_held_by_current_thread (const struct lock *);
 
 // --------- Begin Changes -------- //
 void update_temp_priority(struct thread *t);
-
 // --------- End Changes ----------//
-
 
 /* Condition variable. */
 struct condition {
