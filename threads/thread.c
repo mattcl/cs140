@@ -139,6 +139,7 @@ void thread_init (void){
 	 * We are now running in the current thread. */
 	initial_thread = running_thread ();
 	initial_thread->recent_cpu = 0;
+	initial_thread->nice = 0;
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
@@ -535,10 +536,14 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	t->magic = THREAD_MAGIC;
 
 	//====== Begin changes=========//
-
+	if (thread_mlfqs){
+		struct thread *t = running_thread();
+		t->recent_cpu = t->recent_cpu;
+		t->nice = t->nice;
+	}
 	t->tmp_priority = priority;
+
 	list_init (&t->held_locks);
-	t->recent_cpu = running_thread()->recent_cpu;
 
 	//====== End changes=========//
 
