@@ -159,7 +159,7 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 			recalculate_all_recent_cpu();
 		}
 
-		if(thread_get_highest_priority() > thread_current()->priority) {
+		if(mlfqs_get_highest_priority() > thread_current()->priority) {
 			intr_yield_on_return();
 		}
 
