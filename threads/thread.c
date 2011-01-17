@@ -456,7 +456,7 @@ int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
 
 	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
-	printf("%d(recent_cpu) x %d(100) = %d ftoi of that is %d\n", running_thread()->recent_cpu, itof(100), fpCPU,  ftoi(fpCPU));
+	//printf("%d(recent_cpu) x %d(100) = %d ftoi of that is %d\n", running_thread()->recent_cpu, itof(100), fpCPU,  ftoi(fpCPU));
 	//return ftoi(fp_mult(itof(100), running_thread()->recent_cpu));
 	return ftoi(fpCPU);
 }
