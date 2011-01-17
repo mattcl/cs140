@@ -85,7 +85,7 @@ static tid_t allocate_tid (void);
 
 static int thread_get_highest_priority(void);
 
-int count_ready_threads ();
+int count_ready_threads (void);
 void count_thread_if_ready(struct thread *t, void *count);
 
 void recalculate_priority(struct thread *t, void *switchQueues);
@@ -437,13 +437,13 @@ int thread_get_nice (void){
 /* Returns 100 times the system load average. */
 int thread_get_load_avg (void){
 	/* Not yet implemented. */
-	return FP_MULT(itof(100),load_avg);
+	return fp_mult(itof(100),load_avg);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu (void){
 	/* Not yet implemented. */
-	fixed_point fpCPU = FP_MULT(running_thread()->recent_cpu, itof(100));
+	fixed_point fpCPU = fp_mult(running_thread()->recent_cpu, itof(100));
 	return ftoi(fpCPU);
 }
 
@@ -736,9 +736,9 @@ void thread_preempt(void){
 }
 
 void recalculate_loads (void){
-	load_avg = FP_ADD(
-			FP_MULT(FP_DIV(itof(59),itof(60)),(load_avg)),
-			   FP_MULT(FP_DIV(itof(1),itof(60)), itof(count_ready_threads())));
+	load_avg = fp_add(
+			fp_mult(fp_div(itof(59),itof(60)),(load_avg)),
+			   fp_mult(fp_div(itof(1),itof(60)), itof(count_ready_threads())));
 }
 
 int count_ready_threads (){
@@ -760,8 +760,8 @@ void recalculate_priorities (void){
 void recalculate_priority(struct thread *t, void *switchQueues){
 	/* Calculates PRI_MAX - (recent_cpu/4)-(nice*2) */
 	fixed_point newP =
-			FP_SUB(itof(PRI_MAX), FP_INT_DIV(t->recent_cpu,4));
-	newP = FP_SUB(newP, itof(t->nice*2));
+			fp_sub(itof(PRI_MAX), fp_int_div(t->recent_cpu,4));
+	newP = fp_sub(newP, itof(t->nice*2));
 	int newPriority = ftoi(newP);
 
 	if (newPriority < PRI_MIN){
@@ -781,11 +781,11 @@ void recalculate_all_recent_cpu (void){
 
 void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
 	fixed_point coefficient =
-			FP_DIV(FP_INT_MULT(load_avg,2),
-				   FP_INT_ADD(FP_INT_MULT(load_avg,2), 1));
+			fp_div(fp_int_mult(load_avg,2),
+				   fp_int_add(fp_int_mult(load_avg,2), 1));
 
-	t->recent_cpu = FP_INT_ADD(
-			FP_MULT(coefficient, t->recent_cpu),
+	t->recent_cpu = fp_int_add(
+			fp_mult(coefficient, t->recent_cpu),
 			t->nice);
 }
 
