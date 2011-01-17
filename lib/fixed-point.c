@@ -15,7 +15,7 @@ inline fixed_point itof(int n){
 }
 
 inline int ftoi(fixed_point f){
-  assert(CONVERSTION_VAL != 0);
+  assert(CONVERSION_VAL != 0);
   return f / CONVERSION_VAL;
 }
 
@@ -28,6 +28,7 @@ inline fixed_point fp_sub(fixed_point f1, fixed_point f2){
 }
 
 inline fixed_point fp_int_add(fixed_point f, int n){
+  
   return f + itof(n);
 }
 
@@ -36,7 +37,7 @@ inline fixed_point fp_int_sub(fixed_point f, int n){
 }
 
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){
-  assert(CONVERSTION_VAL != 0);
+  assert(CONVERSION_VAL != 0);
   return ((((int64_t) f1) * f2) / CONVERSION_VAL);
 }
 
@@ -49,24 +50,8 @@ inline fixed_point fp_div(fixed_point f1, fixed_point f2){
 }
 
 inline fixed_point fp_int_div(fixed_point f, int n){
-  assert(CONVERSTION_VAL != n);
+  assert(CONVERSION_VAL != n);
   return f / n;
 }
 
-/*
-void conversion_tests(void) {
-  int n = 5555555;
-  assert(n < MAX_INT_CONV_VAL);
-  fixed_point f = INT_TO_FP(n);
-  int n2 = FP_TO_INT(f);
-  assert(n == n2);
-}
-
-int main(const int argc, const char* argv[]) {
-  conversion_tests();
-}
-*/
-
-
-//#endif /* fixed-point.h */
 
