@@ -15,6 +15,7 @@ inline fixed_point itof(int n){
 }
 
 inline int ftoi(fixed_point f){
+  assert(CONVERSTION_VAL != 0);
   return f / CONVERSION_VAL;
 }
 
@@ -35,6 +36,7 @@ inline fixed_point fp_int_sub(fixed_point f, int n){
 }
 
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){
+  assert(CONVERSTION_VAL != 0);
   return ((((int64_t) f1) * f2) / CONVERSION_VAL);
 }
 
@@ -47,6 +49,7 @@ inline fixed_point fp_div(fixed_point f1, fixed_point f2){
 }
 
 inline fixed_point fp_int_div(fixed_point f, int n){
+  assert(CONVERSTION_VAL != n);
   return f / n;
 }
 
