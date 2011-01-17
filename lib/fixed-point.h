@@ -16,6 +16,7 @@
 #define MAX_INT_CONV_VAL 262143 
 
 #define CONVERSION_VAL (1 << (INT_FIELD_SIZE))
+#define F_VALUE_17_14 (1 << (FRAC_FIELD_SIZE))
 
 typedef int32_t fixed_point;
 

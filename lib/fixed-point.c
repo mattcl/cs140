@@ -37,7 +37,7 @@ inline fixed_point fp_int_sub(fixed_point f, int n){
 
 inline fixed_point fp_mult(fixed_point f1, fixed_point f2){
   ASSERT(CONVERSION_VAL != 0);
-  return ((((int64_t) f1) * ((int64_t)f2)) / CONVERSION_VAL);
+  return ((((int64_t) f1) * ((int64_t)f2)) / F_VALUE_17_14);
 }
 
 inline fixed_point fp_int_mult(fixed_point f, int n){
@@ -45,7 +45,7 @@ inline fixed_point fp_int_mult(fixed_point f, int n){
 }
 
 inline fixed_point fp_div(fixed_point f1, fixed_point f2){
-  return ((((int64_t) f1) * (CONVERSION_VAL)) / f2);
+  return ((((int64_t) f1) * (F_VALUE_17_14)) / f2);
 }
 
 inline fixed_point fp_int_div(fixed_point f, int n){
