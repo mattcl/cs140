@@ -771,6 +771,10 @@ void recalculate_priorities (void){
 
 void recalculate_priority(struct thread *t, void *switchQueues){
 	/* Calculates PRI_MAX - (recent_cpu/4)-(nice*2) */
+	if (t == idle_thread) {
+		return;
+	}
+
 	fixed_point newP =
 			fp_sub(itof(PRI_MAX), fp_int_div(t->recent_cpu,4));
 	newP = fp_sub(newP, itof(t->nice*2));
