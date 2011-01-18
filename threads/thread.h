@@ -24,6 +24,8 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define TICKS_PER_TIME_SLICE 4          /* Time slice is about 40 ms */
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -101,13 +103,16 @@ struct thread {
     /* Owned by thread.c. */
 	int64_t wake_time;           /* time used by thread sleep */
 
+	//int32_t ticks_left;	 		 /* Number of ticks left until thread is preempted*/
+
 	/* Shared between thread.c and synch.c. */
 	int tmp_priority;            /* priority used for priority donation */
 	struct list held_locks;		 /* Locks that this thread currently owns*/
 	struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
 
 	int nice ;                   /* Nice value */
-	fixed_point recent_cpu;
+	fixed_point recent_cpu;      /* The recent amount of cpu this thread
+	 	 	 	 	 	 	 	 	has used.*/
 	// ------------- END CHANGES --------------//
 
 	/* Owned by thread.c. */
@@ -153,14 +158,14 @@ int thread_get_load_avg (void);
 // ------------ BEGIN CHANGES -------------- //
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
-
 void recalculate_priorities (void);
 void recalculate_all_recent_cpu (void);
 void recalculate_loads (void);
-
+int mlfqs_get_highest_priority(void);
 bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
 // ------------- END CHANGES --------------- //
+
 #endif /* threads/thread.h */

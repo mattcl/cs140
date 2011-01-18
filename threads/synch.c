@@ -296,7 +296,8 @@ void lock_release (struct lock *lock){
 		ASSERT(highest != NULL);
 
 		//The thread that is still waiting with the highest priority
-		if(!list_empty(&lock->waiters)){
+		// update donate priority if not in mlfqs mode
+		if(!list_empty(&lock->waiters) && !thread_mlfqs){
 			// Reset the lock priority to the next highest priority waiting on
 			// the lock So that the next acquisition will be raised if necessary
 			lock->lock_priority = max_thread(&lock->waiters)->tmp_priority;
@@ -348,7 +349,6 @@ struct semaphore_elem {
    code to receive the signal and act upon it. */
 void cond_init (struct condition *cond){
 	ASSERT (cond != NULL);
-
 	list_init (&cond->waiters);
 }
 
@@ -427,8 +427,6 @@ void cond_broadcast (struct condition *cond, struct lock *lock){
 	}
 }
 
-//----- Begin Changes ------//
-
 /**
  * This function takes as parameters list_elem *a, which is a memeber of a
  * lock and list_elem *b which is a member of a lock and return true
@@ -440,8 +438,6 @@ bool lockCompare (const struct list_elem *a,
 					void *aux UNUSED){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	ASSERT((list_entry(a, struct lock, elem)) != NULL);
-	ASSERT((list_entry(b, struct lock, elem)) != NULL);
 	return ((list_entry(a, struct lock, elem)->lock_priority) <
 		    (list_entry(b, struct lock, elem)->lock_priority));
 }
@@ -456,7 +452,8 @@ bool lockCompare (const struct list_elem *a,
 bool condCompare (const struct list_elem *a,
 			      const struct list_elem *b,
 			      void *aux UNUSED){
-
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
 	return ((list_entry(a, struct semaphore_elem, elem)->thread->tmp_priority)<
 		    (list_entry(b, struct semaphore_elem, elem)->thread->tmp_priority));
 }
@@ -482,9 +479,14 @@ bool condCompare (const struct list_elem *a,
  *
  * The recursion needs to be done with interrupt's disabled because
  * We need to donate priority atomically or we will have odd race conditions
+ *
+ * Priority donation is disabled in mlfqs mode so this does nothing when mlfqs
+ * is on.
  */
 void update_temp_priority(struct thread *t){
-
+	if (thread_mlfqs){
+		return;
+	}
 	ASSERT (intr_get_level () == INTR_OFF);
 
 	if(t == NULL)return;
@@ -497,7 +499,6 @@ void update_temp_priority(struct thread *t){
 
 		t->tmp_priority = max(max_lock(&t->held_locks)->lock_priority,
 							  t->priority);
-
 	}
 
 	// Update all the neccessary threads that this thread depends.
@@ -509,5 +510,3 @@ void update_temp_priority(struct thread *t){
 		update_temp_priority(t->lockWaitedOn->holder);
 	}
 }
-
-// ------ End Changes ------//

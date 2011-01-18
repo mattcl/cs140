@@ -82,11 +82,8 @@ void timer_sleep (int64_t ticks){
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-
 	// ---------- BEGIN CHANGES -----------//
-
 	thread_sleep(start + ticks);
-	
 	// ------------ END CHANGES -----------//
 }
 
@@ -148,19 +145,31 @@ void timer_print_stats (void){
 
 /* Timer interrupt handler. */
 static void timer_interrupt (struct intr_frame *args UNUSED){
+
 	ticks++;
 	thread_tick ();
 	thread_check_sleeping(ticks);
-	if (thread_mlfqs){
 
+	if (thread_mlfqs){
+		// every 4 ticks we update all the priorities
+		// for threads
 		if (ticks % 4 == 0){
 			recalculate_priorities();
 		}
 
+		//Every second we recalculate the load_avg and
+		// the recent cpu time for all threads
 		if (ticks % TIMER_FREQ == 0){
 			recalculate_loads();
 			recalculate_all_recent_cpu();
 		}
+
+		// The above may have changed our priority in which case we need
+		// to yield on return.
+		if(mlfqs_get_highest_priority() > thread_current()->priority) {
+			intr_yield_on_return();
+		}
+
 	}
 }
 

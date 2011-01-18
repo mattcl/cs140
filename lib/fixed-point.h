@@ -1,7 +1,9 @@
 /*                                                                                 
  * File: fixed-point.h                                                                     
  * -------------------
- * Implements fixed point operations                                                         
+ * Implements fixed point operations
+ * any functions that take int arguments have are of
+ * form fp_int_op(float_point,int)                                                         
  */
 
 
@@ -17,6 +19,14 @@
 
 #define CONVERSION_VAL (1 << (FRAC_FIELD_SIZE))
 
+/* The fixed_point uses a 32 bit int as it's
+ * underlying representation.  1 bit is the signed bit,
+ * p bits are determined as the whole number part of the 
+ * number, and q bits are used as the fractional part of 
+ * the number (were the number is represented as p.q).  
+ * For more details consult a reference on floating point 
+ * representations.
+ */
 typedef int32_t fixed_point;
 
 inline fixed_point itof(int n);
