@@ -24,8 +24,6 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-#define TICKS_PER_TIME_SLICE 4          /* Time slice is about 40 ms */
-
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -102,8 +100,6 @@ struct thread {
     // ------------ BEGIN CHANGES -------------//
     /* Owned by thread.c. */
 	int64_t wake_time;           /* time used by thread sleep */
-
-	int32_t ticks_left;	 		 /* Number of ticks left until thread is preempted*/
 
 	/* Shared between thread.c and synch.c. */
 	int tmp_priority;            /* priority used for priority donation */
