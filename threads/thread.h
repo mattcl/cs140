@@ -103,7 +103,7 @@ struct thread {
     /* Owned by thread.c. */
 	int64_t wake_time;           /* time used by thread sleep */
 
-	//int32_t ticks_left;	 		 /* Number of ticks left until thread is preempted*/
+	int32_t ticks_left;	 		 /* Number of ticks left until thread is preempted*/
 
 	/* Shared between thread.c and synch.c. */
 	int tmp_priority;            /* priority used for priority donation */
