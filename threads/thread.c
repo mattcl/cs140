@@ -145,7 +145,7 @@ void thread_init (void){
 	// Set the default value for the fields used by the mlfqs
 	initial_thread->recent_cpu = 0;
 	initial_thread->nice = 0;
-	//initial_thread->ticks_left = TICKS_PER_TIME_SLICE;
+	initial_thread->ticks_left = TICKS_PER_TIME_SLICE;
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
@@ -193,11 +193,11 @@ void thread_tick (void){
 		// For preemptive round robin
 		// preempt if this time quantum has
 		// expired
-		/*
+
 		t->ticks_left --;
 		if (t->ticks_left == 0){
 			intr_yield_on_return();
-		}*/
+		}
 	}
 	// ------------- END CHANGES -------------- //
 
@@ -942,7 +942,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 			// For preemptive round robin
 			// preempt if this time quantum has
 			// expired
-			//next->ticks_left = TICKS_PER_TIME_SLICE ;
+			next->ticks_left = TICKS_PER_TIME_SLICE ;
 
 			return next;
 		}
