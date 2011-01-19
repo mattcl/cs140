@@ -503,10 +503,12 @@ void update_temp_priority(struct thread *t){
 
 	// Update all the neccessary threads that this thread depends.
 	if(t->lockWaitedOn != NULL){
-		// This lock needs to be updated to reflect the change of this threads
-		// priority update
-		t->lockWaitedOn->lock_priority =
-				max(t->lockWaitedOn->lock_priority, t->tmp_priority);
-		update_temp_priority(t->lockWaitedOn->holder);
+		// If the new tmp priority is now  higher than the current lock
+		// priority update the lock priority and then tell the thread
+		// that owns it to also update its  tmp priority
+		if (t->tmp_priority > t->lockWaitedOn->lock_priority){
+			t->lockWaitedOn->lock_priority = t->tmp_priority;
+			update_temp_priority(t->lockWaitedOn->holder);
+		}
 	}
 }
