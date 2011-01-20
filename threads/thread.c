@@ -729,15 +729,17 @@ void thread_sleep(int64_t wake_time) {
 	struct thread *cur = running_thread ();
 	ASSERT(is_thread(cur));
 	ASSERT(cur->status == THREAD_RUNNING);
-	//enum intr_level old_level = intr_disable();
 
 	//The time that the thread should wake up
 	cur->wake_time = wake_time;
+
 	lock_acquire(&sleep_list_lock);
 	list_push_back(&sleep_list, &cur->elem);
 	lock_release(&sleep_list_lock);
+
+	enum intr_level old_level = intr_disable();
 	thread_block();
-	//intr_set_level(old_level);
+	intr_set_level(old_level);
 }
 
 /*
