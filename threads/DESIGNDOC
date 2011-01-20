@@ -283,26 +283,36 @@ typedef int32_t fixed_point;
 >> scheduling decision and the priority and recent_cpu values for each
 >> thread after each given number of timer ticks:
 
+load_avg = 2
+
 timer  recent_cpu    priority   thread
 ticks   A   B   C   A   B   C   to run
 -----  --  --  --  --  --  --   ------
- 0
- 4
- 8
-12
-16
-20
-24
-28
-32
-36
+ 0      0   0  0   63  61  59     A
+ 4      4   0  0   62  61  59     A
+ 8      8   0  0   61  61  59     B  //Round robin in bucket 61
+12      8   4  0   61  60  59     A
+16      12  4  0   60  60  59     B  //Round robin in bucket 60
+20      12  8  0   60  59  59     A
+24      16  8  0   59  59  59     C  //Round robin in bucket 59
+28      16  8  4   59  59  58     B  //Round robin in bucket 59
+32      16  12 4   59  58  58     A  
+36      20  12 4   58  58  58     C  //Round robin in bucket 58
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
 
+No. If the scheduler needs to pick another thread out of the same bucket we
+are using round robin to pick the oldest thread in that priority bucket.
+
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+
+The more code we have in the interrupt handler the slower the overall performance
+of the system because the only thing that can run is the scheduler while the interrupt
+handler is running. 
+
 
 ---- RATIONALE ----
 
@@ -311,12 +321,32 @@ ticks   A   B   C   A   B   C   to run
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
 
+Advantages: Okay, so with a regular priority scheduler,
+Disadvantages: possible starvation? Lower thoroughput
+
+If we had more time we would have implemented the FCFS in the lower 32 buckets and then give 
+larger time slices as threads were assigned from lower priority buckets. So jobs with lower 
+priorities would run longer. This may help with throughput of jobs and shit.
+
+
+
 >> C6: The assignment explains arithmetic for fixed-point math in
 >> detail, but it leaves it open to you to implement it.  Why did you
 >> decide to implement it the way you did?  If you created an
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+
+We implemented an interface fixed-point.h and a file fixed-point.c.
+The thought to implement some type of abstract data type came from 
+the ability to program and debug easier (i.e. isolate bugs to one spot, etc.).
+We considered implementing the functionality in both macros and functions.
+While macros would be more efficient (i.e. no overhead), they are difficult to
+debug and prone to errors.  Switching to functions also allows us to use asserts
+to check for divide by 0's and conversion overflows.  Finally by declaring all 
+the functions as inline we should be able to gain the speed of a macro with the
+safeness of a function.
+
 
 			   SURVEY QUESTIONS
 			   ================
