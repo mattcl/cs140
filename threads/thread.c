@@ -33,6 +33,8 @@
  * on a certain tick to transpire*/
 static struct list sleep_list;
 
+static struct lock sleep_list_lock;
+
 /* Queues used by the multi level feedback
  * queue scheduler */
 static struct list mlfqs_queue[PRI_MAX+1];
@@ -122,6 +124,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void);
 void thread_init (void){
 	ASSERT (intr_get_level () == INTR_OFF);
 	lock_init (&tid_lock);
+	lock_init(&sleep_list_lock);
 
 	list_init (&ready_list);
 	list_init (&all_list);
@@ -698,24 +701,26 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 void thread_check_sleeping(int64_t current_tick) {
 	ASSERT (intr_context ());
 	struct list_elem *e;
-	if(list_begin(&sleep_list) != list_end(&sleep_list)){
-		for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
-			struct thread *t = list_entry(e, struct thread, elem);
-			if(t->wake_time <= current_tick) {
+	if (lock_try_acquire(&sleep_list_lock)){
+		if(list_begin(&sleep_list) != list_end(&sleep_list)){
+			for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
+				struct thread *t = list_entry(e, struct thread, elem);
+				if(t->wake_time <= current_tick) {
 
-				// This needs to happen first because
-				// thread_unblock moves e to the ready list
-				// leaving the sleep list in an inconsistent state
-				// if e isn't removed first
-				e = list_remove(e);
+					// This needs to happen first because
+					// thread_unblock moves e to the ready list
+					// leaving the sleep list in an inconsistent state
+					// if e isn't removed first
+					e = list_remove(e);
 
-				thread_unblock(t);
-				continue;
+					thread_unblock(t);
+					continue;
+				}
+				e = list_next(e);
 			}
-			e = list_next(e);
 		}
+		lock_release(&sleep_list_lock);
 	}
-
 }
 
 /**
@@ -733,7 +738,11 @@ void thread_sleep(int64_t wake_time) {
 
 	enum intr_level old_level = intr_disable();
 
+	lock_acquire(&sleep_list_lock);
 	list_push_back(&sleep_list, &cur->elem);
+	lock_release(&sleep_list_lock);
+
+
 	thread_block();
 	intr_set_level(old_level);
 }
