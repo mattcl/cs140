@@ -734,12 +734,12 @@ void thread_sleep(int64_t wake_time) {
 	//The time that the thread should wake up
 	cur->wake_time = wake_time;
 
-	enum intr_level old_level = intr_disable();
 
 	lock_acquire(&sleep_list_lock);
 	list_push_back(&sleep_list, &cur->elem);
 	lock_release(&sleep_list_lock);
 
+	enum intr_level old_level = intr_disable();
 
 	thread_block();
 	intr_set_level(old_level);
