@@ -233,10 +233,6 @@ void lock_acquire (struct lock *lock) {
 
 	intr_set_level (old_level);
 
-	// update the temp priority because acquiring this lock may have
-	// also acquired the group of people waiting on this lock which
-	// may have higher priority than t
-	//update_temp_priority(t);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -263,10 +259,6 @@ bool lock_try_acquire (struct lock *lock) {
 		lock->holder = t;
 		// not atomically because we are only updating thread specific data
 		list_push_back(&t->held_locks, &lock->elem);
-		// update the temp priority because acquiring this lock may have
-		// also acquired the group of people waiting on this lock which
-		// may have higher priority than t
-		//update_temp_priority(t);
 	}
 
 	intr_set_level (old_level);

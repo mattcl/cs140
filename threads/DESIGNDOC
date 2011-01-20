@@ -176,11 +176,45 @@ t9	      |	T1 tmpPriority  = 20 |
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
+From the list of threads that are waiting on the synchronization primitives,
+we take the thread with the max tmp priority to unblock when the primitive
+releases or signals. Because this is done with interrupts disabled we are sure
+that the tmp priorities can't change so we are guaranteed that we will run the 
+thread with the highest priority that is waiting on this primitive.
+
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
 
+When a call to lock_acquire comes in the interrupts are disabled. With the interrupts 
+disabled we check to see if the lock has a holder. If it has a holder we put ourselves
+on the waiters list for the lock. We update our tmp priority which will update the lock 
+priority. Then we block. If it doesn't we put the lock on the the current threads list 
+of held locks. 
+
+Donation is handled in the update_tmp_priority function. 
+The current thread first updates its tmp priority to the max between its priority 
+and the lock priority of all the locks that it is currently holding. If the thread
+is also waiting on a lock, the lock priority is updated to the max between its current
+lock priority and the thread' tmp priority. If the lock priority was changed then we also
+update the tmp priority of the lock's holder and repeat recursively until the nested donation is 
+finished.
+
+
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+
+First interrupts are disabled, then if the list of threads that are waiting on the lock
+is not empty, we take the thread with the highest tmp priority out of the lock's waiting
+list and unblock that thread (That thread is now on the ready list). 
+We then update the lock's priority to the maximum tmp priority of threads that are still waiting 
+on the lock to ensure that the lock has the correct lock priority for the next acquirer of the 
+lock (this is because the highest priority has just been removed so the lock priority will 
+most likely fall to a lower priority). Then the thread sets the lock's holder to null, removes 
+the lock from its held lock list, updates the current thread's tmp priority so that its donated priority 
+is reverted appropriately(The highest priority thread waiting on this thread is no longer waiting so the thread's tmp priority
+will likely also decrease so we need to change it). Then it yields the cpu if it is no longer the highest thread 
+(occurring when the tmp priority decreases).
+
 
 ---- SYNCHRONIZATION ----
 
@@ -200,6 +234,14 @@ primitive is to disable interrupts whenever you need to update the tmp priority.
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+Priority donations only occur when waiting on locks. So when we were designing the
+system we thought the best way to decompose the problem is to give the lock a priority
+and that priority would correspond to how quickly this lock needs to be released. We 
+thought that this would be more efficient than working with donating the priority directly
+to the thread because the inderection removes the necessity for the threads to interact directly
+with each other. This was better than other design decisions because the other designs didn't work.
+
 
 			  ADVANCED SCHEDULER
 			  ==================
