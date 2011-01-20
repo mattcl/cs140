@@ -211,7 +211,7 @@ void lock_acquire (struct lock *lock) {
 	struct thread *t = thread_current();
 
 	old_level = intr_disable ();
-	t->lockWaitedOn = lock;
+	t->lock_waited_on = lock;
 	while (lock->holder != NULL) {
 		list_push_back (&lock->waiters, &t->elem);
 
@@ -222,7 +222,7 @@ void lock_acquire (struct lock *lock) {
 		thread_block ();
 	}
 
-	t->lockWaitedOn = NULL;
+	t->lock_waited_on = NULL;
 
 	// These must be done atomically because otherwise in the pathological
 	// case we could re-enable interrupts then immediately get preempted
@@ -502,13 +502,13 @@ void update_temp_priority(struct thread *t){
 	}
 
 	// Update all the neccessary threads that this thread depends.
-	if(t->lockWaitedOn != NULL){
+	if(t->lock_waited_on != NULL){
 		// If the new tmp priority is now  higher than the current lock
 		// priority update the lock priority and then tell the thread
 		// that owns it to also update its  tmp priority
-		if (t->tmp_priority > t->lockWaitedOn->lock_priority){
-			t->lockWaitedOn->lock_priority = t->tmp_priority;
-			update_temp_priority(t->lockWaitedOn->holder);
+		if (t->tmp_priority > t->lock_waited_on->lock_priority){
+			t->lock_waited_on->lock_priority = t->tmp_priority;
+			update_temp_priority(t->lock_waited_on->holder);
 		}
 	}
 }

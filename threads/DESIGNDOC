@@ -3,7 +3,7 @@
          	        | PROJECT 1: THREADS |
 		        |   DESIGN DOCUMENT  |
 		        +--------------------+
-								   
+
 ---- GROUP ----
 
 Matthew Chum-Lum <mchunlum@stanford.edu>
@@ -11,8 +11,8 @@ Sam Oluwalana <soluwalana@stanford.edu>
 John-Ashton Allen  <bglp05@stanford.edu>
 
 ---- PRELIMINARIES ----
->> We couldn't get our project to pass tests when we use the PINTOSOPTS="-j #" 
->> It works consistently with PINTOSOPTS="-r" 
+>> We couldn't get our project to pass tests when we use the PINTOSOPTS="-j #"
+>> It works consistently with PINTOSOPTS="-r"
 
 
       ALARM CLOCK
@@ -23,78 +23,18 @@ John-Ashton Allen  <bglp05@stanford.edu>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
- 
+
+//thread.c
 /* A list of blocked threads which are waiting for a certain tick to transpire.
    This list is iterated on on every timer interrupt to determine which thread
    to next wake up */
 static struct list sleep_list;
 
-
-
-
-//fixed.point.c
-typedef int32_t fixed_point;
-
 //thread.h
 struct thread {
-
-    // ------------ BEGIN CHANGES -------------//
-    /* Owned by thread.c. */
-	int64_t wake_time;           /* time used by thread sleep */
-
-	/* Shared between thread.c and synch.c. */
-	int tmp_priority;            /* priority used for priority donation */
-	struct list held_locks;		 /* Locks that this thread currently owns*/
-	struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
-
-	int nice ;                   /* Nice value */
-	fixed_point recent_cpu;      /* The recent amount of cpu this thread
-	 	 	 	 	 	 	 	 	has used.*/
-	// ------------- END CHANGES --------------//
-
+	int64_t wake_time;           /* time used by thread sleep this is a tick on
+              			     	which this thread will wake up */
 }
-//thread.c
-
-
-/*The value passed to recalculate priority
- * In order to prevent it from moving a thread
- * from one ready queue to another ready queue*/
-#define NO_SWITCH ((void*)1)
-
- 
-/* Queues used by the multi level feedback
- * queue scheduler */
-static struct list mlfqs_queue[PRI_MAX+1];
-
-/*Variable to track the load avg of the system*/
-static fixed_point load_avg;
-
-//sync.h
-/* Lock. No longer layered over a semaphore
- * It has a holder, a boolean value telling
- * whether it is held or not, and a list of waiters,
- * The lock_priority. */
-struct lock {
-    struct thread *holder;      /* Thread holding lock . If no one is
-     	 	 	 	 	 	 	   holding the lock it is available*/
-    struct list_elem elem;		/* element in a held locks list */
-    struct list waiters;		/* List of waiting threads */
-	int lock_priority; 			/* The priority which is max over
-							     * all threads which are waiting on this
-							     * Will be the priority that that thread
-							     * Which is holding the lock must have */
-};
-
-//sync.c
-/* One semaphore in a list. */
-struct semaphore_elem {
-    struct list_elem elem;              /* List element. */
-    struct semaphore semaphore;         /* This semaphore. */
-
-    /* The thread that waits on this semaphore to become
-     * available. */
-    struct thread *thread;
-};
 
 ---- ALGORITHMS ----
 
@@ -126,9 +66,84 @@ struct semaphore_elem {
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+//thread.h
+struct thread {
+	/* Shared between thread.c and synch.c. */
+	int tmp_priority;            /* priority used for priority donation, will be increased
+	    			     	if this thread holds a lock that a higher thread needs */
+	struct list held_locks;      /* A list of locks that this thread currently owns*/
+	struct lock* lock_waited_on;   /* A pointer to the lock that this thread is currently waiting on. */
+}
+
+
+//sync.h
+/* Lock. No longer layered over a semaphore
+ * It has a holder, a boolean value telling
+ * whether it is held or not, and a list of waiters,
+ * The lock_priority is the priority of the highest thread
+   that is waiting on this lock. */
+struct lock {
+    struct thread *holder;      /* Thread holding lock . If no one is
+     	 	 	 	  holding the lock it is available*/
+    struct list_elem elem;	/* Element in a held locks list */
+    struct list waiters;	/* List of waiting threads */
+    int lock_priority; 	        /* The priority which is max over
+				 * all threads which are waiting on this
+				 * Will be the priority that that thread
+				 * Which is holding the lock must have */
+};
+
+//sync.c
+/* One semaphore in a list. */
+struct semaphore_elem {
+    struct list_elem elem;              /* List element. */
+    struct semaphore semaphore;         /* This semaphore. */
+
+    /* The thread that waits on this semaphore to become
+     * available. */
+    struct thread *thread;
+};
+
+
+
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
+   Threads:
+   T1 = {Priority = 1}
+   T2 = {Priority = 10} owns L2
+   T3 = {Priority = 20}
+
+   Locks:
+   L1 with LockPriority = 0
+   L2 with LockPriority = 0
+
+Time increases veritcally.
+Arrows indicate dependicies
+
+t0       T1 acquires L1
+t1       L1 LockPriority = 0
+      	         ^
+	         |
+	         ^
+t2  o------------+---------o<--<--<---T2 tries to acquire L1
+t3  | L1 LockPriority= 10  |		    ^
+t4  | T1 tmpPriority = 10  |		    |
+    o----------------------o    	    ^
+ 		     			    |
+t5	      o----------------------o------+<--<--<-- T3 tries to acquire L2
+t6	      |	L2 lockPriority = 20 |
+t7	      |	T2 tmpPriority  = 20 |
+t8	      |	L1 lockPriority = 20 |
+t9	      |	T1 tmpPriority  = 20 |
+	      o----------------------o
+
+
+
+
+
+
+
 
 ---- ALGORITHMS ----
 
@@ -160,6 +175,30 @@ struct semaphore_elem {
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+//thread.h
+struct thread {
+       	fixed_point recent_cpu;      /* The recent amount of cpu this thread has used.*/
+       	int nice ;     /* Nice value of this thread used for mlfqs operations*/
+
+}
+
+//thread.c
+/*The value passed to recalculate priority
+ * In order to prevent it from moving a thread
+ * from one ready queue to another ready queue*/
+#define NO_SWITCH ((void*)1)
+
+/* Queues used by the multi level feedback
+ * queue scheduler */
+static struct list mlfqs_queue[PRI_MAX+1];
+
+/*Variable to track the load avg of the system*/
+static fixed_point load_avg;
+
+//fixed.point.c
+typedef int32_t fixed_point;
+
 
 ---- ALGORITHMS ----
 

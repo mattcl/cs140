@@ -104,7 +104,7 @@ struct thread {
   /* Shared between thread.c and synch.c. */
   int tmp_priority;            /* priority used for priority donation */
   struct list held_locks;		 /* Locks that this thread currently owns*/
-  struct lock* lockWaitedOn;   /* Lock Waited on by this thread. */
+  struct lock* lock_waited_on;   /* Lock Waited on by this thread. */
   
   int nice ;                   /* Nice value */
   fixed_point recent_cpu;      /* The recent amount of cpu this thread
