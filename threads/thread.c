@@ -700,6 +700,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
  */
 void thread_check_sleeping(int64_t current_tick) {
 	ASSERT (intr_context ());
+	lock_acquire(&sleep_list_lock);
 	struct list_elem *e;
 	if(list_begin(&sleep_list) != list_end(&sleep_list)){
 		for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
@@ -718,6 +719,8 @@ void thread_check_sleeping(int64_t current_tick) {
 			e = list_next(e);
 		}
 	}
+	lock_release(&sleep_list_lock);
+
 }
 
 /**
