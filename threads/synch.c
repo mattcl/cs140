@@ -217,7 +217,7 @@ void lock_acquire (struct lock *lock) {
 		// Update temp because this will bubble all the way to the first
 		// thread that has a lock that t is dependent on and give it the
 		// highest priority
-		//update_temp_priority(t);
+		update_temp_priority(t);
 		thread_block ();
 	}
 
@@ -266,7 +266,7 @@ bool lock_try_acquire (struct lock *lock) {
 		// update the temp priority because acquiring this lock may have
 		// also acquired the group of people waiting on this lock which
 		// may have higher priority than t
-		//update_temp_priority(t);
+		update_temp_priority(t);
 	}
 
 	intr_set_level (old_level);
