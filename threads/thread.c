@@ -701,26 +701,24 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 void thread_check_sleeping(int64_t current_tick) {
 	ASSERT (intr_context ());
 	struct list_elem *e;
-	if (lock_try_acquire(&sleep_list_lock)){
-		if(list_begin(&sleep_list) != list_end(&sleep_list)){
-			for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
-				struct thread *t = list_entry(e, struct thread, elem);
-				if(t->wake_time <= current_tick) {
+	if(list_begin(&sleep_list) != list_end(&sleep_list)){
+		for(e = list_begin(&sleep_list); e != list_end(&sleep_list);) {
+			struct thread *t = list_entry(e, struct thread, elem);
+			if(t->wake_time <= current_tick) {
 
-					// This needs to happen first because
-					// thread_unblock moves e to the ready list
-					// leaving the sleep list in an inconsistent state
-					// if e isn't removed first
-					e = list_remove(e);
+				// This needs to happen first because
+				// thread_unblock moves e to the ready list
+				// leaving the sleep list in an inconsistent state
+				// if e isn't removed first
+				e = list_remove(e);
 
-					thread_unblock(t);
-					continue;
-				}
-				e = list_next(e);
+				thread_unblock(t);
+				continue;
 			}
+			e = list_next(e);
 		}
-		lock_release(&sleep_list_lock);
 	}
+
 }
 
 /**
