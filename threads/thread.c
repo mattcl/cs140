@@ -33,8 +33,6 @@
  * on a certain tick to transpire*/
 static struct list sleep_list;
 
-static struct lock sleep_list_lock;
-
 /* Queues used by the multi level feedback
  * queue scheduler */
 static struct list mlfqs_queue[PRI_MAX+1];
@@ -124,7 +122,6 @@ static struct thread *mlfqs_get_next_thread_to_run(void);
 void thread_init (void){
 	ASSERT (intr_get_level () == INTR_OFF);
 	lock_init (&tid_lock);
-	lock_init(&sleep_list_lock);
 
 	list_init (&ready_list);
 	list_init (&all_list);
@@ -734,13 +731,9 @@ void thread_sleep(int64_t wake_time) {
 	//The time that the thread should wake up
 	cur->wake_time = wake_time;
 
-
-	lock_acquire(&sleep_list_lock);
-	list_push_back(&sleep_list, &cur->elem);
-	lock_release(&sleep_list_lock);
-
 	enum intr_level old_level = intr_disable();
 
+	list_push_back(&sleep_list, &cur->elem);
 	thread_block();
 	intr_set_level(old_level);
 }
