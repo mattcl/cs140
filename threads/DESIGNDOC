@@ -40,22 +40,48 @@ struct thread {
 
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
+First we get the current tick.  Then we invoke thead_sleep with that tick plus the amount of 
+ticks passed in to timer sleep (i.e. the tick we want it to wake up on).
+Upon entering thread sleep, we get the current thread that is running, set it's wake time, 
+and then disable interrupts.  With interrupts disabled we can push the thread onto the sleep list
+and block the thread.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+Since we used a linked list structure rather than a priority queue ordered by wake time
+(we did not implement this as we were told that not doing so would not affect our grade), 
+the best that we can do is O(n) time, with n being the number of sleeping threads.  
+No other operations are performed besides the scanning of the list and removing threads that 
+are being woken up(removing them from the sleeping list and putting them on the ready list).
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+timer_sleep is just a wrapper to thread_sleep.  In thread_sleep we disable interrups
+before we modify the sleep list, the only global data manipulated inside of the function.
+We considered race conditions due to different threads being executed in parallel on multiple
+proccesors; however, when we considered the implementation of locks and semaphores we realized
+that they would elicit the same race condition, and thus not prevent this race condition.  Thus
+we must assume that through building our operating system disabling interrupts only allows one thread
+to run at any given moment.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+Because we disabled interrrupts inside of thread_sleep, if we are interrupted, it will 
+only be outside of a "critical section".
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
->> another design you considered?
+>> another design you considered? 
+We considered implementing a global list of blocked threads but we decided to 
+take the approach that was already taken in the implementation of the semaphores
+where the threads that are sleeping are waiting on time. So they should be put in 
+a global sleep list rather than a generic global "blocked" list.
+
+If you have a global list of blocked threads you lose the ability to control 
+theads waiting on locks and semaphores.
 
 			 PRIORITY SCHEDULING
 			 ===================
@@ -161,6 +187,14 @@ t9	      |	T1 tmpPriority  = 20 |
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
+
+The potential race condition is that while updating our tmp priority we take the 
+max lock priority of all of the locks that we are holding. These can all change while 
+we are updating our tmp priority. This gives us the potential to set our tmp priority to
+an invalid state. RACE CONDITION! This can only be resolved disabling interrupts because 
+we also need to update tmp priorities while we are acquiring locks and releasing locks.
+Inside these operations you can not use locks (obviously) so the lowest  synchronization
+primitive is to disable interrupts whenever you need to update the tmp priority. 
 
 ---- RATIONALE ----
 
