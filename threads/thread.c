@@ -33,6 +33,8 @@
  * on a certain tick to transpire*/
 static struct list sleep_list;
 
+static struct lock sleep_list_lock;
+
 /* Queues used by the multi level feedback
  * queue scheduler */
 static struct list mlfqs_queue[PRI_MAX+1];
@@ -122,6 +124,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void);
 void thread_init (void){
 	ASSERT (intr_get_level () == INTR_OFF);
 	lock_init (&tid_lock);
+	lock_init(&sleep_list_lock);
 
 	list_init (&ready_list);
 	list_init (&all_list);
@@ -145,7 +148,6 @@ void thread_init (void){
 	// Set the default value for the fields used by the mlfqs
 	initial_thread->recent_cpu = 0;
 	initial_thread->nice = 0;
-	//initial_thread->ticks_left = TICKS_PER_TIME_SLICE;
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
@@ -189,15 +191,6 @@ void thread_tick (void){
 	if( thread_mlfqs ) {
 		//Increase recent cpu of active thread on every tick
 		t->recent_cpu = fp_add(t->recent_cpu, itof(1));
-
-		// For preemptive round robin
-		// preempt if this time quantum has
-		// expired
-		/*
-		t->ticks_left --;
-		if (t->ticks_left == 0){
-			intr_yield_on_return();
-		}*/
 	}
 	// ------------- END CHANGES -------------- //
 
@@ -205,6 +198,8 @@ void thread_tick (void){
 	if (++thread_ticks >= TIME_SLICE){
 		intr_yield_on_return ();
 	}
+
+
 }
 
 /* Prints thread statistics. */
@@ -558,7 +553,7 @@ static void init_thread (struct thread *t, const char *name, int priority){
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
 
-	t->lockWaitedOn = NULL;
+	t->lock_waited_on = NULL;
 	t->magic = THREAD_MAGIC;
 
 	//====== Begin changes=========//
@@ -725,6 +720,7 @@ void thread_check_sleeping(int64_t current_tick) {
 			e = list_next(e);
 		}
 	}
+
 }
 
 /**
@@ -736,10 +732,11 @@ void thread_sleep(int64_t wake_time) {
 	struct thread *cur = running_thread ();
 	ASSERT(is_thread(cur));
 	ASSERT(cur->status == THREAD_RUNNING);
-	enum intr_level old_level = intr_disable();
 
 	//The time that the thread should wake up
 	cur->wake_time = wake_time;
+
+	enum intr_level old_level = intr_disable();
 	list_push_back(&sleep_list, &cur->elem);
 	thread_block();
 	intr_set_level(old_level);
@@ -940,12 +937,6 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 			struct thread *next= list_entry(e, struct thread, elem);
 			ASSERT (is_thread(next));
 			ASSERT (next->status == THREAD_READY);
-
-			// For preemptive round robin
-			// preempt if this time quantum has
-			// expired
-			//next->ticks_left = TICKS_PER_TIME_SLICE ;
-
 			return next;
 		}
 	}

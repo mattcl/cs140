@@ -17,7 +17,6 @@ void sema_up (struct semaphore *);
 void sema_self_test (void);
 
 //========== Begin Changes =========//
-
 /* Lock. No longer layered over a semaphore
  * It has a holder, a boolean value telling
  * whether it is held or not, and a list of waiters,
@@ -32,6 +31,7 @@ struct lock {
 							     * Will be the priority that that thread
 							     * Which is holding the lock must have */
 };
+
 
 //========== End Changes ===========//
 
