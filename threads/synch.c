@@ -475,7 +475,7 @@ bool condCompare (const struct list_elem *a,
  * that are waiting on this lock.
  * This function will recursively update all threads which hold a lock
  * on which this thread is dependent giving the appropriate priority to
- * each one.
+ * each one, if this threads tmp_priority is boosted
  *
  * The recursion needs to be done with interrupt's disabled because
  * We need to donate priority atomically or we will have odd race conditions
