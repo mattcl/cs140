@@ -826,9 +826,9 @@ void recalculate_priority(struct thread *t, void *switchQueues){
 	}
 
 	if (switchQueues == NULL){
-		enum intr_level old_level = intr_disable ();
+		//enum intr_level old_level = intr_disable ();
 		mlfqs_switch_queue(t,newPriority);
-		intr_set_level (old_level);
+		//intr_set_level (old_level);
 	}
 }
 
@@ -912,7 +912,7 @@ int mlfqs_get_highest_priority(void) {
  * (Preserves position in its ready queue if it is waiting)
  */
 static void mlfqs_switch_queue(struct thread *t, int new_priority) {
-	ASSERT (intr_get_level () == INTR_OFF);
+	//ASSERT (intr_get_level () == INTR_OFF);
 	if (new_priority == t->priority) return;
 	t->priority = new_priority;
 
