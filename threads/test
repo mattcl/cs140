@@ -1,7 +1,7 @@
 for (( i = 1; i <= 50; i++ ))
 do
-  echo "Iteration $i" >> failure.txt
-  make clean all check PINTOSOPTS="-r" | grep -P "(FAIL|pass|error \d|tests failed|tests passed)" >>failure.txt
-  echo "\n">>failure.txt
+  echo "Iteration $i" >> failure2.txt
+  make clean all check PINTOSOPTS="-r" | grep -P "(FAIL|pass|error \d|tests failed|tests passed)" >>failure2.txt
+  echo "\n">>failure2.txt
 
 done
