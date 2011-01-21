@@ -1,8 +1,10 @@
+e639e8
 			+--------------------+
 			|        CS 140      |
-         	        | PROJECT 1: THREADS |
-		        |   DESIGN DOCUMENT  |
-		        +--------------------+
+			| PROJECT 1: THREADS |
+			|   DESIGN DOCUMENT  |
+			+--------------------+
+
 
 ---- GROUP ----
 
@@ -11,7 +13,8 @@ Sam Oluwalana <soluwalana@stanford.edu>
 John-Ashton Allen  <bglp05@stanford.edu>
 
 ---- PRELIMINARIES ----
->> We couldn't get our project to pass tests when we use the PINTOSOPTS="-j #"
+>> We couldn't get our project to pass some tests with PINTOSOPTS="-j"
+>> This was probably because jitter makes timing differ.
 >> It works consistently with PINTOSOPTS="-r"
 
 
@@ -32,44 +35,48 @@ static struct list sleep_list;
 
 //thread.h
 struct thread {
-	int64_t wake_time;           /* time used by thread sleep this is a tick on
-              			     	which this thread will wake up */
+	int64_t wake_time;           /* time used by thread sleep this is a tick 
+on
+					which this thread will wake up */
 }
 
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
-First we get the current tick.  Then we invoke thead_sleep with that tick plus the amount of 
-ticks passed in to timer sleep (i.e. the tick we want it to wake up on).
-Upon entering thread sleep, we get the current thread that is running, set it's wake time, 
-and then disable interrupts.  With interrupts disabled we can push the thread onto the sleep list
+First we get the current tick.  Then we invoke thead_sleep with that tick plus 
+the amount of ticks passed in to timer sleep (i.e. the tick we want it to wake 
+up on). Upon entering thread sleep, we get the current thread that is running, 
+set it's wake time, and then disable interrupts.  With interrupts disabled we 
+can push the thread onto the sleep list
 and block the thread.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
-Since we used a linked list structure rather than a priority queue ordered by wake time
-(we did not implement this as we were told that not doing so would not affect our grade), 
-the best that we can do is O(n) time, with n being the number of sleeping threads.  
-No other operations are performed besides the scanning of the list and removing threads that 
-are being woken up(removing them from the sleeping list and putting them on the ready list).
+Since we used a linked list structure rather than a priority queue ordered by 
+wake time (we did not implement this as we were told that not doing so would not 
+affect our grade), the best that we can do is O(n) time, with n being the number 
+of sleeping threads. No other operations are performed besides the scanning of 
+the list and removing threads that are being woken up(removing them from the 
+sleeping list and putting them on the ready list).
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
-timer_sleep is just a wrapper to thread_sleep.  In thread_sleep we disable interrups
-before we modify the sleep list, the only global data manipulated inside of the function.
-We considered race conditions due to different threads being executed in parallel on multiple
-proccesors; however, when we considered the implementation of locks and semaphores we realized
-that they would elicit the same race condition, and thus not prevent this race condition.  Thus
-we must assume that through building our operating system disabling interrupts only allows one thread
-to run at any given moment.
+timer_sleep is just a wrapper to thread_sleep.  In thread_sleep we disable 
+interrups before we modify the sleep list, the only global data manipulated 
+inside of the function. We considered race conditions due to different threads 
+being executed in parallel on multiple proccesors; however, when we considered 
+the implementation of locks and semaphores we realized that they would elicit 
+the same race condition, and thus not prevent this race condition. Thus we must 
+assume that through building our operating system disabling interrupts only 
+allows one thread to run at any given moment.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
-Because we disabled interrrupts inside of thread_sleep, if we are interrupted, it will 
-only be outside of a "critical section".
+Because we disabled interrrupts inside of thread_sleep, if we are interrupted, 
+it will only be outside of a "critical section".
 
 ---- RATIONALE ----
 
@@ -77,8 +84,8 @@ only be outside of a "critical section".
 >> another design you considered? 
 We considered implementing a global list of blocked threads but we decided to 
 take the approach that was already taken in the implementation of the semaphores
-where the threads that are sleeping are waiting on time. So they should be put in 
-a global sleep list rather than a generic global "blocked" list.
+where the threads that are sleeping are waiting on time. So they should be put 
+in a global sleep list rather than a generic global "blocked" list.
 
 If you have a global list of blocked threads you lose the ability to control 
 theads waiting on locks and semaphores.
@@ -95,10 +102,14 @@ theads waiting on locks and semaphores.
 //thread.h
 struct thread {
 	/* Shared between thread.c and synch.c. */
-	int tmp_priority;            /* priority used for priority donation, will be increased
-	    			     	if this thread holds a lock that a higher thread needs */
-	struct list held_locks;      /* A list of locks that this thread currently owns*/
-	struct lock* lock_waited_on;   /* A pointer to the lock that this thread is currently waiting on. */
+	int tmp_priority;            /* priority used for priority donation, 
+will be increased
+					if this thread holds a lock that a 
+higher thread needs */
+	struct list held_locks;      /* A list of locks that this thread 
+currently owns*/
+	struct lock* lock_waited_on;   /* A pointer to the lock that this thread 
+is currently waiting on. */
 }
 
 
@@ -110,7 +121,7 @@ struct thread {
    that is waiting on this lock. */
 struct lock {
     struct thread *holder;      /* Thread holding lock . If no one is
-     	 	 	 	  holding the lock it is available*/
+				  holding the lock it is available*/
     struct list_elem elem;	/* Element in a held locks list */
     struct list waiters;	/* List of waiting threads */
     int lock_priority; 	        /* The priority which is max over
@@ -149,14 +160,14 @@ Arrows indicate dependicies
 
 t0       T1 acquires L1
 t1       L1 LockPriority = 0
-      	         ^
-	         |
-	         ^
+		 ^
+		 |
+		 ^
 t2  o------------+---------o<--<--<---T2 tries to acquire L1
 t3  | L1 LockPriority= 10  |		    ^
 t4  | T1 tmpPriority = 10  |		    |
     o----------------------o    	    ^
- 		     			    |
+					    |
 t5	      o----------------------o------+<--<--<-- T3 tries to acquire L2
 t6	      |	L2 lockPriority = 20 |
 t7	      |	T2 tmpPriority  = 20 |
@@ -185,35 +196,37 @@ thread with the highest priority that is waiting on this primitive.
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
 
-When a call to lock_acquire comes in the interrupts are disabled. With the interrupts 
-disabled we check to see if the lock has a holder. If it has a holder we put ourselves
-on the waiters list for the lock. We update our tmp priority which will update the lock 
-priority. Then we block. If it doesn't we put the lock on the the current threads list 
-of held locks. 
+When a call to lock_acquire comes in the interrupts are disabled. With the 
+interrupts disabled we check to see if the lock has a holder. If it has a holder 
+we put ourselves on the waiters list for the lock. We update our tmp priority 
+which will update the lock priority. Then we block. If it doesn't we put the 
+lock on the the current threads list of held locks. 
 
-Donation is handled in the update_tmp_priority function. 
-The current thread first updates its tmp priority to the max between its priority 
-and the lock priority of all the locks that it is currently holding. If the thread
-is also waiting on a lock, the lock priority is updated to the max between its current
-lock priority and the thread' tmp priority. If the lock priority was changed then we also
-update the tmp priority of the lock's holder and repeat recursively until the nested donation is 
-finished.
+Donation is handled in the update_tmp_priority function.  The current thread 
+first updates its tmp priority to the max between its priority and the lock 
+priority of all the locks that it is currently holding. If the thread is also 
+waiting on a lock, the lock priority is updated to the max between its current 
+lock priority and the thread' tmp priority. If the lock priority was changed 
+then we also update the tmp priority of the lock's holder and repeat recursively 
+until the nested donation is finished.
 
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
 
-First interrupts are disabled, then if the list of threads that are waiting on the lock
-is not empty, we take the thread with the highest tmp priority out of the lock's waiting
-list and unblock that thread (That thread is now on the ready list). 
-We then update the lock's priority to the maximum tmp priority of threads that are still waiting 
-on the lock to ensure that the lock has the correct lock priority for the next acquirer of the 
-lock (this is because the highest priority has just been removed so the lock priority will 
-most likely fall to a lower priority). Then the thread sets the lock's holder to null, removes 
-the lock from its held lock list, updates the current thread's tmp priority so that its donated priority 
-is reverted appropriately(The highest priority thread waiting on this thread is no longer waiting so the thread's tmp priority
-will likely also decrease so we need to change it). Then it yields the cpu if it is no longer the highest thread 
-(occurring when the tmp priority decreases).
+First interrupts are disabled, then if the list of threads that are waiting on 
+the lock is not empty, we take the thread with the highest tmp priority out of 
+the lock's waiting list and unblock that thread (That thread is now on the ready 
+list). We then update the lock's priority to the maximum tmp priority of threads 
+that are still waiting on the lock to ensure that the lock has the correct lock 
+priority for the next acquirer of the lock (this is because the highest priority 
+has just been removed so the lock priority will most likely fall to a lower 
+priority).  Then the thread sets the lock's holder to null, removes the lock 
+from its held lock list, updates the current thread's tmp priority so that its 
+donated priority is reverted appropriately(The highest priority thread waiting 
+on this thread is no longer waiting so the thread's tmp priority will likely 
+also decrease so we need to change it). Then it yields the cpu if it is no 
+longer the highest thread (occurring when the tmp priority decreases).
 
 
 ---- SYNCHRONIZATION ----
@@ -223,24 +236,26 @@ will likely also decrease so we need to change it). Then it yields the cpu if it
 >> this race?
 
 The potential race condition is that while updating our tmp priority we take the 
-max lock priority of all of the locks that we are holding. These can all change while 
-we are updating our tmp priority. This gives us the potential to set our tmp priority to
-an invalid state. RACE CONDITION! This can only be resolved disabling interrupts because 
-we also need to update tmp priorities while we are acquiring locks and releasing locks.
-Inside these operations you can not use locks (obviously) so the lowest  synchronization
-primitive is to disable interrupts whenever you need to update the tmp priority. 
+max lock priority of all of the locks that we are holding. These can all change 
+while we are updating our tmp priority. This gives us the potential to set our 
+tmp priority to an invalid state. RACE CONDITION! This can only be resolved 
+disabling interrupts because we also need to update tmp priorities while we are 
+acquiring locks and releasing locks. Inside these operations you can not use 
+locks (obviously) so the lowest synchronization primitive is to disable 
+interrupts whenever you need to update the tmp priority. 
 
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-Priority donations only occur when waiting on locks. So when we were designing the
-system we thought the best way to decompose the problem is to give the lock a priority
-and that priority would correspond to how quickly this lock needs to be released. We 
-thought that this would be more efficient than working with donating the priority directly
-to the thread because the inderection removes the necessity for the threads to interact directly
-with each other. This was better than other design decisions because the other designs didn't work.
+Priority donations only occur when waiting on locks. So when we were designing 
+the system we thought the best way to decompose the problem is to give the lock 
+a priority and that priority would correspond to how quickly this lock needs to 
+be released. We thought that this would be more efficient than working with 
+donating the priority directly to the thread because the inderection removes the 
+necessity for the threads to interact directly with each other. This was better 
+than other design decisions because the other designs didn't work.
 
 
 			  ADVANCED SCHEDULER
@@ -254,8 +269,9 @@ with each other. This was better than other design decisions because the other d
 
 //thread.h
 struct thread {
-       	fixed_point recent_cpu;      /* The recent amount of cpu this thread has used.*/
-       	int nice ;     /* Nice value of this thread used for mlfqs operations*/
+	fixed_point recent_cpu;      /* The recent amount of cpu this thread has 
+used.*/
+	int nice ;     /* Nice value of this thread used for mlfqs operations*/
 
 }
 
@@ -296,8 +312,8 @@ ticks   A   B   C   A   B   C   to run
 20      12  8  0   60  59  59     A
 24      16  8  0   59  59  59     C  //Round robin in bucket 59
 28      16  8  4   59  59  58     B  //Round robin in bucket 59
-32      16  12 4   59  58  58     A  
-36      20  12 4   58  58  58     C  //Round robin in bucket 58
+32      16  12 4   59  58  58     A  36      20  12 4   58  58  58     C  
+//Round robin in bucket 58
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
@@ -309,9 +325,9 @@ are using round robin to pick the oldest thread in that priority bucket.
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
 
-The more code we have in the interrupt handler the slower the overall performance
-of the system because the only thing that can run is the scheduler while the interrupt
-handler is running. 
+The more code we have in the interrupt handler the slower the overall 
+performance of the system because the only thing that can run is the scheduler 
+while the interrupt handler is running. 
 
 
 ---- RATIONALE ----
@@ -324,9 +340,16 @@ handler is running.
 Advantages: Okay, so with a regular priority scheduler,
 Disadvantages: possible starvation? Lower thoroughput
 
-If we had more time we would have implemented the FCFS in the lower 32 buckets and then give 
-larger time slices as threads were assigned from lower priority buckets. So jobs with lower 
-priorities would run longer. This may help with throughput of jobs and shit.
+If we had more time we would have implemented the FCFS in the lower 32 buckets 
+and then give larger time slices as threads were assigned from lower priority 
+buckets. So jobs with lower priorities would run longer. This may help with 
+throughput of jobs and shit.
+
+Also, we would have designed our code around semaphores instead of interrupts, 
+so that it would we easier to port to machines with multiple CPUs. We considered 
+this in the beginning, but realized that this would also require changing the 
+structure of the semaphores/locks, since the current implementation of locks and
+semaphores would not allow for multiple CPUs.
 
 
 
@@ -338,8 +361,8 @@ priorities would run longer. This may help with throughput of jobs and shit.
 >> numbers, why did you do so?  If not, why not?
 
 We implemented an interface fixed-point.h and a file fixed-point.c.
-The thought to implement some type of abstract data type came from 
-the ability to program and debug easier (i.e. isolate bugs to one spot, etc.).
+The thought to implement some type of abstract data type came from the ability 
+to program and debug easier (i.e. isolate bugs to one spot, etc.).
 We considered implementing the functionality in both macros and functions.
 While macros would be more efficient (i.e. no overhead), they are difficult to
 debug and prone to errors.  Switching to functions also allows us to use asserts
