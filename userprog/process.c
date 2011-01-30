@@ -195,6 +195,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp) {
+
+	printf("Loading the ELF file\n");
+
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
@@ -334,7 +337,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		*esp-- = strPtrs[i];
-		printf("Arg %d is %s when dereferenced", i, strPtrs[i]);
+		printf("Arg %d is %s when dereferenced\n", i, strPtrs[i]);
 	}
 
 	// set argv
