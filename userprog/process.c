@@ -384,10 +384,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	printf("Should point to the memory address before\n");
 
 
-	print("%p\n", *esp);
+	printf("%p\n", *esp);
 	// set argc
 	* esp -= sizeof(char*);
-	print("%p\n", *esp);
+	printf("%p\n", *esp);
 	**(int **)esp = count;
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
