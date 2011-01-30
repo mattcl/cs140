@@ -364,6 +364,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 		//put stuff into the stack
 		strlcpy(*esp, token, arg_len);
+		printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
 		strPtrs[++count] = *esp;
 
 	}
@@ -378,6 +379,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
+		printf("ESP %p %p %s %p %s\n", *esp, **(char***)esp, **(char***)esp, token, strPtrs[i], strPtrs[i]);
 	}
 
 	// set argv
@@ -386,6 +388,8 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	// set argc
 	push_4_byte_data(esp, (void*)count);
+
+	printf("ESP %p, %d\n");
 
 	//push return address
 	push_4_byte_data(esp , NULL);
