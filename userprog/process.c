@@ -346,7 +346,6 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	int i = 0;
 
 	size_t fn_len = strlen(f_name) + 1;
-	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
 
 	//make space for filename
 	adjust_stack_ptr(esp, fn_len);
@@ -356,13 +355,9 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	strPtrs[0] = *esp;
 
-	printf("esp after pushing %p\n", *esp);
-
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-
 		size_t arg_len = strlen(token) + 1;
-		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
 		//make room for the argument
 		adjust_stack_ptr(esp, arg_len);
@@ -371,50 +366,28 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 		strlcpy(*esp, token, arg_len);
 		strPtrs[++count] = *esp;
 
-		printf("esp after pushing %p strlcpy\n", *esp);
-
 	}
-
-	printf("before word align %p\n", *esp);
 
 	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
 
-	printf("after word align %p\n", *esp);
-
-
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
-
-	printf("After moving for the argv[argc] %p\n", *esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-
-		printf("Arg %d is \"%s\" when dereferenced %p AT stack pos %p\n", i, **(char***)esp, **(char***)esp, *esp);
 	}
 
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
-	printf("After set argv %p %p\n", *esp, **(char ***)esp);
-	printf("Should point to the memory address before\n");
-
 
 	// set argc
 	push_4_byte_data(esp, (void*)count);
 
-	printf("Count %d should be %d\n", count, **(int**)esp);
-
 	// set return address
-	push_4_byte_data(esp , NULL);
 
-	printf("Return address should be 0 %d\n", **(int**)esp);
-
-	// -------- END CHANGES -------- //
-
-	printf("ESP %p\n", *esp);
 	return true;
 
 }
