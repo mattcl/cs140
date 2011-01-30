@@ -52,7 +52,7 @@ static void syscall_handler (struct intr_frame *f){
 			system_exec(f, *(char**)arg(esp,1));
 			break;
 		case SYS_WAIT:
-			system_wait(f, *(pid_t*)arg(esp,1));
+			system_wait(f, *(tid_t*)arg(esp,1));
 			break;
 		case SYS_CREATE:
 			system_create(f, *(char**)arg(esp,1), *(unsigned int *)arg(esp,2));
