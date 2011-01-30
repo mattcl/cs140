@@ -14,7 +14,7 @@ static void syscall_handler (struct intr_frame *f){
 	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
-	int sys_call_num = *((int *)esp+1);
+	int sys_call_num = *((int *)esp);
 
 	switch (sys_call_num){
 		case SYS_HALT:
