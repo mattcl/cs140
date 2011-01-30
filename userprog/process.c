@@ -330,8 +330,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 }
 
 inline void push_4_byte_data(void ** esp, void *data){
-	*(char**)esp -= sizeof(char *);
-	**((char ***) esp) = data;
+	*(uint32_t*)esp -= sizeof(uint32_t);
+	**((uint32_t **) esp) = data;
 }
 
 inline void adjust_stack_ptr(void **esp, size_t length){
