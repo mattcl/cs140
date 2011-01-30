@@ -322,7 +322,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
 		strPtrs[++count] = *esp;
-		token = strtok_r(NULL, " ", &save_ptr);
+		//token = strtok_r(NULL, " ", &save_ptr);
 		size_t arg_len = strlen(token) + 1;
 		strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
