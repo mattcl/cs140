@@ -88,48 +88,46 @@ dir_get_inode (struct dir *dir)
    if EP is non-null, and sets *OFSP to the byte offset of the
    directory entry if OFSP is non-null.
    otherwise, returns false and ignores EP and OFSP. */
-static bool
-lookup (const struct dir *dir, const char *name,
-        struct dir_entry *ep, off_t *ofsp) 
-{
-  struct dir_entry e;
-  size_t ofs;
-  
-  ASSERT (dir != NULL);
-  ASSERT (name != NULL);
+static bool lookup (const struct dir *dir, const char *name,
+		struct dir_entry *ep, off_t *ofsp) {
+	struct dir_entry e;
+	size_t ofs;
 
-  for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-       ofs += sizeof e) 
-    if (e.in_use && !strcmp (name, e.name)) 
-      {
-        if (ep != NULL)
-          *ep = e;
-        if (ofsp != NULL)
-          *ofsp = ofs;
-        return true;
-      }
-  return false;
+	ASSERT (dir != NULL);
+	ASSERT (name != NULL);
+
+	for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
+			ofs += sizeof e) {
+		if (e.in_use && !strcmp (name, e.name)){
+			if (ep != NULL){
+				*ep = e;
+			}
+			if (ofsp != NULL){
+				*ofsp = ofs;
+			}
+			return true;
+		}
+	}
+	return false;
 }
 
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
    On success, sets *INODE to an inode for the file, otherwise to
    a null pointer.  The caller must close *INODE. */
-bool
-dir_lookup (const struct dir *dir, const char *name,
-            struct inode **inode) 
-{
-  struct dir_entry e;
+bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode){
+	struct dir_entry e;
 
-  ASSERT (dir != NULL);
-  ASSERT (name != NULL);
+	ASSERT (dir != NULL);
+	ASSERT (name != NULL);
 
-  if (lookup (dir, name, &e, NULL))
-    *inode = inode_open (e.inode_sector);
-  else
-    *inode = NULL;
+	if (lookup (dir, name, &e, NULL)){
+		*inode = inode_open (e.inode_sector);
+	} else {
+		*inode = NULL;
+	}
 
-  return *inode != NULL;
+	return *inode != NULL;
 }
 
 /* Adds a file named NAME to DIR, which must not already contain a

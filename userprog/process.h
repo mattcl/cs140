@@ -3,6 +3,9 @@
 
 #include "threads/thread.h"
 
+// define a limit on the argument length
+#define MAX_ARG_LENGTH 256
+
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
 void process_exit (void);

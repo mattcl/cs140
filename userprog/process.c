@@ -203,6 +203,19 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	bool success = false;
 	int i;
 
+	// --------- BEGIN CHANGES -------- //
+	// copy the file_name with args into a modifiable buffer
+	char arg_buffer[MAX_ARG_LENGTH];
+	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
+	strlcpy(arg_buffer, file_name, len);
+	
+	char *f_name, *token, *save_ptr;
+	
+	// extract the filename from the args
+	f_name = strtok_r(arg_buffer, " ", &save_ptr);
+
+	// ---------- END CHANGES ----------//
+
 	/* Allocate and activate page directory. */
 	t->pagedir = pagedir_create ();
 	if (t->pagedir == NULL) {
@@ -211,7 +224,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	process_activate ();
 
 	/* Open executable file. */
-	file = filesys_open (file_name);
+	//file = filesys_open (file_name);
+	file = filesys_open (f_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
 		goto done;
@@ -292,6 +306,48 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	if (!setup_stack (esp)){
 		goto done;
 	}
+	
+	// ------- BEGIN CHANGES ------- //
+	void *strPtrs[128];
+	int count = 0;
+	strPtrs[0] = *esp;
+	size_t fn_len = strlen(f_name) + 1;
+	strlcpy(*esp, f_name, fn_len);
+	// moves esp down length of the filename
+	*esp -= fn_len;
+
+	// pushes arguments onto stack
+	for(token = strtok_r(arg_buffer, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+		strPtrs[++count] = *esp;
+		token = strtok_r(NULL, " ", &save_ptr);
+		size_t arg_len = strlen(token) + 1;
+		strlcpy(*esp, token, arg_len);
+		// moves esp down length of pushed data
+		*esp -= arg_len;
+	}
+	
+	// word align
+	*esp -= ((unsigned int) *esp) % 4; 
+	
+	// sets argv[argc] = NULL
+	*esp-- = NULL;
+
+	// set argv elements
+	for(i = count; i >= 0; i--) {
+		*esp-- = strPtrs[i];
+		printf("Arg %d is %s when dereferenced", i, strPtrs[i]);
+	}
+
+	// set argv
+	*esp-- = (char *) *esp + 1; 
+
+	// set argc
+	*esp-- = (void *) count;
+
+	// set return address
+	*esp-- = NULL;
+
+	// -------- END CHANGES -------- //
 
 	/* Start address. */
 	*eip = (void (*) (void)) ehdr.e_entry;
