@@ -312,7 +312,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		goto done;
 	}
 	
-	setup_main_args(esp, f_name, token, save_ptr);
+	//setup_main_args(esp, f_name, token, save_ptr);
 
 	/* Start address. */
 	*eip = (void (*) (void)) ehdr.e_entry;
