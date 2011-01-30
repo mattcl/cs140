@@ -372,7 +372,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	for(i = count; i >= 0; i--) {
 		*(char**)esp -= sizeof(char*);
 		**(char ***)esp = strPtrs[i];
-		printf("Arg %d is \"%s\" when dereferenced %p\n", i, *esp, strPtrs[i]);
+		printf("Arg %d is \"%s\" when dereferenced %p\n", i, **esp, strPtrs[i]);
 	}
 
 	// set argv
