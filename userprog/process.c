@@ -379,7 +379,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		printf("ESP %p %p %s %p %s\n", *esp, **(char***)esp, **(char***)esp, token, strPtrs[i], strPtrs[i]);
+		printf("ESP %p %p %s %p %s\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], strPtrs[i]);
 	}
 
 	// set argv
