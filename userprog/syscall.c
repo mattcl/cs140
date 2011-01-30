@@ -24,6 +24,7 @@ static void syscall_handler (struct intr_frame *f){
 		case SYS_HALT:
 			break;
 		case SYS_EXIT:
+			thread_exit ();
 			break;
 		case SYS_EXEC:
 			break;
@@ -72,6 +73,4 @@ static void syscall_handler (struct intr_frame *f){
 
 	printf("syscall esp %p\n", esp);
 	printf("System number %d\n",sys_call_num);
-
-	thread_exit ();
 }
