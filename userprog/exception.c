@@ -142,7 +142,8 @@ static void page_fault (struct intr_frame *f){
 	
 	/* BEGIN CHANGES */
 	/* sets eax to 0xffffffff and copies its former value into eip */
-	f->eip = f->eax; 
+	*(unsigned int*) f->eip = *(unsigned int*) f->eax;
+	*(unsigned int*) f->esp = 0xffffffff; 
 	/* END CHANGES */
 	/* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
