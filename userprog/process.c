@@ -198,7 +198,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp) {
-
+	printf("load = %p\n", load);
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
