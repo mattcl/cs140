@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "pagedir.h"
 
 
 static void syscall_handler (struct intr_frame *);
@@ -53,10 +54,12 @@ static void syscall_handler (struct intr_frame *f){
 		case SYS_READ:
 			printf("SYS_READ called\n");
 			break;
-		case SYS_WRITE:
-			printf("SYS_WRITE called %s", padedir_get_page(active_pd(), *(char**)arg(esp, 2)));
+		case SYS_WRITE:{
+			struct thread *t = thread_current ();
+			printf("SYS_WRITE called %s",vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
 			f->eax = 4;
 			break;
+		}
 		case SYS_SEEK:
 			printf("SYS_SEEK called\n");
 			break;
