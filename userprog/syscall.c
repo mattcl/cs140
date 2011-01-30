@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 
