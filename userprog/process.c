@@ -317,7 +317,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	size_t fn_len = strlen(f_name) + 1;
 	strlcpy(*esp, f_name, fn_len);
 	// moves esp down length of the filename
-	*esp -= fn_len;
+	*esp = (char*)(*esp) - fn_len;
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
@@ -326,11 +326,11 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		size_t arg_len = strlen(token) + 1;
 		strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
-		*esp -= arg_len;
+		*esp = (char*)(*esp) - arg_len;
 	}
 	
 	// word align
-	*esp -= ((unsigned int) *esp) % 4; 
+	*esp = ((char*) (*esp)) - (((unsigned int) *esp) % 4); 
 	
 	// sets argv[argc] = NULL
 	*esp-- = NULL;
