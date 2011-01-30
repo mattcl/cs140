@@ -331,6 +331,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	printf("esp after pushing %p\n", *esp);
 
+
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
 
@@ -342,21 +343,27 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		*(char**)esp -= arg_len;
 		error = strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
+
 		strPtrs[++count] = *esp;
 
 		printf("esp after pushing %p strlcpy %lu\n", *esp, error);
+
 	}
 	
 	printf("before word align %p\n", *esp);
 	// word align
+
 	*(char**)esp -= ((unsigned int)*esp) % 4;
 	printf("after word align %p\n", *esp);
+
 	
 	// sets argv[argc] = NULL
+
 	//*(char**)(*esp) = NULL;
 
 	*esp -= sizeof(char*);
 	**((char **) esp) = NULL;
+
 
 
 	printf("After moving for the argv[argc] %p\n", *esp);
