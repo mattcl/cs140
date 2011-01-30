@@ -362,7 +362,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	//*(char**)(*esp) = NULL;
 
 	*esp -= sizeof(char*);
-	**((char **) esp) = NULL;
+	**((int **) esp) = NULL;
 
 
 
@@ -381,11 +381,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	(int*)(*esp) --;
 	**(int **)esp = count;
 
-
-
-
 	// set return address
-	*esp-- = NULL;
+	*--esp = NULL;
 
 	// -------- END CHANGES -------- //
 
