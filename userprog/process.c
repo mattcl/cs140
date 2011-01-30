@@ -342,7 +342,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	*(char**)esp -= ((unsigned int)*esp) % 4;
 	
 	// sets argv[argc] = NULL
-	*esp-- = NULL;
+	*esp = 0;
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
