@@ -384,13 +384,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	// set argc
 	*esp--;
 	**(int **)esp = count;
-	printf("Count %d should be %d\n", count, **esp);
+	printf("Count %d should be %d\n", count, **(int**)esp);
 
 	// set return address
 	*esp --;
 	**((int **) esp) = NULL;
 
-	printf("Return address should be 0 %d\n", **esp);
+	printf("Return address should be 0 %d\n", **(int**)esp);
 
 	// -------- END CHANGES -------- //
 
