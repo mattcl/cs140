@@ -362,7 +362,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	//*(char**)(*esp) = NULL;
 
 	*(char**)esp -= sizeof(int);
-	**((int **) esp) = NULL;
+	**((char ***) esp) = NULL;
 
 
 
