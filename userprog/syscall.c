@@ -19,7 +19,7 @@ void syscall_init (void) {
 static void system_halt (struct intr_frame *f UNUSED);
 static void system_exit (struct intr_frame *f, int status UNUSED);
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED);
-static void system_wait (struct intr_frame *f, pid_t pid UNUSED);
+static void system_wait (struct intr_frame *f, tid_t pid UNUSED);
 static void system_create (struct intr_frame *f, const char *file, unsigned int initial_size UNUSED);
 static void system_remove(struct intr_frame *f, const char *file UNUSED);
 static void system_open (struct intr_frame *f, const char *file UNUSED);
@@ -74,7 +74,7 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		}
 		case SYS_SEEK:
-			system_seek(f, (int*)arg(esp,1), *(unsigned int *)arg(esp,2) );
+			system_seek(f, *(int*)arg(esp,1), *(unsigned int *)arg(esp,2) );
 			break;
 		case SYS_TELL:
 			system_tell(f, *(int*)arg(esp,1));
@@ -132,7 +132,8 @@ static void system_exit (struct intr_frame *f, int satus UNUSED){
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 	printf("SYS_EXEC called\n");
 }
-static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+
+static void system_wait (struct intr_frame *f, tid_t pid UNUSED){
 	printf("SYS_WAIT called\n");
 }
 static void system_create (struct intr_frame *f, const char *file, unsigned int initial_size UNUSED){
@@ -147,7 +148,7 @@ static void system_open (struct intr_frame *f, const char *file UNUSED){
 static void system_filesize(struct intr_frame *f, int fd UNUSED){
 	printf("SYS_FILESIZE called\n");
 }
-static void system_read(struct intr_frame *f, int fd , const void *buffer, unsigned int size UNUSED){
+static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED){
 	printf("SYS_READ called\n");
 }
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
