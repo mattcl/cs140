@@ -10,6 +10,8 @@ void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+// arg with INT == 0 is the system call number
+// params are start at INT == 1
 #define arg(ESP, INT)(*((int *)ESP + INT))
 
 static void syscall_handler (struct intr_frame *f){
@@ -38,7 +40,7 @@ static void syscall_handler (struct intr_frame *f){
 		case SYS_READ:
 			break;
 		case SYS_WRITE:
-
+			printf("%s",arg(esp, 2));
 			break;
 		case SYS_SEEK:
 			break;
