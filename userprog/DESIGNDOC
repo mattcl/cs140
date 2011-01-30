@@ -35,6 +35,8 @@ FirstName LastName <email@domain.example>
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
+First we push the arguments on the stack in order (i.e. we first
+>> push the filename onto the stack).
 
 ---- RATIONALE ----
 
