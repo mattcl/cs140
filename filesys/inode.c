@@ -108,37 +108,34 @@ inode_create (block_sector_t sector, off_t length)
 /* Reads an inode from SECTOR
    and returns a `struct inode' that contains it.
    Returns a null pointer if memory allocation fails. */
-struct inode *
-inode_open (block_sector_t sector)
-{
-  struct list_elem *e;
-  struct inode *inode;
+struct inode *inode_open (block_sector_t sector){
+	struct list_elem *e;
+	struct inode *inode;
 
-  /* Check whether this inode is already open. */
-  for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
-       e = list_next (e)) 
-    {
-      inode = list_entry (e, struct inode, elem);
-      if (inode->sector == sector) 
-        {
-          inode_reopen (inode);
-          return inode; 
-        }
-    }
+	/* Check whether this inode is already open. */
+	for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
+			e = list_next (e)){
+		inode = list_entry (e, struct inode, elem);
+		if (inode->sector == sector){
 
-  /* Allocate memory. */
-  inode = malloc (sizeof *inode);
-  if (inode == NULL)
-    return NULL;
+			inode_reopen (inode);
+			return inode;
+		}
+	}
 
-  /* Initialize. */
-  list_push_front (&open_inodes, &inode->elem);
-  inode->sector = sector;
-  inode->open_cnt = 1;
-  inode->deny_write_cnt = 0;
-  inode->removed = false;
-  block_read (fs_device, inode->sector, &inode->data);
-  return inode;
+	/* Allocate memory. */
+	inode = malloc (sizeof *inode);
+	if (inode == NULL){
+		return NULL;
+	}
+	/* Initialize. */
+	list_push_front (&open_inodes, &inode->elem);
+	inode->sector = sector;
+	inode->open_cnt = 1;
+	inode->deny_write_cnt = 0;
+	inode->removed = false;
+	block_read (fs_device, inode->sector, &inode->data);
+	return inode;
 }
 
 /* Reopens and returns INODE. */
