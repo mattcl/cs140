@@ -207,7 +207,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	int i;
 
 	// --------- BEGIN CHANGES -------- //
-	// copy the file_name with args into a modifiable buffer
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
 	strlcpy(arg_buffer, file_name, len);
@@ -216,6 +215,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	
 	// extract the filename from the args
 	f_name = strtok_r(arg_buffer, " ", &save_ptr);
+	token = strtok_r(NULL, " ", &saveptr);
 
 	// ---------- END CHANGES ----------//
 
@@ -320,7 +320,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	*esp -= fn_len;
 
 	// pushes arguments onto stack
-	for(token = strtok_r(arg_buffer, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
 		strPtrs[++count] = *esp;
 		token = strtok_r(NULL, " ", &save_ptr);
 		size_t arg_len = strlen(token) + 1;
