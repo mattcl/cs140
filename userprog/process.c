@@ -341,8 +341,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		printf("esp after pushing %p strlcpy %lu\n", *esp, error);
 	}
 	
+	printf("before word align %p\n", *esp);
 	// word align
 	*(char**)esp -= ((unsigned int)*esp) % 4;
+	printf("after word align %p\n", *esp);
 	
 	// sets argv[argc] = NULL
 	**(char **)esp = NULL;
