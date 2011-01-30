@@ -57,7 +57,7 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		case SYS_WRITE:{
 			struct thread *t = thread_current ();
-			printf("SYS_WRITE called %s",vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
+			printf("SYS_WRITE called %s", *(char**)arg(esp, 2));
 			f->eax = 4;
 			break;
 		}
@@ -98,3 +98,4 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 	}
 }
+
