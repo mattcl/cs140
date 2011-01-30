@@ -53,7 +53,7 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_READ called\n");
 			break;
 		case SYS_WRITE:
-			printf("SYS_WRITE called %s",*(char**)arg(esp, 2));
+			printf("SYS_WRITE called %d %s %d",*(int*)arg(esp, 1), *(char**)arg(esp, 2), *(int*)arg(esp,3));
 
 			break;
 		case SYS_SEEK:
