@@ -11,7 +11,7 @@ void syscall_init (void) {
 }
 
 static void syscall_handler (struct intr_frame *f){
-	printf ("system call Vector number %x!\n", f->vec_no);
+	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
 

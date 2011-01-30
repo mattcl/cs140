@@ -191,6 +191,8 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
+static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr);
+
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
@@ -313,10 +315,25 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		goto done;
 	}
 	
+	setup_main_args(esp, f_name, token, save_ptr);
 
+	/* Start address. */
+	*eip = (void (*) (void)) ehdr.e_entry;
+
+	success = true;
+
+	done:
+	/* We arrive here whether the load is successful or not. */
+	file_close (file);
+	printf("Returning load\n");
+	return success;
+}
+
+static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr){
 	// ------- BEGIN CHANGES ------- //
 	void *strPtrs[128];
 	int count = 0;
+	int i = 0;
 
 	size_t fn_len = strlen(f_name) + 1;
 	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
@@ -341,22 +358,21 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
 		*(char**)esp -= arg_len;
-		error = strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
 
 		strPtrs[++count] = *esp;
 
-		printf("esp after pushing %p strlcpy %lu\n", *esp, error);
+		printf("esp after pushing %p strlcpy\n", *esp);
 
 	}
-	
+
 	printf("before word align %p\n", *esp);
 	// word align
 
 	*(char**)esp -= ((unsigned int)*esp) % 4;
 	printf("after word align %p\n", *esp);
 
-	
+
 	// sets argv[argc] = NULL
 
 	//*(char**)(*esp) = NULL;
@@ -400,17 +416,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	// -------- END CHANGES -------- //
 
 	printf("ESP %p\n", *esp);
+	return true;
 
-	/* Start address. */
-	*eip = (void (*) (void)) ehdr.e_entry;
-
-	success = true;
-
-	done:
-	/* We arrive here whether the load is successful or not. */
-	file_close (file);
-	printf("Returning load\n");
-	return success;
 }
 
 /* load() helpers. */
