@@ -329,7 +329,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		//token = strtok_r(NULL, " ", &save_ptr);
 		size_t arg_len = strlen(token) + 1;
 
-		printf("Token %s, size %d, %p\n", token, fn_len, *esp);
+		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
 		strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
