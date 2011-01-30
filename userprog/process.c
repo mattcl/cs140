@@ -378,11 +378,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	*--esp = (*(char**)esp + 1);
 
 	// set argc
-	(int*)(*esp) --;
+	*esp--;
 	**(int **)esp = count;
 
 	// set return address
-	*--esp = NULL;
+	*esp --;
+	**((int **) esp) = NULL;
 
 	// -------- END CHANGES -------- //
 
