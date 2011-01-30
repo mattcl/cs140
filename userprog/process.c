@@ -379,7 +379,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	**(char***)esp = (*(char**)esp + 1);
 
 	printf("After set argv %p %p\n", *esp, **(char ***)esp);
-	printf("Should point to the memory address before\n")
+	printf("Should point to the memory address before\n");
 
 	// set argc
 	* esp --;
