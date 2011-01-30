@@ -339,7 +339,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	}
 	
 	// word align
-	*esp -= ((unsigned int) *esp) % 4; 
+	*(char**)esp -= ((unsigned int)*esp) % 4;
 	
 	// sets argv[argc] = NULL
 	*esp-- = NULL;
