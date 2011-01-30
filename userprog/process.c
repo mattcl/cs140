@@ -383,8 +383,11 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	printf("After set argv %p %p\n", *esp, **(char ***)esp);
 	printf("Should point to the memory address before\n");
 
+
+	print("%p\n", *esp);
 	// set argc
 	* esp -= sizeof(char*);
+	print("%p\n", *esp);
 	**(int **)esp = count;
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
