@@ -15,13 +15,13 @@ void syscall_init (void) {
 #define arg(ESP, INT)((int *)ESP + INT)
 
 static void syscall_handler (struct intr_frame *f){
-	printf ("system call Vector number 0x%x!\n", f->vec_no);
+	//printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
 	int sys_call_num = *(int*)arg(esp, 0);
 
-	printf("syscall esp %p\n", esp);
-	printf("System number %d\n",sys_call_num);
+	//printf("syscall esp %p\n", esp);
+	printf("System Call number %d\n",sys_call_num);
 
 	switch (sys_call_num){
 		case SYS_HALT:
@@ -54,7 +54,7 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		case SYS_WRITE:
 			printf("SYS_WRITE called %s",*(char**)arg(esp, 2));
-			f->eax = 4;
+
 			break;
 		case SYS_SEEK:
 			printf("SYS_SEEK called\n");
