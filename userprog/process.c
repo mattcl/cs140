@@ -353,8 +353,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	
 	// sets argv[argc] = NULL
-	**(char **)esp = NULL;
-	*esp --;
+	*(char*)(*esp) = NULL;
+	*esp = (char*)(*esp) - 1;
 
 	printf("After moving for the argv[argc] %p\n", *esp);
 
