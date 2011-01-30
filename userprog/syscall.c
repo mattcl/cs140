@@ -6,6 +6,10 @@
 #include "threads/vaddr.h"
 #include "pagedir.h"
 
+/* Process identifier. */
+typedef int pid_t;
+#define PID_ERROR ((pid_t) -1)
+
 static void syscall_handler (struct intr_frame *);
 
 void syscall_init (void) {

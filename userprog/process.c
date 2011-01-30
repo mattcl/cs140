@@ -49,7 +49,7 @@ tid_t process_execute (const char *file_name) {
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_) {
-	//char *file_name = file_name_;
+	char *file_name = file_name_;
 	struct intr_frame if_;
 	bool success;
 
@@ -58,10 +58,10 @@ static void start_process (void *file_name_) {
 	if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
 	if_.cs = SEL_UCSEG;
 	if_.eflags = FLAG_IF | FLAG_MBS;
-	success = load (file_name_, &if_.eip, &if_.esp);
+	success = load (file_name, &if_.eip, &if_.esp);
 
 	/* If load failed, quit. */
-	palloc_free_page (file_name_);
+	palloc_free_page (file_name);
 	if (!success) {
 		thread_exit ();
 	}
@@ -316,12 +316,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		goto done;
 	}
 	
-	setup_main_args(esp, f_name, token, save_ptr);
-
 	/* Start address. */
 	*eip = (void (*) (void)) ehdr.e_entry;
 
-	success = true;
+	success = setup_main_args(esp, f_name, token, save_ptr);
 
 	done:
 	/* We arrive here whether the load is successful or not. */

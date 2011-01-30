@@ -148,7 +148,7 @@ static void page_fault (struct intr_frame *f){
 			not_present ? "not present" : "rights violation",
 				  write ? "writing" : "reading",
 			       user ? "user" : "kernel");
-	PANIC ("Page Fault");
+	//PANIC ("Page Fault");
 
 	kill (f);
 }
