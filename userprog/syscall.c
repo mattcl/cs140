@@ -6,6 +6,20 @@
 
 static void syscall_handler (struct intr_frame *);
 
+static void system_halt (struct intr_frame *f UNUSED);
+static void system_exit (struct intr_frame *f, int status UNUSED);
+static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED);
+static void system_wait (struct intr_frame *f, tid_t pid UNUSED);
+static void system_create (struct intr_frame *f, const char *file, unsigned int initial_size UNUSED);
+static void system_remove(struct intr_frame *f, const char *file UNUSED);
+static void system_open (struct intr_frame *f, const char *file UNUSED);
+static void system_filesize(struct intr_frame *f, int fd UNUSED);
+static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED);
+static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size);
+static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED);
+static void system_tell(struct intr_frame *f, int fd UNUSED);
+static void system_close(struct intr_frame *f, int fd UNUSED);
+
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
