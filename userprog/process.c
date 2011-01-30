@@ -345,7 +345,6 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	strPtrs[0] = *esp;
 
-
 	printf("esp after pushing %p\n", *esp);
 
 
@@ -358,6 +357,8 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
 		*(char**)esp -= arg_len;
+		strlcpy(*esp, token, arg_len);
+
 		// moves esp down length of pushed data
 
 		strPtrs[++count] = *esp;
