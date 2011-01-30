@@ -12,13 +12,13 @@ void syscall_init (void) {
 
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
-#define arg(ESP, INT)(*((int *)ESP + INT))
+#define arg(ESP, INT)((int *)ESP + INT)
 
 static void syscall_handler (struct intr_frame *f){
 	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
-	int sys_call_num = arg(esp, 0);
+	int sys_call_num = *(int*)arg(esp, 0);
 
 	switch (sys_call_num){
 		case SYS_HALT:
