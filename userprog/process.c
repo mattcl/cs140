@@ -339,7 +339,7 @@ inline void adjust_stack_ptr(void **esp, size_t length){
 
 
 static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr){
-	// ------- BEGIN CHANGES ------- //
+	printf("Setup stack\n");
 	void *strPtrs[128];
 	int count = 0;
 	int i = 0;
@@ -386,8 +386,8 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argc
 	push_4_byte_data(esp, (void*)count);
 
-	// set return address
-
+	//push return address
+	push_4_byte_data(esp , NULL);
 	return true;
 
 }
