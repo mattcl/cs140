@@ -206,11 +206,14 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	bool success = false;
 	int i;
 
+	size_t error;
+
 	// --------- BEGIN CHANGES -------- //
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
 	strlcpy(arg_buffer, file_name, len);
 	
+
 	char *f_name, *token, *save_ptr;
 	
 	// extract the filename from the args
@@ -331,18 +334,19 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
-		strlcpy(*esp, token, arg_len);
+		error = strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
 		*(char**)esp -= arg_len;
 
-		printf("esp after pushing %p\n", *esp);
+		printf("esp after pushing %p strlcpy %lu\n", *esp, error);
 	}
 	
 	// word align
 	*(char**)esp -= ((unsigned int)*esp) % 4;
 	
 	// sets argv[argc] = NULL
-	*esp = 0;
+	**(char **)esp = NULL;
+	*esp --;
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
