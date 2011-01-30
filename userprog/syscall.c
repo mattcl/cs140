@@ -21,7 +21,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = *(int*)arg(esp, 0);
 
 	//printf("syscall esp %p\n", esp);
-	printf("System Call number %d\n",sys_call_num);
+	//printf("System Call number %d\n",sys_call_num);
 
 	switch (sys_call_num){
 		case SYS_HALT:
