@@ -6,7 +6,7 @@
 #define syscall0(NUMBER)                                        \
         ({                                                      \
           int retval;                                           \
-          print("SysCallWith %d", NUMBER);                                              \
+          printf("SysCallWith %d", NUMBER);                                              \
           asm volatile                                          \
             ("pushl %[number]; int $0x30; addl $4, %%esp"       \
                : "=a" (retval)                                  \
