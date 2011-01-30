@@ -313,13 +313,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		goto done;
 	}
 	
+
 	// ------- BEGIN CHANGES ------- //
 	void *strPtrs[128];
 	int count = 0;
 
 	size_t fn_len = strlen(f_name) + 1;
 	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
-
 
 
 	*(char**)esp -= fn_len;
@@ -361,7 +361,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	//*(char**)(*esp) = NULL;
 
-	*esp -= sizeof(char*);
+	*(char**)esp -= sizeof(int);
 	**((int **) esp) = NULL;
 
 
@@ -370,14 +370,14 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
-		* esp -= sizeof(char*);
+		*(char**)esp -= sizeof(char*);
 		**(char ***)esp = strPtrs[i];
 		printf("Arg %d is \"%s\" when dereferenced %p\n", i, *esp, strPtrs[i]);
 	}
 
 	// set argv
 	char *beginning = *esp;
-	* esp -= sizeof(char*);
+	*(char**)esp -= sizeof(char*);
 	**(char***)esp = beginning;
 
 	printf("After set argv %p %p\n", *esp, **(char ***)esp);
@@ -386,13 +386,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	printf("%p\n", *esp);
 	// set argc
-	* esp -= sizeof(char*);
+	*(char**)esp -= sizeof(int);
 	printf("%p\n", *esp);
 	**(int **)esp = count;
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
 	// set return address
-	* esp -= sizeof(void*);
+	*(char**)esp -= sizeof(void*);
 	**((int **) esp) = NULL;
 
 	printf("Return address should be 0 %d\n", **(int**)esp);
