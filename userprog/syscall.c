@@ -11,11 +11,11 @@ void syscall_init (void) {
 }
 
 static void syscall_handler (struct intr_frame *f){
-	printf ("system call Vector number %d!\n", f->vec_no);
+	printf ("system call Vector number %x!\n", f->vec_no);
 
 	void *esp = f->esp;
 
-	printf("ESP %p\n", esp);
+	printf("syscall esp %p\n", esp);
 	printf("System number %d\n", *((int *)esp-2));
 
 	thread_exit ();
