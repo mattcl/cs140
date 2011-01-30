@@ -356,6 +356,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	**(char **)esp = NULL;
 	*esp --;
 
+	printf("After moving for the argv[argc] %p\n", *esp);
+
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		*esp-- = strPtrs[i];
