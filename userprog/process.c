@@ -199,8 +199,6 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp) {
 
-	printf("Loading the ELF file\n");
-
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
@@ -325,7 +323,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	done:
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
-	printf("Returning load\n");
 	return success;
 }
 
