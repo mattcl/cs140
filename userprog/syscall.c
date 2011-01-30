@@ -82,6 +82,7 @@ static void syscall_handler (struct intr_frame *f){
 		case SYS_CLOSE:
 			system_close(f, *(int*)arg(esp,1));
 			break;
+
 			// Project 3 Syscalls
 		case SYS_MMAP:
 			printf("SYS_MMAP called\n");
