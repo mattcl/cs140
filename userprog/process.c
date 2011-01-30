@@ -319,7 +319,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	strlcpy(*esp, f_name, fn_len);
 	// moves esp down length of the filename
-	*esp -= fn_len;
+	*(char*)esp -= fn_len;
 
 	printf("esp after pushing %p\n", *esp);
 
@@ -333,7 +333,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 		strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
-		*esp -= arg_len;
+		*(char*)esp -= arg_len;
 
 		printf("esp after pushing %p\n", *esp);
 	}
