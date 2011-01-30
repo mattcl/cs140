@@ -389,7 +389,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argc
 	push_4_byte_data(esp, (void*)count);
 
-	printf("ESP %p, %d\n");
+	printf("ESP %p, %d\n", *esp, **(int**)esp);
 
 	//push return address
 	push_4_byte_data(esp , NULL);
