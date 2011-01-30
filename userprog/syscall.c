@@ -16,6 +16,22 @@ void syscall_init (void) {
 // params are start at INT == 1
 #define arg(ESP, INT)((int *)ESP + INT)
 
+static void system_halt (struct intr_frame *f);
+static void system_exit (struct intr_frame *f, int status);
+static void system_exec (struct intr_frame *f, const char *cmd_line);
+static void system_wait (struct intr_frame *f, pid_t pid);
+static void system_create (struct intr_frame *f, const char *file, unsigned int initial_size);
+static void system_remove(struct intr_frame *f,, const char *file);
+static void system_open (struct intr_frame *f, const char *file);
+static void system_filesize(struct intr_frame *f, int fd);
+static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size);
+static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size);
+static void system_seek(struct intr_frame *f, int fd, unsigned int position);
+static void system_tell(struct intr_frame *f, int fd);
+static void system_close(struct intr_frame *f, int fd);
+
+static void *convert_user_pointer (void *user_ptr);
+
 static void syscall_handler (struct intr_frame *f){
 	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
@@ -27,47 +43,44 @@ static void syscall_handler (struct intr_frame *f){
 
 	switch (sys_call_num){
 		case SYS_HALT:
-			printf("SYS_HALT called\n");
+			system_halt(f);
 			break;
 		case SYS_EXIT:
-			printf("SYS_EXIT called\n");
-			thread_exit ();
+			system_exit(f, *(int*)arg(esp, 1));
 			break;
 		case SYS_EXEC:
-			printf("SYS_EXEC called\n");
+			system_exec(f, *(char**)arg(esp,1));
 			break;
 		case SYS_WAIT:
-			printf("SYS_WAIT called\n");
+			system_wait(f, *(pid_t*)arg(esp,1));
 			break;
 		case SYS_CREATE:
-			printf("SYS_CREATE called\n");
+			system_create(f, *(char**)arg(esp,1), *(unsigned int *)arg(esp,2));
 			break;
 		case SYS_REMOVE:
-			printf("SYS_REMOVE called\n");
+			system_remove(f, *(char**)arg(esp,1));
 			break;
 		case SYS_OPEN:
-			printf("SYS_OPEN called\n");
+			system_open(f, *(char**)arg(esp,1));
 			break;
 		case SYS_FILESIZE:
-			printf("SYS_FILESIZE called\n");
+			system_filesize(f, *(int*)arg(esp,1));
 			break;
 		case SYS_READ:
-			printf("SYS_READ called\n");
+			system_read(f, *(int*)arg(esp,1), *(void**)arg(esp,2), *(unsigned int *)arg(esp,3) );
 			break;
 		case SYS_WRITE:{
-			struct thread *t = thread_current ();
-			printf("SYS_WRITE called %s",vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
-			f->eax = 4;
+			system_write(f, *(int*)arg(esp,1), *(void**)arg(esp,2), *(unsigned int *)arg(esp,3) );
 			break;
 		}
 		case SYS_SEEK:
-			printf("SYS_SEEK called\n");
+			system_seek(f, (int*)arg(esp,1), *(unsigned int *)arg(esp,2) );
 			break;
 		case SYS_TELL:
-			printf("SYS_TELL called\n");
+			system_tell(f, *(int*)arg(esp,1));
 			break;
 		case SYS_CLOSE:
-			printf("SYS_CLOSE called\n");
+			system_close(f, *(int*)arg(esp,1));
 			break;
 			// Project 3 Syscalls
 		case SYS_MMAP:
@@ -96,4 +109,60 @@ static void syscall_handler (struct intr_frame *f){
 			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
 			break;
 	}
+}
+
+/*
+ * Takes a user program pointer and checks it, will return NULL if the pointer is invalid
+ * Otherwise it will return the address that the kernel can use to access the appropriate data
+ * Should be called before ever dereferencing a user pointer
+ */
+static void *convert_user_pointer (void *user_ptr){
+
+}
+
+static void system_halt (struct intr_frame *f){
+	printf("SYS_HALT called\n");
+}
+
+static void system_exit (struct intr_frame *f, int status){
+	printf("SYS_EXIT called\n");
+	thread_exit ();
+}
+
+static void system_exec (struct intr_frame *f, const char *cmd_line){
+	printf("SYS_EXEC called\n");
+}
+static void system_wait (struct intr_frame *f, pid_t pid){
+	printf("SYS_WAIT called\n");
+}
+static void system_create (struct intr_frame *f, const char *file, unsigned int initial_size){
+	printf("SYS_CREATE called\n");
+}
+static void system_remove(struct intr_frame *f,, const char *file){
+	printf("SYS_REMOVE called\n");
+}
+static void system_open (struct intr_frame *f, const char *file){
+	printf("SYS_OPEN called\n");
+}
+static void system_filesize(struct intr_frame *f, int fd){
+	printf("SYS_FILESIZE called\n");
+}
+static void system_read(struct intr_frame *f, int fd , const void *buffer, unsigned int size){
+	printf("SYS_READ called\n");
+}
+static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+	struct thread *t = thread_current ();
+	printf("SYS_WRITE called with args %d %s, %u\n",fd, buffer, size);
+	//vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
+	f->eax = 4;
+}
+
+static void system_seek(struct intr_frame *f, int fd, unsigned int position){
+	printf("SYS_SEEK called\n");
+}
+static void system_tell(struct intr_frame *f, int fd){
+	printf("SYS_TELL called\n");
+}
+static void system_close(struct intr_frame *f, int fd){
+	printf("SYS_CLOSE called\n");
 }
