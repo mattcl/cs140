@@ -374,6 +374,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
 
+
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
