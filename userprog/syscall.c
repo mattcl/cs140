@@ -16,7 +16,7 @@ static void syscall_handler (struct intr_frame *f){
 	void *esp = f->esp;
 
 	printf("syscall esp %p\n", esp);
-	printf("System number %d\n", *((int *)esp-2));
+	printf("System number %d\n", *((int *)esp+1));
 
 	thread_exit ();
 }
