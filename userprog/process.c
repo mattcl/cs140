@@ -209,8 +209,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	bool success = false;
 	int i;
 
-	size_t error;
-
 	// --------- BEGIN CHANGES -------- //
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
@@ -329,7 +327,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 static inline void push_4_byte_data(void ** esp, void *data){
 	*(uint32_t*)esp -= sizeof(uint32_t);
-	**((uint32_t **) esp) = data;
+	**((uint32_t **) esp) = (uint32_t)data;
 }
 
 static inline void adjust_stack_ptr(void **esp, size_t length){
@@ -379,7 +377,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], strPtrs[i], i);
+		printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
 	}
 
 	// set argv
