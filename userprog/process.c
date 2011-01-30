@@ -334,6 +334,10 @@ inline void push_4_byte_data(void ** esp, void *data){
 	**((char ***) esp) = data;
 }
 
+inline void adjust_stack_ptr(void **esp, size_t length){
+	*(char**)esp -= length;
+}
+
 
 static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr){
 	// ------- BEGIN CHANGES ------- //
@@ -345,7 +349,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
 
 
-	*(char**)esp -= fn_len;
+	adjust_stack_ptr(esp, fn_len);
 	strlcpy(*esp, f_name, fn_len);
 	// moves esp down length of the filename
 
@@ -362,7 +366,8 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
-		*(char**)esp -= arg_len;
+		adjust_stack_ptr(esp, arg_len);
+
 		strlcpy(*esp, token, arg_len);
 
 		// moves esp down length of pushed data
@@ -376,24 +381,17 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	printf("before word align %p\n", *esp);
 	// word align
 
-	*(char**)esp -= ((unsigned int)*esp) % 4;
+	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
 	printf("after word align %p\n", *esp);
 
 
 	// sets argv[argc] = NULL
-
-	//*(char**)esp -= sizeof(int);
-	//**((char ***) esp) = NULL;
 	push_4_byte_data(esp , NULL);
-
 
 	printf("After moving for the argv[argc] %p\n", *esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
-		//*(char**)esp -= sizeof(char*);
-		//**(char ***)esp = strPtrs[i];
-
 		push_4_byte_data(esp, strPtrs[i]);
 
 		printf("Arg %d is \"%s\" when dereferenced %p AT stack pos %p\n", i, **(char***)esp, **(char***)esp, *esp);
@@ -402,26 +400,16 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
-
-	//*(char**)esp -= sizeof(char*);
-	//**(char***)esp = beginning;
-
 	printf("After set argv %p %p\n", *esp, **(char ***)esp);
 	printf("Should point to the memory address before\n");
 
 
 	// set argc
-
-	//*(char**)esp -= sizeof(int);
-	//**(int **)esp = count;
 	push_4_byte_data(esp, (void*)count);
 
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
 	// set return address
-	//*(char**)esp -= sizeof(void*);
-	//**((int **) esp) = NULL;
-
 	push_4_byte_data(esp , NULL);
 
 	printf("Return address should be 0 %d\n", **(int**)esp);
