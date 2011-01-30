@@ -399,6 +399,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	// -------- END CHANGES -------- //
 
+	printf("ESP %p\n", esp);
+
 	/* Start address. */
 	*eip = (void (*) (void)) ehdr.e_entry;
 
