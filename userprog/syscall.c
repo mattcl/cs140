@@ -34,6 +34,7 @@ static void *convert_user_pointer (void *user_ptr);
 
 static void syscall_handler (struct intr_frame *f){
 	printf("SYSTEM CALL!\n");
+	thread_exit();
 	return;
 	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
