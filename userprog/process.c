@@ -347,8 +347,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	printf("after word align %p\n", *esp);
 	
 	// sets argv[argc] = NULL
-	*esp-- = NULL;
+	//*esp-- = NULL;
+	*(char**)(*esp) = NULL;
 
+	//**((char **) esp) = NULL;
+
+	*esp -= sizeof(char*);
 	printf("After moving for the argv[argc] %p\n", *esp);
 
 	// set argv elements
