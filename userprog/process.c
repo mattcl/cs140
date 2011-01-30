@@ -393,7 +393,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	//push return address
 	push_4_byte_data(esp , NULL);
-	printf("Returning from setting up stack\n");
+	printf("Returning from setting up stack %p\n", *esp);
 	return true;
 
 }
