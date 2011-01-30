@@ -33,6 +33,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED);
 static void *convert_user_pointer (void *user_ptr);
 
 static void syscall_handler (struct intr_frame *f){
+	printf("SYSTEM CALL!\n");
 	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
@@ -154,7 +155,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 }
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	//struct thread *t = thread_current ();
-	//printf("SYS_WRITE called with args %d %s, %u\n",fd, pagedir_get_page(buffer), size);
+	printf("SYS_WRITE called with args %d %s, %u\n",fd, buffer, size);
 	//vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
 	//f->eax = 4;
 }
