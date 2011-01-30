@@ -65,6 +65,7 @@ static void start_process (void *file_name_) {
 	if (!success) {
 		thread_exit ();
 	}
+	printf("Finished loading\n");
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
