@@ -382,12 +382,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	printf("Should point to the memory address before\n")
 
 	// set argc
-	*esp--;
+	*esp -= sizeof(int);
 	**(int **)esp = count;
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
 	// set return address
-	*esp --;
+	*esp -= sizeof(void*);
 	**((int **) esp) = NULL;
 
 	printf("Return address should be 0 %d\n", **(int**)esp);
