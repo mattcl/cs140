@@ -348,30 +348,27 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	size_t fn_len = strlen(f_name) + 1;
 	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
 
-
+	//make space for filename
 	adjust_stack_ptr(esp, fn_len);
+
+	//puts filename on stack
 	strlcpy(*esp, f_name, fn_len);
-	// moves esp down length of the filename
 
 	strPtrs[0] = *esp;
 
 	printf("esp after pushing %p\n", *esp);
 
-
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
 
-		//token = strtok_r(NULL, " ", &save_ptr);
 		size_t arg_len = strlen(token) + 1;
-
 		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
 
+		//make room for the argument
 		adjust_stack_ptr(esp, arg_len);
 
+		//put stuff into the stack
 		strlcpy(*esp, token, arg_len);
-
-		// moves esp down length of pushed data
-
 		strPtrs[++count] = *esp;
 
 		printf("esp after pushing %p strlcpy\n", *esp);
@@ -379,9 +376,10 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	}
 
 	printf("before word align %p\n", *esp);
-	// word align
 
+	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
+
 	printf("after word align %p\n", *esp);
 
 
