@@ -329,12 +329,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	return success;
 }
 
-inline void push_4_byte_data(void ** esp, void *data){
+static inline void push_4_byte_data(void ** esp, void *data){
 	*(uint32_t*)esp -= sizeof(uint32_t);
 	**((uint32_t **) esp) = data;
 }
 
-inline void adjust_stack_ptr(void **esp, size_t length){
+static inline void adjust_stack_ptr(void **esp, size_t length){
 	*(char**)esp -= length;
 }
 
@@ -354,6 +354,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	strlcpy(*esp, f_name, fn_len);
 
 	strPtrs[0] = *esp;
+	printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
@@ -371,28 +372,32 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
+	printf("ESP %p\n", *esp);
 
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
-
+	printf("ESP %p, %d\n", *esp, **(int**)esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		printf("ESP %p %p %s %p %s\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], strPtrs[i]);
+		printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], strPtrs[i], i);
 	}
 
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
+	printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
 
 	// set argc
 	push_4_byte_data(esp, (void*)count);
 
-	printf("ESP %p, %d\n", *esp, **(int**)esp);
+	printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
 
 	//push return address
 	push_4_byte_data(esp , NULL);
+	printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
+
 	printf("Returning from setting up stack %p\n", *esp);
 	return true;
 
