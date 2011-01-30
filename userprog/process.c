@@ -329,6 +329,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	return success;
 }
 
+inline void push_4_byte_data(void ** esp, void *data){
+	*(char**)esp -= sizeof(char *);
+	**((char ***) esp) = data;
+}
+
+
 static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr){
 	// ------- BEGIN CHANGES ------- //
 	void *strPtrs[128];
@@ -376,41 +382,47 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 	// sets argv[argc] = NULL
 
-	//*(char**)(*esp) = NULL;
-
-	*(char**)esp -= sizeof(int);
-	**((char ***) esp) = NULL;
-
+	//*(char**)esp -= sizeof(int);
+	//**((char ***) esp) = NULL;
+	push_4_byte_data(esp , NULL);
 
 
 	printf("After moving for the argv[argc] %p\n", *esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
-		*(char**)esp -= sizeof(char*);
-		**(char ***)esp = strPtrs[i];
+		//*(char**)esp -= sizeof(char*);
+		//**(char ***)esp = strPtrs[i];
+
+		push_4_byte_data(esp, strPtrs[i]);
+
 		printf("Arg %d is \"%s\" when dereferenced %p AT stack pos %p\n", i, **(char***)esp, **(char***)esp, *esp);
 	}
 
 	// set argv
 	char *beginning = *esp;
-	*(char**)esp -= sizeof(char*);
-	**(char***)esp = beginning;
+	push_4_byte_data(esp, beginning);
+
+	//*(char**)esp -= sizeof(char*);
+	//**(char***)esp = beginning;
 
 	printf("After set argv %p %p\n", *esp, **(char ***)esp);
 	printf("Should point to the memory address before\n");
 
 
-	printf("%p\n", *esp);
 	// set argc
-	*(char**)esp -= sizeof(int);
-	printf("%p\n", *esp);
-	**(int **)esp = count;
+
+	//*(char**)esp -= sizeof(int);
+	//**(int **)esp = count;
+	push_4_byte_data(esp, (void*)count);
+
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
 	// set return address
-	*(char**)esp -= sizeof(void*);
-	**((int **) esp) = NULL;
+	//*(char**)esp -= sizeof(void*);
+	//**((int **) esp) = NULL;
+
+	push_4_byte_data(esp , NULL);
 
 	printf("Return address should be 0 %d\n", **(int**)esp);
 
