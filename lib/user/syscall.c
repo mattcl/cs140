@@ -6,11 +6,11 @@
 #define syscall0(NUMBER)                                        \
         ({                                                      \
           int retval;                                           \
-          printf("SysCallWith %d", NUMBER);                                              \
+          printf("SysCallWith %d", NUMBER);                     \
           asm volatile                                          \
             ("pushl %[number]; int $0x30; addl $4, %%esp"       \
                : "=a" (retval)                                  \
-               : [number] "i" (NUMBER+1)                          \
+               : [number] "i" (NUMBER)                          \
                : "memory");                                     \
           retval;                                               \
         })
@@ -20,6 +20,7 @@
 #define syscall1(NUMBER, ARG0)                                           \
         ({                                                               \
           int retval;                                                    \
+          printf("SysCallWith %d", NUMBER);                     \
           asm volatile                                                   \
             ("pushl %[arg0]; pushl %[number]; int $0x30; addl $8, %%esp" \
                : "=a" (retval)                                           \
@@ -34,6 +35,7 @@
 #define syscall2(NUMBER, ARG0, ARG1)                            \
         ({                                                      \
           int retval;                                           \
+          printf("SysCallWith %d", NUMBER);                     \
           asm volatile                                          \
             ("pushl %[arg1]; pushl %[arg0]; "                   \
              "pushl %[number]; int $0x30; addl $12, %%esp"      \
@@ -50,6 +52,7 @@
 #define syscall3(NUMBER, ARG0, ARG1, ARG2)                      \
         ({                                                      \
           int retval;                                           \
+          printf("SysCallWith %d", NUMBER);                     \
           asm volatile                                          \
             ("pushl %[arg2]; pushl %[arg1]; pushl %[arg0]; "    \
              "pushl %[number]; int $0x30; addl $16, %%esp"      \
