@@ -54,7 +54,8 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_READ called\n");
 			break;
 		case SYS_WRITE:
-			printf("SYS_WRITE called %s",pagedir_get_page(active_pd(), *(char**)arg(esp, 2)));
+			struct thread *t = thread_current ();
+			printf("SYS_WRITE called %s",pagedir_get_page(t->pagedir, *(char**)arg(esp, 2)));
 			f->eax = 4;
 			break;
 		case SYS_SEEK:
