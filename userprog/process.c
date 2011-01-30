@@ -385,8 +385,8 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	push_4_byte_data(esp, beginning);
 	printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
 
-	// set argc
-	push_4_byte_data(esp, (void*)count);
+	// set argc (Count was an index but needs to be the number of args including filename)
+	push_4_byte_data(esp, (void*)(count+1));
 
 	printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
 
