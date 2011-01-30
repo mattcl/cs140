@@ -215,7 +215,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	
 	// extract the filename from the args
 	f_name = strtok_r(arg_buffer, " ", &save_ptr);
-	token = strtok_r(NULL, " ", &saveptr);
+	token = strtok_r(NULL, " ", &save_ptr);
 
 	// ---------- END CHANGES ----------//
 
@@ -342,7 +342,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	}
 
 	// set argv
-	*esp-- = (char *) *esp + 1; 
+	*esp-- = ((char *) *esp) + 1;
 
 	// set argc
 	*esp-- = (void *) count;
