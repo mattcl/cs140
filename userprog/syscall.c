@@ -153,7 +153,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 }
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	struct thread *t = thread_current ();
-	printf("SYS_WRITE called with args %d %s, %u\n",fd, buffer, size);
+	printf("SYS_WRITE called with args %d %s, %u\n",fd, pagedir_get_page(buffer), size);
 	//vtop(pagedir_get_page(t->pagedir, *(char**)arg(esp, 2))));
 	f->eax = 4;
 }
