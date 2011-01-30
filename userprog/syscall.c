@@ -40,7 +40,7 @@ static void syscall_handler (struct intr_frame *f){
 		case SYS_READ:
 			break;
 		case SYS_WRITE:
-			printf("%p",(char*)arg(esp, 2));
+			printf("%p",*(char**)arg(esp, 2));
 			break;
 		case SYS_SEEK:
 			break;
