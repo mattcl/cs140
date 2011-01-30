@@ -20,6 +20,9 @@ static void syscall_handler (struct intr_frame *f){
 	void *esp = f->esp;
 	int sys_call_num = *(int*)arg(esp, 0);
 
+	printf("syscall esp %p\n", esp);
+	printf("System number %d\n",sys_call_num);
+
 	switch (sys_call_num){
 		case SYS_HALT:
 			break;
@@ -70,8 +73,4 @@ static void syscall_handler (struct intr_frame *f){
 			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
 			break;
 	}
-
-
-	printf("syscall esp %p\n", esp);
-	printf("System number %d\n",sys_call_num);
 }
