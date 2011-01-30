@@ -353,22 +353,29 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	
 	// sets argv[argc] = NULL
-	*(char*)(*esp) = NULL;
-	*esp = (char*)(*esp) - 1;
+
+	//*(char**)(*esp) = NULL;
+
+	**((char **) esp) = NULL;
+	*esp -= sizeof(char*);
+
 
 	printf("After moving for the argv[argc] %p\n", *esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		*esp-- = strPtrs[i];
-		printf("Arg %d is \"%s\" when dereferenced\n", i, strPtrs[i]);
+		printf("Arg %d is \"%s\" when dereferenced %p\n", i, strPtrs[i], strPtrs[i]);
 	}
 
 	// set argv
 	*esp-- = ((char *) *esp) + 1;
 
 	// set argc
-	*esp-- = (void *) count;
+	**(int **)esp = count;
+	(int*)(*esp) --;
+
+
 
 	// set return address
 	*esp-- = NULL;
