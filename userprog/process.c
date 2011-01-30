@@ -375,15 +375,22 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	}
 
 	// set argv
-	*--esp = (*(char**)esp + 1);
+	* esp -= sizeof(void*);
+	**esp = (*esp + 1);
+
+	printf("After set argv %p %p\n", *esp, **esp);
+	printf("Should point to the memory address before\n")
 
 	// set argc
 	*esp--;
 	**(int **)esp = count;
+	printf("Count %d should be %d\n", count, **esp);
 
 	// set return address
 	*esp --;
 	**((int **) esp) = NULL;
+
+	printf("Return address should be 0 %d\n", **esp);
 
 	// -------- END CHANGES -------- //
 
