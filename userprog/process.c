@@ -361,7 +361,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	*esp-- = ((char *) *esp) + 1;
 
 	// set argc
-	*esp-- = (void *) count;
+	**(int **)esp = count;
+	(int*)(*esp) --;
+
+
 
 	// set return address
 	*esp-- = NULL;
