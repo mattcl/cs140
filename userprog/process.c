@@ -372,7 +372,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	for(i = count; i >= 0; i--) {
 		* esp -= sizeof(char*);
 		**(char ***)esp = strPtrs[i];
-		printf("Arg %d is \"%s\" when dereferenced %p\n", i, strPtrs[i], strPtrs[i]);
+		printf("Arg %d is \"%s\" when dereferenced %p\n", i, *esp, strPtrs[i]);
 	}
 
 	// set argv
@@ -384,7 +384,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	printf("Should point to the memory address before\n");
 
 	// set argc
-	* esp --;
+	* esp -= ;
 	**(int **)esp = count;
 	printf("Count %d should be %d\n", count, **(int**)esp);
 
