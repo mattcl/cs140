@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
 static void syscall_handler (struct intr_frame *);
 
 void syscall_init (void) {
@@ -53,7 +54,7 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_READ called\n");
 			break;
 		case SYS_WRITE:
-			printf("SYS_WRITE called %s",padedir_get_page(active_pd(), *(char**)arg(esp, 2)));
+			printf("SYS_WRITE called %s", padedir_get_page(active_pd(), *(char**)arg(esp, 2)));
 			f->eax = 4;
 			break;
 		case SYS_SEEK:

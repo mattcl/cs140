@@ -139,7 +139,11 @@ static void page_fault (struct intr_frame *f){
 	not_present = (f->error_code & PF_P) == 0;
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
-
+	
+	/* BEGIN CHANGES */
+	/* sets eax to 0xffffffff and copies its former value into eip */
+	f->eip = f->eax; 
+	/* END CHANGES */
 	/* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
