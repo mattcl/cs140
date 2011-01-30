@@ -315,22 +315,31 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	int count = 0;
 	strPtrs[0] = *esp;
 	size_t fn_len = strlen(f_name) + 1;
+	printf("Filename %s, size %d, %p\n", f_name, fn_len, *esp);
+
 	strlcpy(*esp, f_name, fn_len);
 	// moves esp down length of the filename
-	*esp -= fn_len;
+	*(char**)esp -= fn_len;
+
+	printf("esp after pushing %p\n", *esp);
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
 		strPtrs[++count] = *esp;
 		//token = strtok_r(NULL, " ", &save_ptr);
 		size_t arg_len = strlen(token) + 1;
+
+		printf("Token %s, size %d, %p\n", token, arg_len, *esp);
+
 		strlcpy(*esp, token, arg_len);
 		// moves esp down length of pushed data
-		*esp -= arg_len;
+		*(char**)esp -= arg_len;
+
+		printf("esp after pushing %p\n", *esp);
 	}
 	
 	// word align
-	*esp -= ((unsigned int) *esp) % 4; 
+	*(char**)esp -= ((unsigned int)*esp) % 4;
 	
 	// sets argv[argc] = NULL
 	*esp-- = NULL;
@@ -338,7 +347,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		*esp-- = strPtrs[i];
-		printf("Arg %d is %s when dereferenced\n", i, strPtrs[i]);
+		printf("Arg %d is \"%s\" when dereferenced\n", i, strPtrs[i]);
 	}
 
 	// set argv
