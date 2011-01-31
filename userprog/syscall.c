@@ -7,8 +7,8 @@
 #include "pagedir.h"
 #include "threads/vaddr.h"
 
-typedef int pid_t;
-#define PID_ERROR ((pid_t) -1)
+static struct lock filesys_lock;
+
 
 static void syscall_handler (struct intr_frame *);
 
@@ -67,7 +67,6 @@ static void testMemoryAccess (void *esp){
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
 	//end test
-
 }
 
 //returns -1 on segfault
@@ -264,8 +263,9 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 }
 
 /*
- * Returns a unsigned int if there was a segfault it will set
- * ERROR to negative 1
+ * Returns a unsigned int representing 4 bytes of data
+ * if there was a segfault it will set
+ * ERROR will be negative, positive otherwise
  */
 static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
 	uint8_t *uaddr = (uint8_t*)uaddr_in;

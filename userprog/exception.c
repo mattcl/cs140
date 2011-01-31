@@ -150,7 +150,7 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	f ->eip = f->eax;
+	f->eip = f->eax;
 	f->eax = 0xffffffff;
 
 	//kill (f);
