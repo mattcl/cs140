@@ -40,7 +40,7 @@ void syscall_init (void) {
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
 static void syscall_handler (struct intr_frame *f){
-	//printf ("system call Vector number 0x%x!\n", f->vec_no);
+	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
 	if (!is_user_vaddr(esp)){
@@ -50,6 +50,14 @@ static void syscall_handler (struct intr_frame *f){
 
 	//printf("syscall esp %p\n", esp);
 	//printf("System Call number %d\n",sys_call_num);
+
+	int ERROR = 0;
+	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
+	if(ERROR == -1){
+		printf("SEGFAULT!!!!!\n");
+	} else {
+		printf("DIDNT SEGFAULT THE REAL ERROR\n");
+	}
 
 	switch (sys_call_num){
 		case SYS_HALT:{
