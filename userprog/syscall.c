@@ -27,7 +27,7 @@ static void system_tell(struct intr_frame *f, int fd UNUSED);
 static void system_close(struct intr_frame *f, int fd UNUSED);
 
 static int get_user(const uint8_t *uaddr);
-static bool put_user (uint8_t *udst, uit8_t byte);
+static bool put_user (uint8_t *udst, uint8_t byte);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 
@@ -37,10 +37,10 @@ void syscall_init (void) {
 
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
-#define arg(ESP, INT)((int *)ESP + INT)
+#define arg(ESP, INT)(((int *)ESP) + INT)
 
 static void syscall_handler (struct intr_frame *f){
-	//printf ("system call Vector number 0x%x!\n", f->vec_no);
+	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
 	if (!is_user_vaddr(esp)){
@@ -50,6 +50,14 @@ static void syscall_handler (struct intr_frame *f){
 
 	//printf("syscall esp %p\n", esp);
 	//printf("System Call number %d\n",sys_call_num);
+
+	int ERROR = 0;
+	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
+	if(ERROR == -1){
+		printf("SEGFAULT!!!!!\n");
+	} else {
+		printf("DIDNT SEGFAULT THE REAL ERROR\n");
+	}
 
 	switch (sys_call_num){
 		case SYS_HALT:{
@@ -131,7 +139,7 @@ static void syscall_handler (struct intr_frame *f){
 						       !is_user_vaddr(arg(esp,3))){
 					       //KILLLLLL PROCESS
 				       }
-				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,1), *(int*)arg(esp,3));
+				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
 				       break;
 			       }
 		case SYS_SEEK:{
@@ -224,7 +232,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 
 }
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	printf("SYS_WRITE called %d %s %d\n",fd, buffer, size);
+	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
 
@@ -244,8 +252,8 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
-	for (int i = 0; i < 4; i ++){
-		int fromMemory = get_user(uaddr);
+	for (i = 0; i < 4; i ++){
+		int fromMemory = get_user((uint8_t*)uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
 			return 0;
@@ -255,7 +263,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	}
 
 	for (i = 3; i >=0; i --){
-		returnValue = (returnValue << 8) + (uint8_t)output[i];
+		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
 	return returnValue;
@@ -269,7 +277,7 @@ static int get_user(const uint8_t *uaddr){
 	return result;
 }
 
-static bool put_user (uint8_t *udst, uit8_t byte){
+static bool put_user (uint8_t *udst, uint8_t byte){
 	int error_code;
 	asm("mov1 $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
 	return error_code != -1;
