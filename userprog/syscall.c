@@ -51,146 +51,146 @@ static void syscall_handler (struct intr_frame *f){
 
 	switch (sys_call_num){
 		case SYS_HALT:{
-			printf("SYS_HALT called\n");
-			system_halt(f);
-			break;
-		}
+				      printf("SYS_HALT called\n");
+				      system_halt(f);
+				      break;
+			      }
 		case SYS_EXIT:{
-			printf("SYS_EXIT called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_exit(f, *(int*)arg(esp,1));
-			thread_exit ();
-			break;
-		}
+				      printf("SYS_EXIT called\n");
+				      if (!is_user_vaddr(arg(esp,1))){
+					      //KILL PROCESS
+				      }
+				      system_exit(f, *(int*)arg(esp,1));
+				      thread_exit ();
+				      break;
+			      }
 		case SYS_EXEC:{
-			printf("SYS_EXEC called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_exec(f, *(char**)arg(esp,1));
-			break;
-		}
+				      printf("SYS_EXEC called\n");
+				      if (!is_user_vaddr(arg(esp,1))){
+					      //KILL PROCESS
+				      }
+				      system_exec(f, *(char**)arg(esp,1));
+				      break;
+			      }
 		case SYS_WAIT:{
-			printf("SYS_WAIT called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_wait(f, *(pid_t*)arg(esp,1));
-			break;
-		}
+				      printf("SYS_WAIT called\n");
+				      if (!is_user_vaddr(arg(esp,1))){
+					      //KILL PROCESS
+				      }
+				      system_wait(f, *(pid_t*)arg(esp,1));
+				      break;
+			      }
 		case SYS_CREATE:{
-			printf("SYS_CREATE called\n");
-			if (!is_user_vaddr(arg(esp,1)) || !is_user_vaddr(arg(esp,2))){
-				//KILL PROCESS
-			}
-			system_create(f, (char*)arg(esp,1), *(int*)arg(esp,2));
-			break;
-		}
+					printf("SYS_CREATE called\n");
+					if (!is_user_vaddr(arg(esp,1)) || !is_user_vaddr(arg(esp,2))){
+						//KILL PROCESS
+					}
+					system_create(f, (char*)arg(esp,1), *(int*)arg(esp,2));
+					break;
+				}
 		case SYS_REMOVE:{
-			printf("SYS_REMOVE called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_remove(f, (char*)arg(esp,1));
-			break;
-		}
+					printf("SYS_REMOVE called\n");
+					if (!is_user_vaddr(arg(esp,1))){
+						//KILL PROCESS
+					}
+					system_remove(f, (char*)arg(esp,1));
+					break;
+				}
 		case SYS_OPEN:{
-			printf("SYS_OPEN called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_open(f, (char*)arg(esp,1));
-			break;
-		}
+				      printf("SYS_OPEN called\n");
+				      if (!is_user_vaddr(arg(esp,1))){
+					      //KILL PROCESS
+				      }
+				      system_open(f, (char*)arg(esp,1));
+				      break;
+			      }
 		case SYS_FILESIZE:{
-			printf("SYS_FILESIZE called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_filesize(f, *(int*)arg(esp,1));
-			break;
-		}
+					  printf("SYS_FILESIZE called\n");
+					  if (!is_user_vaddr(arg(esp,1))){
+						  //KILL PROCESS
+					  }
+					  system_filesize(f, *(int*)arg(esp,1));
+					  break;
+				  }
 		case SYS_READ:{
-			printf("SYS_READ called\n");
-			if(!is_user_vaddr(arg(esp,1)) ||
-					!is_user_vaddr(arg(esp,2)) ||
-					!is_user_vaddr(arg(esp,3))){
-				//KILLLLLL PROCESS
-			}
-			system_read(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
-			break;
-		}
+				      printf("SYS_READ called\n");
+				      if(!is_user_vaddr(arg(esp,1)) ||
+						      !is_user_vaddr(arg(esp,2)) ||
+						      !is_user_vaddr(arg(esp,3))){
+					      //KILLLLLL PROCESS
+				      }
+				      system_read(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
+				      break;
+			      }
 		case SYS_WRITE:{
-			printf("SYS_WRITE called\n");
-			if(!is_user_vaddr(arg(esp,1)) ||
-					!is_user_vaddr(arg(esp,2)) ||
-					!is_user_vaddr(arg(esp,3))){
-				//KILLLLLL PROCESS
-			}
-			system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,1), *(int*)arg(esp,3));
-			break;
-		}
+				       printf("SYS_WRITE called\n");
+				       if(!is_user_vaddr(arg(esp,1)) ||
+						       !is_user_vaddr(arg(esp,2)) ||
+						       !is_user_vaddr(arg(esp,3))){
+					       //KILLLLLL PROCESS
+				       }
+				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,1), *(int*)arg(esp,3));
+				       break;
+			       }
 		case SYS_SEEK:{
-			printf("SYS_SEEK called\n");
-			if(!is_user_vaddr(arg(esp,1)) ||
-					!is_user_vaddr(arg(esp,2))){
-				//KILLLLLL PROCESS
-			}
-			system_seek(f, *(int*)arg(esp,1), *(unsigned int*)arg(esp,2));
-			break;
-		}
+				      printf("SYS_SEEK called\n");
+				      if(!is_user_vaddr(arg(esp,1)) ||
+						      !is_user_vaddr(arg(esp,2))){
+					      //KILLLLLL PROCESS
+				      }
+				      system_seek(f, *(int*)arg(esp,1), *(unsigned int*)arg(esp,2));
+				      break;
+			      }
 		case SYS_TELL:{
-			printf("SYS_TELL called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_tell(f, *(int*)arg(esp,1));
-			break;
-		}
+				      printf("SYS_TELL called\n");
+				      if (!is_user_vaddr(arg(esp,1))){
+					      //KILL PROCESS
+				      }
+				      system_tell(f, *(int*)arg(esp,1));
+				      break;
+			      }
 		case SYS_CLOSE:{
-			printf("SYS_CLOSE called\n");
-			if (!is_user_vaddr(arg(esp,1))){
-				//KILL PROCESS
-			}
-			system_close(f, *(int*)arg(esp,1));
-			break;
-		}
-			// Project 3 Syscalls
+				       printf("SYS_CLOSE called\n");
+				       if (!is_user_vaddr(arg(esp,1))){
+					       //KILL PROCESS
+				       }
+				       system_close(f, *(int*)arg(esp,1));
+				       break;
+			       }
+			       // Project 3 Syscalls
 		case SYS_MMAP:{
-			printf("SYS_MMAP called\n");
-			break;
-		}
+				      printf("SYS_MMAP called\n");
+				      break;
+			      }
 		case SYS_MUNMAP:{
-			printf("SYS_MUNMAP called\n");
-			break;
-		}
-			//Progect 4 Syscalls
+					printf("SYS_MUNMAP called\n");
+					break;
+				}
+				//Progect 4 Syscalls
 		case SYS_CHDIR:{
-			printf("SYS_CHDIR called\n");
-			break;
-		}
+				       printf("SYS_CHDIR called\n");
+				       break;
+			       }
 		case SYS_MKDIR:{
-			printf("SYS_MKDIR called\n");
-			break;
-		}
+				       printf("SYS_MKDIR called\n");
+				       break;
+			       }
 		case SYS_READDIR:{
-			printf("SYS_READDIR called\n");
-			break;
-		}
+					 printf("SYS_READDIR called\n");
+					 break;
+				 }
 		case SYS_ISDIR:{
-			printf("SYS_ISDIR called\n");
-			break;
-		}
+				       printf("SYS_ISDIR called\n");
+				       break;
+			       }
 		case SYS_INUMBER:{
-			printf("SYS_INUMBER called\n");
-			break;
-		}
+					 printf("SYS_INUMBER called\n");
+					 break;
+				 }
 		default:{
-			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
-			break;
-		}
+				PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+				break;
+			}
 	}
 }
 
