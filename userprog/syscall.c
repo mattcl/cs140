@@ -270,6 +270,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	uint8_t output [4];
 	int i;
 	for (i = 0; i < 4; i ++){
+		printf("get user called with %p\n",(uint8_t*)uaddr );
 		int fromMemory = get_user((uint8_t*)uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
@@ -281,7 +282,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	}
 
 	for (i = 3; i >=0; i --){
-		printf("%ul, %ul, %ul", returnValue , ((returnValue << 8) , (uint8_t)output[i]));
+		printf("%ul, %ul, %ul\n", returnValue , ((returnValue << 8) , (uint8_t)output[i]));
 		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
