@@ -72,7 +72,7 @@ static void testMemoryAccess (void *esp){
 }
 
 //returns -1 on segfault
-static int set_args(void *esp, int num, uint32_t *argument){
+static int set_args(void *esp, int num, uint32_t **argument){
 	int i;
 	int ERR;
 	for (i = 0; i < num; i++){
@@ -95,9 +95,10 @@ static void syscall_handler (struct intr_frame *f){
 
 	testMemoryAccess(esp);
 
-	uint32_t arg1;
-	uint32_t arg2;
 	uint32_t arg3;
+	uint32_t arg2;
+	uint32_t arg1;
+
 	printf("Args 1 through 3 %p %p %p\n", &arg1, &arg2, &arg3);
 
 	switch (sys_call_num){
