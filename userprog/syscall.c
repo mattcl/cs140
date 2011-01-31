@@ -40,7 +40,6 @@ void syscall_init (void) {
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
 static void syscall_handler (struct intr_frame *f){
-	printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
 	if (!is_user_vaddr(esp)){
@@ -207,9 +206,11 @@ static void syscall_handler (struct intr_frame *f){
 static void system_halt (struct intr_frame *f UNUSED){
 
 }
-static void system_exit (struct intr_frame *f, int status UNUSED){
-	
+static void system_exit (struct intr_frame *f, int status UNUSED) {
+	f->eax = 0;
+	thread_exit();
 }
+
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 
 }

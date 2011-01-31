@@ -5,5 +5,5 @@ make clean
 echo building
 make
 echo creating filesystem
-./gen_filesys.sh insult
+./gen_filesys.sh insult test1
 echo done
