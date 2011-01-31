@@ -65,7 +65,7 @@ static void syscall_handler (struct intr_frame *f){
 	if(ERROR < 0){
 		printf("SEGFAULT!!!!!REAL ERROR\n");
 	} else {
-		printf("DIDNT SEGFAULT Should be system call %d:)\n", );
+		printf("DIDNT SEGFAULT Should be system call %d:)\n", input);
 	}
 
 	input = get_user_int((uint32_t*)PHYS_BASE, &ERROR);
