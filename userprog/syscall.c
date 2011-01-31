@@ -75,7 +75,7 @@ static void testMemoryAccess (void *esp){
 static int set_args(void *esp, int num, uint32_t **argument){
 	int i, ERR;
 	for (i = 0; i < num; i++){
-		printf("Argument i pointer is %p", argument[i]);
+		//printf("Argument i pointer is %p", argument[i]);
 		argument[i] = get_user_int(arg(esp,(i+1)), &ERR);
 		if (ERR < 0 ){
 			return ERR;
@@ -96,7 +96,7 @@ static void syscall_handler (struct intr_frame *f){
 
 	uint32_t arg1 [3];
 
-	printf("Args 1 through 3 %p %p %p\n", &arg1[0], &arg1[1], &arg1[2]);
+	//printf("Args 1 through 3 %p %p %p\n", &arg1[0], &arg1[1], &arg1[2]);
 
 	switch (sys_call_num){
 		case SYS_HALT:{
