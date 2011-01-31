@@ -27,7 +27,7 @@ static void system_tell(struct intr_frame *f, int fd UNUSED);
 static void system_close(struct intr_frame *f, int fd UNUSED);
 
 static int get_user(const uint8_t *uaddr);
-static bool put_user (uint8_t *udst, uit8_t byte);
+static bool put_user (uint8_t *udst, uint8_t byte);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 
@@ -244,8 +244,8 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
-	for (int i = 0; i < 4; i ++){
-		int fromMemory = get_user(uaddr);
+	for (i = 0; i < 4; i ++){
+		int fromMemory = get_user((uint8_t*)uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
 			return 0;
@@ -255,7 +255,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	}
 
 	for (i = 3; i >=0; i --){
-		returnValue = (returnValue << 8) + (uint8_t)output[i];
+		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
 	return returnValue;
