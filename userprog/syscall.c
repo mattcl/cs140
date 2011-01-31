@@ -279,7 +279,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 		(uint8_t*)uaddr ++;
 	}
 
-	for (i = 3; i >=0; i --){
+	for (i = 0; i  < 4; i ++){
 		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
