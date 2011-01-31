@@ -94,11 +94,9 @@ static void syscall_handler (struct intr_frame *f){
 
 	//testMemoryAccess(esp);
 
-	uint32_t arg3 = 0;
-	uint32_t arg2 = 0;
-	uint32_t arg1 = 0;
+	uint32_t arg1 [3];
 
-	//printf("Args 1 through 3 %p %p %p\n", &arg1, &arg2, &arg3);
+	printf("Args 1 through 3 %p %p %p\n", &arg1[0], &arg1[1], &arg1[2]);
 
 	switch (sys_call_num){
 		case SYS_HALT:{
@@ -110,7 +108,7 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_EXIT called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_exit(f, (int)arg1);
+			system_exit(f, (int)arg1[0]);
 			thread_exit ();
 			break;
 		}
@@ -118,77 +116,77 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_EXEC called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_exec(f, (char*)arg1);
+			system_exec(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_WAIT:{
 			printf("SYS_WAIT called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_wait(f, (pid_t)arg1);
+			system_wait(f, (pid_t)arg1[0]);
 			break;
 		}
 		case SYS_CREATE:{
 			printf("SYS_CREATE called\n");
 			ERROR = set_args(esp, 2, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_create(f, (char*)arg1, (int)arg2);
+			system_create(f, (char*)arg1[0], (int)arg1[1]);
 			break;
 		}
 		case SYS_REMOVE:{
 			printf("SYS_REMOVE called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_remove(f, (char*)arg1);
+			system_remove(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_OPEN:{
 			printf("SYS_OPEN called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_open(f, (char*)arg1);
+			system_open(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_FILESIZE:{
 			printf("SYS_FILESIZE called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_filesize(f, (int)arg1);
+			system_filesize(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_READ:{
 			printf("SYS_READ called\n");
 			ERROR = set_args(esp, 3, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_read(f, (int)arg1, (char*)arg2, (int)arg3);
+			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_WRITE:{
 			printf("SYS_WRITE called\n");
 			ERROR = set_args(esp, 3, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_write(f, (int)arg1, (char*)arg2, (int)arg3);
+			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_SEEK:{
 			printf("SYS_SEEK called\n");
 			ERROR = set_args(esp, 2, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_seek(f, (int)arg1, (unsigned int)arg2);
+			system_seek(f, (int)arg1[0], (unsigned int)arg[1]);
 			break;
 		}
 		case SYS_TELL:{
 			printf("SYS_TELL called\n");
 			ERROR = set_args(esp, 1, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_tell(f, (int)arg1);
+			system_tell(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_CLOSE:{
 			printf("SYS_CLOSE called\n");
 			ERROR = set_args(esp, 2, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_close(f, (int)arg1);
+			system_close(f, (int)arg1[0]);
 			break;
 		}
 		// Project 3 Syscalls
