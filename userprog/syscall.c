@@ -283,7 +283,7 @@ static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
 	}
 
 	for (i = 3; i >=0; i --){
-		printf("%ul, %ul, %ul\n", returnValue , ((returnValue << 8) , (uint8_t)output[i]));
+		printf("%ul, %ul, %ul\n", returnValue , (returnValue << 8) , (uint8_t)output[i]);
 		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
