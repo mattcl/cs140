@@ -278,7 +278,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 			return 0;
 		}
 		output[i] = (uint8_t) fromMemory;
-		(char*)uaddr ++ ;
+		(uint8_t*)uaddr += 1 ;
 	}
 
 	for (i = 3; i >=0; i --){
