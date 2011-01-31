@@ -89,102 +89,86 @@ static void syscall_handler (struct intr_frame *f){
 	void *esp = f->esp;
 
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
-	if (ERROR < 0); //KILL USER PROCESS
+	if (ERROR < 0) system_exit(f, -1);
 
 	//testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
-	//printf("Args 1 through 3 %p %p %p\n", &arg1[0], &arg1[1], &arg1[2]);
-
 	switch (sys_call_num){
 		case SYS_HALT:{
-			printf("SYS_HALT called\n");
 			system_halt(f);
 			break;
 		}
 		case SYS_EXIT:{
-			printf("SYS_EXIT called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_exit(f, (int)arg1[0]);
-			thread_exit ();
 			break;
 		}
 		case SYS_EXEC:{
-			printf("SYS_EXEC called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_exec(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_WAIT:{
-			printf("SYS_WAIT called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_wait(f, (pid_t)arg1[0]);
 			break;
 		}
 		case SYS_CREATE:{
-			printf("SYS_CREATE called\n");
 			ERROR = set_args(esp, 2, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_create(f, (char*)arg1[0], (int)arg1[1]);
 			break;
 		}
 		case SYS_REMOVE:{
-			printf("SYS_REMOVE called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_remove(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_OPEN:{
-			printf("SYS_OPEN called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_open(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_FILESIZE:{
-			printf("SYS_FILESIZE called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_filesize(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_READ:{
-			printf("SYS_READ called\n");
 			ERROR = set_args(esp, 3, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_WRITE:{
-			printf("SYS_WRITE called\n");
 			ERROR = set_args(esp, 3, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_SEEK:{
-			printf("SYS_SEEK called\n");
 			ERROR = set_args(esp, 2, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
 			break;
 		}
 		case SYS_TELL:{
-			printf("SYS_TELL called\n");
 			ERROR = set_args(esp, 1, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_tell(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_CLOSE:{
-			printf("SYS_CLOSE called\n");
 			ERROR = set_args(esp, 2, &arg1);
-			if (ERROR < 0)/*KILL USER PROCESS*/;
+			if (ERROR < 0)system_exit(f, -1);
 			system_close(f, (int)arg1[0]);
 			break;
 		}
@@ -226,47 +210,57 @@ static void syscall_handler (struct intr_frame *f){
 }
 
 static void system_halt (struct intr_frame *f UNUSED){
-
+	printf("SYS_HALT called\n");
 }
 static void system_exit (struct intr_frame *f, int status UNUSED) {
-	f->eax = 0;
+	f->eax = status;
 	printf("exiting\n");
 	thread_exit();
 	printf("done exiting \n");
 }
 
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
-
+	printf("SYS_EXEC called\n");
 }
+
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
-
+	printf("SYS_WAIT called\n");
 }
+
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){
-
+	printf("SYS_CREATE called\n");
 }
+
 static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
-
+	printf("SYS_REMOVE called\n");
 }
+
 static void system_open (struct intr_frame *f, const char *file_name UNUSED){
-
+	printf("SYS_OPEN called\n");
 }
+
 static void system_filesize(struct intr_frame *f, int fd UNUSED){
-
+	printf("SYS_FILESIZE called\n");
 }
+
 static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED){
-
+	printf("SYS_READ called\n");
 }
+
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
+
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
-
+	printf("SYS_SEEK called\n");
 }
+
 static void system_tell(struct intr_frame *f, int fd UNUSED){
-
+	printf("SYS_TELL called\n");
 }
-static void system_close(struct intr_frame *f, int fd UNUSED){
 
+static void system_close(struct intr_frame *f, int fd UNUSED){
+	printf("SYS_CLOSE called\n");
 }
 
 /*
