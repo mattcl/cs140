@@ -266,7 +266,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
  * ERROR to negative 1
  */
 static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
-	uint8_t *uaddr = (uint8_t)uaddr_in;
+	uint8_t *uaddr = (uint8_t*)uaddr_in;
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
