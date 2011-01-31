@@ -75,7 +75,7 @@ static void testMemoryAccess (void *esp){
 static int set_args(void *esp, int num, uint32_t **argument){
 	int i, ERR;
 	for (i = 0; i < num; i++){
-		//printf("Argument i pointer is %p", argument[i]);
+		printf("Argument i pointer is %p", argument[i]);
 		argument[i] = get_user_int(arg(esp,(i+1)), &ERR);
 		if (ERR < 0 ){
 			return ERR;
@@ -172,7 +172,7 @@ static void syscall_handler (struct intr_frame *f){
 			printf("SYS_SEEK called\n");
 			ERROR = set_args(esp, 2, &arg1);
 			if (ERROR < 0)/*KILL USER PROCESS*/;
-			system_seek(f, (int)arg1[0], (unsigned int)arg[1]);
+			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
 			break;
 		}
 		case SYS_TELL:{
