@@ -181,11 +181,11 @@ static void syscall_handler (struct intr_frame *f){
 		arg3 = get_user_int(arg(esp,3), &ERROR);
 		if (ERROR < 0); //KILL USER PROCESS
 
-		printf("Arg 1 %d, arg 2 %s, arg3 %d\n");
+		printf("Arg 1 %d, arg 2 %s, arg3 %d\n", arg1, arg2, arg3);
 
 		ERROR = set_args(esp, 3, &arg1);
 
-		printf("Arg 1 %d, arg 2 %s, arg3 %d\n");
+		printf("Arg 1 %d, arg 2 %s, arg3 %d\n", arg1, arg2, arg3);
 
 		system_write(f, (int)arg1, (char*)arg2, (int)arg3);
 		break;
