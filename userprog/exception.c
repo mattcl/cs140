@@ -150,6 +150,8 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	kill (f);
+	asm ("movl %eax, %eip; movl $0xffffffff, %eax;");
+
+	//kill (f);
 }
 

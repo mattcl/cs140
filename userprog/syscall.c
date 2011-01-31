@@ -26,10 +26,8 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUS
 static void system_tell(struct intr_frame *f, int fd UNUSED);
 static void system_close(struct intr_frame *f, int fd UNUSED);
 
-// returns a pointer that can be dereferenced given that
-// the user_ptr points to valid memory, returns NULL if
-// it does not
-static void * user_ptr_to_kernel_ptr(void *user_ptr);
+static int get_user(const uint8_t *uaddr);
+static bool put_user (uint8_t *udst, uit8_t byte);
 
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
@@ -43,12 +41,13 @@ static void syscall_handler (struct intr_frame *f){
 	//printf ("system call Vector number 0x%x!\n", f->vec_no);
 
 	void *esp = f->esp;
-	int sys_call_num = *(int*)arg(esp, 0);
+	if (!is_user_vaddr(esp)){
+		//KILL Process
+	}
+	int sys_call_num = get_user(arg(esp, 0));
 
 	//printf("syscall esp %p\n", esp);
 	//printf("System Call number %d\n",sys_call_num);
-
-	void *user_ptr1;
 
 	switch (sys_call_num){
 		case SYS_HALT:{
@@ -58,81 +57,104 @@ static void syscall_handler (struct intr_frame *f){
 		}
 		case SYS_EXIT:{
 			printf("SYS_EXIT called\n");
-			system_exit(f, *(int*)arg(esp, 1));
+			if (!is_user_vaddr(arg(esp,1))){
+				//KILL PROCESS
+			}
+			system_exit(f, *(int*)arg(esp,1));
 			thread_exit ();
 			break;
 		}
 		case SYS_EXEC:{
 			printf("SYS_EXEC called\n");
-			if ((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,1))) == NULL){
+			if (!is_user_vaddr(arg(esp,1))){
 				//KILL PROCESS
 			}
-			system_exec(f, (char*)user_ptr1);
+			system_exec(f, *(char**)arg(esp,1));
 			break;
 		}
 		case SYS_WAIT:{
 			printf("SYS_WAIT called\n");
-			system_wait(f, *(pid_t*)arg(esp, 1));
+			if (!is_user_vaddr(arg(esp,1))){
+				//KILL PROCESS
+			}
+			system_wait(f, *(pid_t*)arg(esp,1));
 			break;
 		}
 		case SYS_CREATE:{
 			printf("SYS_CREATE called\n");
-			if ((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,1))) == NULL){
+			if (!is_user_vaddr(arg(esp,1)) || !is_user_vaddr(arg(esp,2))){
 				//KILL PROCESS
 			}
-			system_create(f, (char*)user_ptr1, *(int*)arg(esp,2));
+			system_create(f, (char*)arg(esp,1), *(int*)arg(esp,2));
 			break;
 		}
 		case SYS_REMOVE:{
 			printf("SYS_REMOVE called\n");
-			if ((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,1))) == NULL){
+			if (!is_user_vaddr(arg(esp,1))){
 				//KILL PROCESS
 			}
-			system_remove(f, (char*)user_ptr1);
+			system_remove(f, (char*)arg(esp,1));
 			break;
 		}
 		case SYS_OPEN:{
 			printf("SYS_OPEN called\n");
-			if ((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,1))) == NULL){
+			if (!is_user_vaddr(arg(esp,1))){
 				//KILL PROCESS
 			}
-			system_open(f, (char*)user_ptr1);
+			system_open(f, (char*)arg(esp,1));
 			break;
 		}
 		case SYS_FILESIZE:{
 			printf("SYS_FILESIZE called\n");
-			system_filesize(f, *(int*)arg(esp, 1));
+			if (!is_user_vaddr(arg(esp,1))){
+				//KILL PROCESS
+			}
+			system_filesize(f, *(int*)arg(esp,1));
 			break;
 		}
 		case SYS_READ:{
 			printf("SYS_READ called\n");
-			if((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,2))) == NULL){
+			if(!is_user_vaddr(arg(esp,1)) ||
+					!is_user_vaddr(arg(esp,2)) ||
+					!is_user_vaddr(arg(esp,3))){
 				//KILLLLLL PROCESS
 			}
-			system_read(f, *(int*)arg(esp, 1), user_ptr1, *(int*)arg(esp, 3));
+			system_read(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
 			break;
 		}
 		case SYS_WRITE:{
 			printf("SYS_WRITE called\n");
-			if((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,2))) == NULL){
+			if(!is_user_vaddr(arg(esp,1)) ||
+					!is_user_vaddr(arg(esp,2)) ||
+					!is_user_vaddr(arg(esp,3))){
 				//KILLLLLL PROCESS
 			}
-			system_write(f,*(int*)arg(esp, 1), user_ptr1, *(int*)arg(esp, 3));
+			system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,1), *(int*)arg(esp,3));
 			break;
 		}
 		case SYS_SEEK:{
 			printf("SYS_SEEK called\n");
-			system_seek(f, *(int*)arg(esp, 1),*(int*)arg(esp, 2));
+			if(!is_user_vaddr(arg(esp,1)) ||
+					!is_user_vaddr(arg(esp,2))){
+				//KILLLLLL PROCESS
+			}
+			system_seek(f, *(int*)arg(esp,1), *(unsigned int*)arg(esp,2));
 			break;
 		}
 		case SYS_TELL:{
 			printf("SYS_TELL called\n");
-			system_tell(f, *(int*)arg(esp, 1));
+			if (!is_user_vaddr(arg(esp,1))){
+				//KILL PROCESS
+			}
+			system_tell(f, *(int*)arg(esp,1));
 			break;
 		}
 		case SYS_CLOSE:{
 			printf("SYS_CLOSE called\n");
-			system_close(f, *(int*)arg(esp, 1));
+			if (!is_user_vaddr(arg(esp,1))){
+				//KILL PROCESS
+			}
+			system_close(f, *(int*)arg(esp,1));
 			break;
 		}
 			// Project 3 Syscalls
@@ -212,10 +234,42 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 
 }
 
-static void * user_ptr_to_kernel_ptr(void *user_ptr){
-	if (!is_user_vaddr(user_ptr)){
-		return NULL;
+/*
+ * Returns a unsigned int if there was a segfault it will set
+ * ERROR to negative 1
+ */
+static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
+	uint32_t returnValue = 0;
+	uint8_t output [4];
+	for (int i = 0; i < 4; i ++){
+		int fromMemory = get_user(uaddr);
+		if (fromMemory == -1){
+			*ERROR = -1;
+			return 0;
+		}
+		output[i] = (uint8_t) fromMemory;
+		(uint8_t*)uaddr ++;
 	}
-	struct thread *t = thread_current();
-	return pagedir_get_page(t->pagedir, user_ptr);
+
+	for (int i = 3; i >=0; i --){
+		returnValue = (returnValue << 8) + (uint8_t)output[i];
+	}
+	*ERROR = 1;
+	return returnValue;
 }
+
+
+static uint8_t get_user(const uint8_t *uaddr){
+	int result;
+	asm("movl $1f, %0; movzbl %1, %0; 1:"
+			: "=&a" (result) : "m" (*uaddr));
+	return result;
+}
+
+static bool put_user (uint8_t *udst, uit8_t byte){
+	int error_code;
+	asm("mov1 $1f, %0; movb %b2, %1; 1:"
+			: "=&a" (error_code), "=m" (*udst) : "q" (byte));
+	return error_code != -1;
+}
+
