@@ -6,4 +6,7 @@ echo building
 make
 echo creating filesystem
 ./gen_filesys.sh insult test1
+
+pintos -q run test1
+
 echo done

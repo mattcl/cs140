@@ -51,12 +51,6 @@ static void syscall_handler (struct intr_frame *f){
 	//printf("System Call number %d\n",sys_call_num);
 
 	int ERROR = 0;
-	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
-	if(ERROR == -1){
-		printf("SEGFAULT!!!!!\n");
-	} else {
-		printf("DIDNT SEGFAULT THE REAL ERROR\n");
-	}
 
 	switch (sys_call_num){
 		case SYS_HALT:{
@@ -208,7 +202,9 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 static void system_exit (struct intr_frame *f, int status UNUSED) {
 	f->eax = 0;
+	printf("exiting\n");
 	thread_exit();
+	printf("done exiting \n");
 }
 
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
