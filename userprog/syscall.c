@@ -65,7 +65,7 @@ static void syscall_handler (struct intr_frame *f){
 	if(ERROR < 0){
 		printf("SEGFAULT!!!!!REAL ERROR\n");
 	} else {
-		printf("DIDNT SEGFAULT Should be system call %d:)\n", input);
+		printf("DIDNT SEGFAULT Should be system call %d:)\n", );
 	}
 
 	input = get_user_int((uint32_t*)PHYS_BASE, &ERROR);
@@ -273,13 +273,15 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 		int fromMemory = get_user((uint8_t*)uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
+			printf("Error\n");
 			return 0;
 		}
 		output[i] = (uint8_t) fromMemory;
 		(uint8_t*)uaddr ++;
 	}
 
-	for (i = 0; i  < 4; i ++){
+	for (i = 3; i >=0; i --){
+		printf("%ul, %ul, %ul", returnValue , ((returnValue << 8) , (uint8_t)output[i]));
 		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
 	*ERROR = 1;
