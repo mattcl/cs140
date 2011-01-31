@@ -29,6 +29,8 @@ static void system_close(struct intr_frame *f, int fd UNUSED);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uit8_t byte);
 
+static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
+
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
