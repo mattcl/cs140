@@ -4,6 +4,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+#include "pagedir.h"
+#include "threads/vaddr.h"
+
 typedef int pid_t;
 #define PID_ERROR ((pid_t) -1)
 
@@ -210,5 +213,6 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 }
 
 static inline void * user_ptr_to_kernel_ptr(void *user_ptr){
+
 	return user_ptr;
 }
