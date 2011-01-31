@@ -265,20 +265,21 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
  * Returns a unsigned int if there was a segfault it will set
  * ERROR to negative 1
  */
-static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
+static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
+	uint8_t *uaddr = (uint8_t)uaddr_in;
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
 	for (i = 0; i < 4; i ++){
-		printf("get user called with %p\n",(uint8_t*)uaddr );
-		int fromMemory = get_user((uint8_t*)uaddr);
+		printf("get user called with %p\n",uaddr );
+		int fromMemory = get_user(uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
 			printf("Error\n");
 			return 0;
 		}
 		output[i] = (uint8_t) fromMemory;
-		(uint8_t*)uaddr += 1 ;
+		uaddr ++ ;
 	}
 
 	for (i = 3; i >=0; i --){
