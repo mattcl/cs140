@@ -29,7 +29,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED);
 // returns a pointer that can be dereferenced given that
 // the user_ptr points to valid memory, returns NULL if
 // it does not
-static inline void * user_ptr_to_kernel_ptr(void *user_ptr);
+static void * user_ptr_to_kernel_ptr(void *user_ptr);
 
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
@@ -212,7 +212,10 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 
 }
 
-static inline void * user_ptr_to_kernel_ptr(void *user_ptr){
-
-	return user_ptr;
+static void * user_ptr_to_kernel_ptr(void *user_ptr){
+	if (!is_user_vaddr(user_ptr)){
+		return NULL;
+	}
+	struct thread *t = thread_current();
+	return pagedir_get_page(t->pagedir, user_ptr);
 }
