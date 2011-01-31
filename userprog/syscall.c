@@ -75,8 +75,8 @@ static void testMemoryAccess (void *esp){
 static int set_args(void *esp, int num, uint32_t *argument){
 	int i;
 	int ERR;
-	for (i = 1; i <= num; i++){
-		argument[i] = get_user_int(arg(esp,i),&ERR);
+	for (i = 0; i < num; i++){
+		argument[i] = get_user_int(arg(esp,(i+1)),&ERR);
 		if (ERR < 0 ){
 			return -1;
 		}
