@@ -39,161 +39,189 @@ void syscall_init (void) {
 // params are start at INT == 1
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
-static void syscall_handler (struct intr_frame *f){
-
-	void *esp = f->esp;
-	if (!is_user_vaddr(esp)){
-		//KILL Process
-	}
-	int sys_call_num = get_user(arg(esp, 0));
-
+static void testMemoryAccess (void *esp){
 	//printf("syscall esp %p\n", esp);
 	//printf("System Call number %d\n",sys_call_num);
 
+	//TEST user access
+
 	int ERROR = 0;
+	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
+	if (ERROR < 0){
+		printf("SEGFAULT!!!!!\n");
+	} else {
+		printf("DIDNT SEGFAULT THE REAL ERROR\n");
+	}
+
+	input = get_user_int((uint32_t*)esp, &ERROR);
+	if (ERROR < 0){
+		printf("SEGFAULT!!!!!REAL ERROR\n");
+	} else {
+		printf("DIDNT SEGFAULT Should be system call %d:)\n", input);
+	}
+
+	input = get_user_int((uint32_t*)PHYS_BASE, &ERROR);
+	if (ERROR < 0){
+		printf("SEGFAULT!!!!!\n");
+	} else {
+		printf("DIDNT SEGFAULT THE REAL ERROR\n");
+	}
+	//end test
+
+}
+
+//returns -1 on segfault
+static int set_args(void *esp, int num, uint32_t **argument){
+	int i, ERR;
+	for (i = 0; i < num; i++){
+		//printf("Argument i pointer is %p", argument[i]);
+		argument[i] = get_user_int(arg(esp,(i+1)), &ERR);
+		if (ERR < 0 ){
+			return ERR;
+		}
+	}
+	return 1;
+}
+
+static void syscall_handler (struct intr_frame *f){
+	int ERROR = 0;
+
+	void *esp = f->esp;
+
+	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
+	if (ERROR < 0); //KILL USER PROCESS
+
+	//testMemoryAccess(esp);
+
+	uint32_t arg1 [3];
+
+	//printf("Args 1 through 3 %p %p %p\n", &arg1[0], &arg1[1], &arg1[2]);
 
 	switch (sys_call_num){
 		case SYS_HALT:{
-				      printf("SYS_HALT called\n");
-				      system_halt(f);
-				      break;
-			      }
+			printf("SYS_HALT called\n");
+			system_halt(f);
+			break;
+		}
 		case SYS_EXIT:{
-				      printf("SYS_EXIT called\n");
-				      if (!is_user_vaddr(arg(esp,1))){
-					      //KILL PROCESS
-				      }
-				      system_exit(f, *(int*)arg(esp,1));
-				      thread_exit ();
-				      break;
-			      }
+			printf("SYS_EXIT called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_exit(f, (int)arg1[0]);
+			thread_exit ();
+			break;
+		}
 		case SYS_EXEC:{
-				      printf("SYS_EXEC called\n");
-				      if (!is_user_vaddr(arg(esp,1))){
-					      //KILL PROCESS
-				      }
-				      system_exec(f, *(char**)arg(esp,1));
-				      break;
-			      }
+			printf("SYS_EXEC called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_exec(f, (char*)arg1[0]);
+			break;
+		}
 		case SYS_WAIT:{
-				      printf("SYS_WAIT called\n");
-				      if (!is_user_vaddr(arg(esp,1))){
-					      //KILL PROCESS
-				      }
-				      system_wait(f, *(pid_t*)arg(esp,1));
-				      break;
-			      }
+			printf("SYS_WAIT called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_wait(f, (pid_t)arg1[0]);
+			break;
+		}
 		case SYS_CREATE:{
-					printf("SYS_CREATE called\n");
-					if (!is_user_vaddr(arg(esp,1)) || !is_user_vaddr(arg(esp,2))){
-						//KILL PROCESS
-					}
-					system_create(f, (char*)arg(esp,1), *(int*)arg(esp,2));
-					break;
-				}
+			printf("SYS_CREATE called\n");
+			ERROR = set_args(esp, 2, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_create(f, (char*)arg1[0], (int)arg1[1]);
+			break;
+		}
 		case SYS_REMOVE:{
-					printf("SYS_REMOVE called\n");
-					if (!is_user_vaddr(arg(esp,1))){
-						//KILL PROCESS
-					}
-					system_remove(f, (char*)arg(esp,1));
-					break;
-				}
+			printf("SYS_REMOVE called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_remove(f, (char*)arg1[0]);
+			break;
+		}
 		case SYS_OPEN:{
-				      printf("SYS_OPEN called\n");
-				      if (!is_user_vaddr(arg(esp,1))){
-					      //KILL PROCESS
-				      }
-				      system_open(f, (char*)arg(esp,1));
-				      break;
-			      }
+			printf("SYS_OPEN called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_open(f, (char*)arg1[0]);
+			break;
+		}
 		case SYS_FILESIZE:{
-					  printf("SYS_FILESIZE called\n");
-					  if (!is_user_vaddr(arg(esp,1))){
-						  //KILL PROCESS
-					  }
-					  system_filesize(f, *(int*)arg(esp,1));
-					  break;
-				  }
+			printf("SYS_FILESIZE called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_filesize(f, (int)arg1[0]);
+			break;
+		}
 		case SYS_READ:{
-				      printf("SYS_READ called\n");
-				      if(!is_user_vaddr(arg(esp,1)) ||
-						      !is_user_vaddr(arg(esp,2)) ||
-						      !is_user_vaddr(arg(esp,3))){
-					      //KILLLLLL PROCESS
-				      }
-				      system_read(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
-				      break;
-			      }
+			printf("SYS_READ called\n");
+			ERROR = set_args(esp, 3, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+			break;
+		}
 		case SYS_WRITE:{
-				       printf("SYS_WRITE called\n");
-				       if(!is_user_vaddr(arg(esp,1)) ||
-						       !is_user_vaddr(arg(esp,2)) ||
-						       !is_user_vaddr(arg(esp,3))){
-					       //KILLLLLL PROCESS
-				       }
-				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
-				       break;
-			       }
+			printf("SYS_WRITE called\n");
+			ERROR = set_args(esp, 3, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+			break;
+		}
 		case SYS_SEEK:{
-				      printf("SYS_SEEK called\n");
-				      if(!is_user_vaddr(arg(esp,1)) ||
-						      !is_user_vaddr(arg(esp,2))){
-					      //KILLLLLL PROCESS
-				      }
-				      system_seek(f, *(int*)arg(esp,1), *(unsigned int*)arg(esp,2));
-				      break;
-			      }
+			printf("SYS_SEEK called\n");
+			ERROR = set_args(esp, 2, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
+			break;
+		}
 		case SYS_TELL:{
-				      printf("SYS_TELL called\n");
-				      if (!is_user_vaddr(arg(esp,1))){
-					      //KILL PROCESS
-				      }
-				      system_tell(f, *(int*)arg(esp,1));
-				      break;
-			      }
+			printf("SYS_TELL called\n");
+			ERROR = set_args(esp, 1, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_tell(f, (int)arg1[0]);
+			break;
+		}
 		case SYS_CLOSE:{
-				       printf("SYS_CLOSE called\n");
-				       if (!is_user_vaddr(arg(esp,1))){
-					       //KILL PROCESS
-				       }
-				       system_close(f, *(int*)arg(esp,1));
-				       break;
-			       }
-			       // Project 3 Syscalls
+			printf("SYS_CLOSE called\n");
+			ERROR = set_args(esp, 2, &arg1);
+			if (ERROR < 0)/*KILL USER PROCESS*/;
+			system_close(f, (int)arg1[0]);
+			break;
+		}
+		// Project 3 Syscalls
 		case SYS_MMAP:{
-				      printf("SYS_MMAP called\n");
-				      break;
-			      }
+			printf("SYS_MMAP called\n");
+			break;
+		}
 		case SYS_MUNMAP:{
-					printf("SYS_MUNMAP called\n");
-					break;
-				}
-				//Progect 4 Syscalls
+			printf("SYS_MUNMAP called\n");
+			break;
+		}
+		//Progect 4 Syscalls
 		case SYS_CHDIR:{
-				       printf("SYS_CHDIR called\n");
-				       break;
-			       }
+			printf("SYS_CHDIR called\n");
+			break;
+		}
 		case SYS_MKDIR:{
-				       printf("SYS_MKDIR called\n");
-				       break;
-			       }
+			printf("SYS_MKDIR called\n");
+			break;
+		}
 		case SYS_READDIR:{
-					 printf("SYS_READDIR called\n");
-					 break;
-				 }
+			printf("SYS_READDIR called\n");
+			break;
+		}
 		case SYS_ISDIR:{
-				       printf("SYS_ISDIR called\n");
-				       break;
-			       }
+			printf("SYS_ISDIR called\n");
+			break;
+		}
 		case SYS_INUMBER:{
-					 printf("SYS_INUMBER called\n");
-					 break;
-				 }
+			printf("SYS_INUMBER called\n");
+			break;
+		}
 		default:{
-				PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
-				break;
-			}
+			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+			break;
+		}
 	}
 }
 
@@ -245,18 +273,23 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
  * Returns a unsigned int if there was a segfault it will set
  * ERROR to negative 1
  */
-static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
+static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
+	uint8_t *uaddr = (uint8_t*)uaddr_in;
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
 	for (i = 0; i < 4; i ++){
-		int fromMemory = get_user((uint8_t*)uaddr);
+		if (!is_user_vaddr(uaddr)){
+			*ERROR = -1;
+			return 0;
+		}
+		int fromMemory = get_user(uaddr);
 		if (fromMemory == -1){
 			*ERROR = -1;
 			return 0;
 		}
 		output[i] = (uint8_t) fromMemory;
-		(uint8_t*)uaddr ++;
+		uaddr ++ ;
 	}
 
 	for (i = 3; i >=0; i --){
