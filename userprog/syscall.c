@@ -200,7 +200,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 
 }
 static void system_exit (struct intr_frame *f, int status UNUSED){
-
+	
 }
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 
@@ -271,8 +271,7 @@ static int get_user(const uint8_t *uaddr){
 
 static bool put_user (uint8_t *udst, uit8_t byte){
 	int error_code;
-	asm("mov1 $1f, %0; movb %b2, %1; 1:"
-			: "=&a" (error_code), "=m" (*udst) : "q" (byte));
+	asm("mov1 $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
 	return error_code != -1;
 }
 
