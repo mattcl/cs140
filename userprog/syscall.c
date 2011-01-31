@@ -243,6 +243,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 	uint32_t returnValue = 0;
 	uint8_t output [4];
+	int i;
 	for (int i = 0; i < 4; i ++){
 		int fromMemory = get_user(uaddr);
 		if (fromMemory == -1){
@@ -253,7 +254,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 		(uint8_t*)uaddr ++;
 	}
 
-	for (int i = 3; i >=0; i --){
+	for (i = 3; i >=0; i --){
 		returnValue = (returnValue << 8) + (uint8_t)output[i];
 	}
 	*ERROR = 1;
@@ -261,7 +262,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR){
 }
 
 
-static uint8_t get_user(const uint8_t *uaddr){
+static int get_user(const uint8_t *uaddr){
 	int result;
 	asm("movl $1f, %0; movzbl %1, %0; 1:"
 			: "=&a" (result) : "m" (*uaddr));
