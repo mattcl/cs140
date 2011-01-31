@@ -115,8 +115,6 @@ static void syscall_handler (struct intr_frame *f){
 				//KILLLLLL PROCESS
 			}
 			system_write(f,*(int*)arg(esp, 1), user_ptr1, *(int*)arg(esp, 3));
-
-			printf("SYS_WRITE called %d %s %d\n",*(int*)arg(esp, 1), *(char**)arg(esp, 2), *(int*)arg(esp,3));
 			break;
 		}
 		case SYS_SEEK:{
@@ -169,4 +167,48 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		}
 	}
+}
+
+static void system_halt (struct intr_frame *f UNUSED){
+
+}
+static void system_exit (struct intr_frame *f, int status UNUSED){
+
+}
+static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
+
+}
+static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+
+}
+static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){
+
+}
+static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
+
+}
+static void system_open (struct intr_frame *f, const char *file_name UNUSED){
+
+}
+static void system_filesize(struct intr_frame *f, int fd UNUSED){
+
+}
+static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED){
+
+}
+static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+	printf("SYS_WRITE called %d %s %d\n",fd, buffer, size);
+}
+static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
+
+}
+static void system_tell(struct intr_frame *f, int fd UNUSED){
+
+}
+static void system_close(struct intr_frame *f, int fd UNUSED){
+
+}
+
+static inline void * user_ptr_to_kernel_ptr(void *user_ptr){
+	return user_ptr;
 }
