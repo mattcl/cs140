@@ -37,7 +37,7 @@ void syscall_init (void) {
 
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
-#define arg(ESP, INT)((int *)ESP + INT)
+#define arg(ESP, INT)(((int *)ESP) + INT)
 
 static void syscall_handler (struct intr_frame *f){
 	//printf ("system call Vector number 0x%x!\n", f->vec_no);
@@ -131,7 +131,7 @@ static void syscall_handler (struct intr_frame *f){
 						       !is_user_vaddr(arg(esp,3))){
 					       //KILLLLLL PROCESS
 				       }
-				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,1), *(int*)arg(esp,3));
+				       system_write(f, *(int*)arg(esp,1), *(char**)arg(esp,2), *(int*)arg(esp,3));
 				       break;
 			       }
 		case SYS_SEEK:{
@@ -224,7 +224,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 
 }
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	printf("SYS_WRITE called %d %s %d\n",fd, buffer, size);
+	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
 
