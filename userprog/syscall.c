@@ -51,13 +51,24 @@ static void syscall_handler (struct intr_frame *f){
 	//printf("syscall esp %p\n", esp);
 	//printf("System Call number %d\n",sys_call_num);
 
+	//TEST user access
+
 	int ERROR = 0;
 	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
-	if(ERROR == -1){
+	if(ERROR < 0){
 		printf("SEGFAULT!!!!!\n");
 	} else {
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
+
+	input = get_user_int((uint32_t*)esp, &ERROR);
+	if(ERROR < 0){
+		printf("SEGFAULT!!!!!REAL ERROR\n");
+	} else {
+		printf("DIDNT SEGFAULT :)\n");
+	}
+
+	//end test
 
 	switch (sys_call_num){
 		case SYS_HALT:{
