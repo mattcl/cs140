@@ -106,6 +106,8 @@ static void mlfqs_insert(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static struct thread *mlfqs_get_next_thread_to_run(void);
 
+static void release_locks(void);
+
 // ---------------- END CHANGES ------------------- //
 
 /* Initializes the threading system by transforming the code
@@ -348,7 +350,9 @@ tid_t thread_tid (void){
    returns to the caller. */
 void thread_exit (void) {
 	ASSERT (!intr_context ());
-
+	intr_disable();
+	release_locks();
+	
 #ifdef USERPROG
 	process_exit ();
 #endif
@@ -356,11 +360,22 @@ void thread_exit (void) {
 	/* 	 Remove thread from all threads list, set our status to dying,
 		 and schedule another process.  That process will destroy us
 		 when it calls thread_schedule_tail(). */
-	intr_disable ();
 	list_remove (&thread_current()->allelem);
+	
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();
+}
+
+/* For all of the held locks, release without preempting */
+static void release_locks() {
+	ASSERT(!intr_context());
+	struct thread *t = thread_current();
+	while(!list_empty(&t->held_locks)) {
+		struct list_elem *e = list_pop_front(&t->held_locks);
+		struct lock *lock = list_entry(e, struct lock, elem);
+		lock_release_preempt(lock, false);
+	}
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and

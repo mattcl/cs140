@@ -155,6 +155,10 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	kill (f);
+	f ->eip = f->eax;
+	f->eax = 0xffffffff;
+	//asm ("movl %eax, %eip; movl $0xffffffff, %eax;");
+
+	//kill (f);
 }
 

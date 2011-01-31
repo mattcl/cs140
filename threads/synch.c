@@ -272,6 +272,9 @@ bool lock_try_acquire (struct lock *lock) {
    make sense to try to release a lock within an interrupt
    handler. */
 void lock_release (struct lock *lock){
+	lock_release_preempt(lock, true);
+}
+void lock_release_preempt (struct lock *lock, bool preempt) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 	ASSERT (!intr_context ());
@@ -312,9 +315,10 @@ void lock_release (struct lock *lock){
 	update_temp_priority(thread_current());
 
 	intr_set_level (old_level);
-
-	//schedule highest priority thread
-	thread_preempt();
+	if(preempt) {
+		//schedule highest priority thread
+		thread_preempt();
+	}
 }
 
 /* Returns true if the current thread holds LOCK, false
