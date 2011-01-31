@@ -77,7 +77,7 @@ static void syscall_handler (struct intr_frame *f){
 			if ((user_ptr1 = user_ptr_to_kernel_ptr(*(char**)arg(esp,1))) == NULL){
 				//KILL PROCESS
 			}
-			system_create(f, (char*)user_ptr1);
+			system_create(f, (char*)user_ptr1, *(int*)arg(esp,2));
 			break;
 		}
 		case SYS_REMOVE:{
