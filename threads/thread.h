@@ -163,7 +163,7 @@ void recalculate_priorities (void);
 void recalculate_all_recent_cpu (void);
 void recalculate_loads (void);
 int mlfqs_get_highest_priority(void);
-bool threadCompare (const struct list_elem *a,
+bool thread_hash_compare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
