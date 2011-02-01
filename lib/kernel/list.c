@@ -450,7 +450,7 @@ struct list_elem *list_search(struct list *list,
 
 	head = list_begin (list);
 	while ((next = list_next (head)) != list_end (list)){
-		if (!less (elem, next, aux) && !less (next, elem, aux)){
+		if (!less (elem, next, NULL) && !less (next, elem, NULL)){
 			return next;
 		} else {
 			head = next;

@@ -13,12 +13,6 @@
 
 #include <stdint.h> //int32_t                                                                
 
-#define INT_FIELD_SIZE 17
-#define FRAC_FIELD_SIZE 14
-#define MAX_INT_CONV_VAL 262143 
-
-#define CONVERSION_VAL (1 << (FRAC_FIELD_SIZE))
-
 /* The fixed_point uses a 32 bit int as it's
  * underlying representation.  1 bit is the signed bit,
  * p bits are determined as the whole number part of the 
