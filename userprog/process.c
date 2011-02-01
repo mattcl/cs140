@@ -840,7 +840,7 @@ static struct child_list_entry *child_list_entry_pid(pid_t c_pid){
 
 /* Takes a tid and returns the corresponding pid
  * if it was a child, PID_ERROR otherwise*/
-static pid_t child_tid_to_pid (tid_t c_tid){
+pid_t child_tid_to_pid (tid_t c_tid){
 	struct child_list_entry *child_entry = child_list_entry_tid(c_tid);
 	if (child_entry != NULL){
 		return child_entry->child_pid;
@@ -850,7 +850,7 @@ static pid_t child_tid_to_pid (tid_t c_tid){
 
 /* Takes a pid and returns the corresponding tid
  * if it was a child, TID_ERROR otherwise*/
-static tid_t child_pid_to_tid (pid_t c_pid){
+tid_t child_pid_to_tid (pid_t c_pid){
 	struct child_list_entry *child_entry = child_list_entry_pid(c_pid);
 	if (child_entry != NULL){
 		return child_entry->child_tid;
