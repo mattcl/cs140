@@ -13,7 +13,6 @@
 #include "devices/shutdown.h"
 #include "threads/malloc.h"
 #include <unistd.h>
-static struct lock filesys_lock;
 
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
@@ -291,6 +290,7 @@ static void system_wait (struct intr_frame *f, pid_t pid){
 	f->eax = process_wait(tid_for_pid(pid));
 }
 
+//FinISHED
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
@@ -300,7 +300,7 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	lock_release(&filesys_lock);
 }
 
-//
+//FINISHED
 static void system_remove(struct intr_frame *f, const char *file_name) {
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
