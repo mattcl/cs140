@@ -3,9 +3,13 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
+#include <console.h>
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 static struct lock filesys_lock;
 
@@ -31,9 +35,12 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 
+#define MAX_SIZE_PUTBUF 300
+
 bool verify_buffer (void * buffer, size_t size);
 
 void syscall_init (void) {
+	lock_init(&filesys_lock);
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -54,7 +61,6 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
-
 
 	input = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0){
@@ -278,6 +284,7 @@ static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
 
 static void system_open (struct intr_frame *f, const char *file_name UNUSED){
 	printf("SYS_OPEN called\n");
+	//make sure to increment fdcount in process struct
 }
 
 static void system_filesize(struct intr_frame *f, int fd UNUSED){
@@ -289,8 +296,50 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 }
 
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+	if (!verify_buffer(buffer, size)){
+		f->eax = -1;
+		system_exit(f, -1);
+	}
+	if (fd == 0){
+		f->eax = -1;
+		system_exit(f, -1);
+	}
 
-	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
+	off_t bytes_written = 0;
+
+	if (fd == 1){
+		bytes_written = size;
+		while (bytes_written > 0){
+			if (bytes_written  > MAX_SIZE_PUTBUF){
+				putbuf(buffer, MAX_SIZE_PUTBUF);
+				bytes_written -= MAX_SIZE_PUTBUF;
+				buffer += MAX_SIZE_PUTBUF;
+			} else {
+				putbuf(buffer, bytes_written);
+				break;
+			}
+		}
+		f->eax = size; // return size
+		return;
+	}
+
+	struct process *process = thread_current()->process;
+	struct fdHashEntry key;
+	key.fd = fd;
+
+	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
+	if (fd_hash_elem == NULL){
+		f->eax = -1;
+		system_exit(f, -1);
+	}
+
+	struct fdHashEntry *fd_item = list_entry(fd_hash_elem, struct fdHashEntry, elem);
+
+	lock_acquire(&filesys_lock);
+	bytes_written = file_write(fd_item->open_file, buffer, size);
+	lock_release(&filesys_lock);
+	f->eax = bytes_written;
+	//printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
