@@ -298,7 +298,7 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	// the pid_t will be in child_waiting_on
 	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
 	lock_release(&cur->child_pid_lock);
-	f->eax = cur->child_waiting_on;
+	f->eax = cur->child_waiting_on_pid;
 }
 
 //Finished
