@@ -989,6 +989,7 @@ struct thread *thread_find(tid_t tid){
 	struct list_elem *head, *next;
 	head = list_begin(&all_list);
 	while ((next= list_next(head)) != list_end(&all_list)){
+		printf("Tid's %u\n", (list_entry(next, struct thread, elem)->tid));
 		if (list_entry(next, struct thread, elem)->tid == tid){
 			return list_entry(next, struct thread, elem);
 		}
