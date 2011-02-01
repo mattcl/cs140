@@ -3,14 +3,17 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
+#include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
 
-typedef int pid_t;
-#define PID_ERROR ((pid_t) -1)
+static struct lock filesys_lock;
 
+<<<<<<< HEAD:userprog/syscall.c
 
+=======
+// THIS IS AN INTERNAL INTERRUPT HANDLER
+>>>>>>> 674945d60d73d9c7a8857d38341a57d1b1005ff0:userprog/syscall.c
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f UNUSED);
@@ -69,11 +72,10 @@ static void testMemoryAccess (void *esp){
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
 	//end test
-
 }
 
 //returns -1 on segfault
-static int set_args(void *esp, int num, uint32_t **argument){
+static int set_args(void *esp, int num, uint32_t argument[]){
 	int i, ERR;
 	for (i = 0; i < num; i++){
 		//printf("Argument i pointer is %p", argument[i]);
@@ -103,73 +105,73 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		}
 		case SYS_EXIT:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_exit(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_EXEC:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_exec(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_WAIT:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_wait(f, (pid_t)arg1[0]);
 			break;
 		}
 		case SYS_CREATE:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_create(f, (char*)arg1[0], (int)arg1[1]);
 			break;
 		}
 		case SYS_REMOVE:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_remove(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_OPEN:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_open(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_FILESIZE:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_filesize(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_READ:{
-			ERROR = set_args(esp, 3, &arg1);
+			ERROR = set_args(esp, 3, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_WRITE:{
-			ERROR = set_args(esp, 3, &arg1);
+			ERROR = set_args(esp, 3, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_SEEK:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
 			break;
 		}
 		case SYS_TELL:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_tell(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_CLOSE:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_close(f, (int)arg1[0]);
 			break;
@@ -215,8 +217,8 @@ static void system_halt (struct intr_frame *f UNUSED){
 	printf("SYS_HALT called\n");
 }
 static void system_exit (struct intr_frame *f, int status UNUSED) {
-	f->eax = status;
 	printf("exiting\n");
+	thread_current()->process->exit_code = status;
 	thread_exit();
 	printf("done exiting \n");
 }
@@ -226,6 +228,11 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+	if (!pid_belongs_to_child(pid)){
+		system_exit(f, -1);
+	}
+
+
 	printf("SYS_WAIT called\n");
 }
 
@@ -266,8 +273,9 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 }
 
 /*
- * Returns a unsigned int if there was a segfault it will set
- * ERROR to negative 1
+ * Returns a unsigned int representing 4 bytes of data
+ * if there was a segfault it will set
+ * ERROR will be negative, positive otherwise
  */
 static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
 	uint8_t *uaddr = (uint8_t*)uaddr_in;

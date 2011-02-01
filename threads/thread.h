@@ -94,7 +94,12 @@ struct thread {
   
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
-  uint32_t *pagedir;           /* Page directory. */
+  uint32_t *pagedir; /* Page directory. */
+  struct process *process; /* Process data */
+  // process needs to be here because only the thread is
+  // reachable inside the syscall interrupt handler so we
+  // need a handle to the processes open files and other
+  // data
 #endif
   
   // ------------ BEGIN CHANGES -------------//
@@ -162,6 +167,8 @@ bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
+
+struct thread *thread_find(tid_t tid);
 // ------------- END CHANGES --------------- //
 
 #endif /* threads/thread.h */

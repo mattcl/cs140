@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -139,6 +140,7 @@ void thread_init (void){
 		mlfqs_init();
 		load_avg = 0;
 	}
+
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -254,6 +256,18 @@ tid_t thread_create (const char *name, int priority,
 	 member cannot be observed. */
 	old_level = intr_disable ();
 
+#ifdef USERPROG
+	/* Initialize the user process */
+	struct process *p = calloc (1, sizeof(struct process));
+	if (p == NULL){
+		return TID_ERROR;
+	}
+
+	if( initialize_process (p, t) == false){
+		free(p);
+		return TID_ERROR;
+	}
+#endif
 	/* Stack frame for kernel_thread(). */
 	kf = alloc_frame (t, sizeof *kf);
 	kf->eip = NULL;
@@ -956,5 +970,23 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 		}
 	}
 	return idle_thread;
+}
+
+/*
+ * Because accessing the all threads list needs to be done with
+ * interrupts off, we must disable interrupts inside of this
+ * function. Returns NULL or a pointer to the thread
+ */
+struct thread *thread_find(tid_t tid){
+	ASSERT (intr_get_level () == INTR_OFF);
+	struct thread key;
+	key.tid = tid;
+	struct list_elem* value;
+	value = list_search(&all_list, &threadCompare, &key.elem );
+	if (value == NULL){
+		return NULL;
+	} else {
+		return (list_entry(value, struct thread, elem));
+	}
 }
 // ---------------- END CHANGES ---------------- //
