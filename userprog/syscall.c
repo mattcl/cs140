@@ -277,8 +277,20 @@ static void system_exit (struct intr_frame *f, int status) {
 	NOT_REACHED();
 }
 
-static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
+static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	printf("SYS_EXEC called\n");
+	if (!string_is_valid(cmd_line)){
+		system_exit(f, -1);
+	}
+	struct process* cur = thread_current()->process;
+	lock_acquire(&cur->child_pid_lock);
+	tid_t returned = process_execute(cmd_line);
+
+	//wait until the child process is set up or fails
+	// the pid_t will be in child_waiting_on
+	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
+	lock_release(&cur->child_pid_lock);
+	f->eax = &cur->child_waiting_on;
 }
 
 //Finished
@@ -427,15 +439,6 @@ static void system_tell(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
-// Called from process.c to ensure proper locking
-// while the process is being destroyed so that the
-// filesys isn't messed up
-void close_open_file (struct file *file){
-	lock_acquire(&filesys_lock);
-	file_close(file);
-	lock_release(&filesys_lock);
-}
-
 static void system_close(struct intr_frame *f, int fd ){
 	printf("SYS_CLOSE called\n");
 
@@ -444,7 +447,9 @@ static void system_close(struct intr_frame *f, int fd ){
 		return;
 	}
 
-	close_open_file(entry->open_file);
+	lock_acquire(&filesys_lock);
+	file_close(entry->open_file);
+	lock_release(&filesys_lock);
 
 	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 	if (returned == NULL){
