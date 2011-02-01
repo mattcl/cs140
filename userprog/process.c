@@ -30,7 +30,6 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 
-static void wake_up_parent_if_waiting (struct thread* current);
 static struct process *parent_process_from_child (struct process* child_process);
 
 //HASH table functions
@@ -317,16 +316,6 @@ static struct process *parent_process_from_child (struct process* our_process){
 
 }
 
-/*
- * CALL THIS WITH process_hash_lock HELD!!!
- */
-static void wake_up_parent_if_waiting (struct thread* current){
-	struct process *parent = parent_process_from_child(current->process);
-	if (parent->child_waiting_on == current->process->pid){
-		sema_up(&parent->waiting_semaphore);
-	}
-}
-
 /* Free the current process's resources.
  * And signals the parent that it has finished,
  * if the parent still exists and is waiting*/
@@ -382,7 +371,9 @@ void process_exit (void){
 			}
 			lock_release(&parent->children_exit_codes_lock);
 		}
-		wake_up_parent_if_waiting(cur);
+		if (parent->child_waiting_on == cur_process->pid){
+			sema_up(&parent->waiting_semaphore);
+		}
 	}
 
 	lock_release(&processes_hash_lock);
