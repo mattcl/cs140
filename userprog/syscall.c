@@ -31,6 +31,8 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 
+bool verify_buffer (void * buffer, size_t size);
+
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
