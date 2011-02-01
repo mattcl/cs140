@@ -273,7 +273,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 static void system_exit (struct intr_frame *f, int status UNUSED) {
 	thread_current()->process->exit_code = status;
 	thread_exit();
-	PANIC("done exiting NEVER CALLED\n");
+	NOT_REACHED();
 }
 
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
@@ -281,28 +281,32 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 //Finished
-static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+static void system_wait (struct intr_frame *f, pid_t pid) {
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
 	f->eax = process_wait(tid_for_pid(pid));
 }
 
-static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){
-	printf("SYS_CREATE called\n");
+static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
 	}
-	  
 	
+	f->eax = filesys_create(filename, intial_size);
 }
 
-static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
-	printf("SYS_REMOVE called\n");
+static void system_remove(struct intr_frame *f, const char *file_name) {
+
+	if(!string_is_valid(file_name)){
+	  system_exit(f, -1);
+	}
+	
+	f->eax = filesys_remove(file_name);
 }
 
 //finished
-static void system_open (struct intr_frame *f, const char *file_name UNUSED){
+static void system_open (struct intr_frame *f, const char *file_name){
 	printf("SYS_OPEN called\n");
 	if (!string_is_valid(file_name)){
 		system_exit(f, -1);
