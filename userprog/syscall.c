@@ -10,6 +10,7 @@
 #include <console.h>
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "devices/shutdown.h"
 
 static struct lock filesys_lock;
 
