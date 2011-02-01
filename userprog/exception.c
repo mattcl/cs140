@@ -83,6 +83,7 @@ static void kill (struct intr_frame *f) {
 		printf ("%s: dying due to interrupt %#04x (%s).\n",
 				thread_name (), f->vec_no, intr_name (f->vec_no));
 		intr_dump_frame (f);
+		thread_current()->process->exit_code = -1;
 		thread_exit ();
 
 	case SEL_KCSEG:
@@ -98,6 +99,7 @@ static void kill (struct intr_frame *f) {
          kernel. */
 		printf ("Interrupt %#04x (%s) in unknown segment %04x\n",
 				f->vec_no, intr_name (f->vec_no), f->cs);
+		thread_current()->process->exit_code = -1;
 		thread_exit ();
 	}
 }
@@ -150,9 +152,12 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	f->eip = f->eax;
-	f->eax = 0xffffffff;
-
+	if (user){
+		kill(f);
+	} else {
+		f->eip = f->eax;
+		f->eax = 0xffffffff;
+	}
 	//kill (f);
 }
 

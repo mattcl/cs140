@@ -3,13 +3,13 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
+#include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
 
 static struct lock filesys_lock;
 
-
+// THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f UNUSED);
@@ -212,8 +212,8 @@ static void system_halt (struct intr_frame *f UNUSED){
 	printf("SYS_HALT called\n");
 }
 static void system_exit (struct intr_frame *f, int status UNUSED) {
-	f->eax = status;
 	printf("exiting\n");
+	thread_current()->process->exit_code = status;
 	thread_exit();
 	printf("done exiting \n");
 }
@@ -223,6 +223,11 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+	if (!pid_belongs_to_child(pid)){
+		system_exit(f, -1);
+	}
+
+
 	printf("SYS_WAIT called\n");
 }
 

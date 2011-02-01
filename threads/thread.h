@@ -167,6 +167,8 @@ bool threadCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
+
+struct thread *thread_find(tid_t tid);
 // ------------- END CHANGES --------------- //
 
 #endif /* threads/thread.h */
