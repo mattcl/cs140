@@ -39,7 +39,8 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
-struct file *file_for_fd (int fd);
+static struct file *file_for_fd (int fd);
+static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
 #define MAX_SIZE_PUTBUF 300
 
@@ -271,7 +272,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 
 //Finished
-static void system_exit (struct intr_frame *f, int status UNUSED) {
+static void system_exit (struct intr_frame *f, int status) {
 	printf("SYS_EXIT\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
@@ -283,7 +284,7 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 //Finished
-static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+static void system_wait (struct intr_frame *f, pid_t pid){
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
@@ -408,25 +409,54 @@ static void system_tell(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
-static void system_close(struct intr_frame *f, int fd UNUSED){
+// Called from process.c to ensure proper locking
+// while the process is being destroyed so that the
+// filesys isn't messed up
+void close_open_file (struct file *file){
+	lock_acquire(&filesys_lock);
+	file_close(file);
+	lock_release(&filesys_lock);
+}
+
+static void system_close(struct intr_frame *f, int fd ){
 	printf("SYS_CLOSE called\n");
 
+	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
+	if (entry == NULL){
+		return;
+	}
+
+	close_open_file(entry->open_file);
+
+	struct hash_elem *returned = hash_delete(thread_current()->process->open_files, entry);
+	if (returned == NULL){
+		/* We have just tried to delete a fd that was not in our fd table....
+		 * This Is obviously a huge problem so system KILLLLLLL!!!! */
+		PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+	}
+
+	free(entry);
 }
 
 //Returns the file or NULL if the fd is invalid
-struct file *file_for_fd (int fd){
+static struct file *file_for_fd (int fd){
+	struct fd_hash_entry *hash_elem = fd_to_fd_hash_entry (fd);
+	if (hash_elem == NULL){
+		return NULL;
+	}
+	return  hash_elem->open_file;
+}
+
+static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 	struct process *process = thread_current()->process;
 	struct fd_hash_entry key;
 	key.fd = fd;
-
 	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
 	if (fd_hash_elem == NULL){
 		return NULL;
 	}
-
-	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem) ->open_file;
+	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
 }
-
 
 static bool buffer_is_valid (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;

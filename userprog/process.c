@@ -806,7 +806,8 @@ static unsigned file_hash_func (const struct hash_elem *e, void *aux UNUSED){
 
 static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	//File close needs to be called here
-	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
+	close_open_file(hash_entry(e, struct fd_hash_entry, elem)->open_file);
+	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
 static bool process_hash_compare  (const struct hash_elem *a,
