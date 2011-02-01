@@ -322,7 +322,7 @@ static struct process *parent_process_from_child (struct process* our_process){
  */
 static void wake_up_parent_if_waiting (struct thread* current){
 	struct process *parent = parent_process_from_child(current->process);
-	if (parent->child_waiting_on == current->process->tid){
+	if (parent->child_waiting_on == current->process->pid){
 		sema_up(&parent->waiting_semaphore);
 	}
 }
