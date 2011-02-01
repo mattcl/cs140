@@ -287,12 +287,15 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	struct process* cur = thread_current()->process;
 	lock_acquire(&cur->child_pid_lock);
 	tid_t returned = process_execute(cmd_line);
-
+	if (returned == TID_ERROR){
+		f->eax = -1;
+		return;
+	}
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on
 	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
 	lock_release(&cur->child_pid_lock);
-	f->eax = &cur->child_waiting_on;
+	f->eax = cur->child_waiting_on;
 }
 
 //Finished
@@ -468,7 +471,7 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	}
 
 	lock_acquire(&filesys_lock);
-	f->eax = file_seek(open_file, position);
+	f->eax = file_seek(file, position);
 	lock_release(&filesys_lock);
 }
 
