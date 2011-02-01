@@ -34,6 +34,8 @@ static void system_close(struct intr_frame *f, int fd UNUSED);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
+struct file *file_for_fd (int fd);
+
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static bool validate_user_string(const char* str);
 
@@ -253,8 +255,10 @@ static void syscall_handler (struct intr_frame *f){
 	}
 }
 
+//FINISHED
 static void system_halt (struct intr_frame *f UNUSED){
 	printf("SYS_HALT called\n");
+	shutdown_power_off();
 }
 
 //Finished
@@ -299,6 +303,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 	printf("SYS_READ called\n");
 }
 
+//FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	if (!verify_buffer(buffer, size)){
 		f->eax = -1;
@@ -327,20 +332,14 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 		return;
 	}
 
-	struct process *process = thread_current()->process;
-	struct fdHashEntry key;
-	key.fd = fd;
+	struct file * open_file = file_for_fd(fd);
 
-	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
-	if (fd_hash_elem == NULL){
-		f->eax = -1;
-		system_exit(f, -1);
+	if (open_file == NULL){
+		exit (f, -1);
 	}
 
-	struct fdHashEntry *fd_item = hash_entry(fd_hash_elem, struct fdHashEntry, elem);
-
 	lock_acquire(&filesys_lock);
-	bytes_written = file_write(fd_item->open_file, buffer, size);
+	bytes_written = file_write(file, buffer, size);
 	lock_release(&filesys_lock);
 	f->eax = bytes_written;
 	//printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
@@ -356,6 +355,20 @@ static void system_tell(struct intr_frame *f, int fd UNUSED){
 
 static void system_close(struct intr_frame *f, int fd UNUSED){
 	printf("SYS_CLOSE called\n");
+}
+
+//Returns the file or NULL if the fd is invalid
+struct file *file_for_fd (int fd){
+	struct process *process = thread_current()->process;
+	struct fdHashEntry key;
+	key.fd = fd;
+
+	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
+	if (fd_hash_elem == NULL){
+		return NULL;
+	}
+
+	return hash_entry(fd_hash_elem, struct fdHashEntry, elem) ->open_file;
 }
 
 
