@@ -153,8 +153,6 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	kill(f);
-
 	if (user){
 		kill(f);
 	} else {
