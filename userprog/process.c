@@ -229,7 +229,6 @@ int process_wait (tid_t child_tid){
 	if (child_tid == TID_ERROR){
 		return -1;
 	}
-	struct thread* childthread;
 	struct thread *cur = thread_current();
 	bool invalid = false;
 
@@ -239,7 +238,9 @@ int process_wait (tid_t child_tid){
 	// bring us back to hear and then we would be dereferencing
 	// freed memory
 	enum intr_level old_level = intr_disable();
-	childthread = thread_find(child_tid);
+
+	struct thread* childthread = thread_find(child_tid);
+
 	//Child has already exited
 	if (childthread == NULL){
 		printf("CHildtrhead = NULL\n");
@@ -266,6 +267,7 @@ int process_wait (tid_t child_tid){
 	if (invalid){
 		return -1;
 	} else {
+		printf("Stuff");
 		struct processReturnCode key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);

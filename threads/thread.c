@@ -975,7 +975,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 
 /*
  * Because accessing the all threads list needs to be done with
- * interrupts off, we must disable interrupts inside of this
+ * interrupts off, we must disable inteTid's %u\nrrupts inside of this
  * function. Returns NULL or a pointer to the thread
  */
 struct thread *thread_find(tid_t tid){
@@ -991,7 +991,7 @@ struct thread *thread_find(tid_t tid){
 	while ((next= list_next(head)) != list_end(&all_list)){
 		printf("Tid's %u\n", (list_entry(next, struct thread, elem)->tid));
 		if (list_entry(next, struct thread, elem)->tid == tid){
-			return list_entry(next, struct thread, elem);
+			return list_entry(next, struct thread, allelem);
 		}
 		head = next;
 	}
