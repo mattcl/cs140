@@ -13,7 +13,6 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "threads/malloc.h"
-#include <unistd.h>
 
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
@@ -43,6 +42,10 @@ static struct file *file_for_fd (int fd);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
 #define MAX_SIZE_PUTBUF 300
+
+/* Standard file descriptors.  */
+#define	STDIN_FILENO	0	/* Standard input.  */
+#define	STDOUT_FILENO	1	/* Standard output.  */
 
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
@@ -271,7 +274,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 
 //Finished
-static void system_exit (struct intr_frame *f, int status) {
+static void system_exit (struct intr_frame *f UNUSED, int status) {
 	printf("SYS_EXIT\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
@@ -385,7 +388,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		system_exit(f, -1);
 	}
 
-	off_t bytes_read ;
+	unsigned int bytes_read ;
 
 	char *charBuffer = (char*) buffer;
 
@@ -501,7 +504,7 @@ static void system_tell(struct intr_frame *f, int fd){
 }
 
 //FINISHED
-static void system_close(struct intr_frame *f, int fd ){
+static void system_close(struct intr_frame *f UNUSED, int fd ){
 	printf("SYS_CLOSE called\n");
 
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);

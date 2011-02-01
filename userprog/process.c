@@ -859,7 +859,7 @@ static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED){
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
+static void process_hash_entry_destroy (struct hash_elem *e UNUSED, void *aux UNUSED){
 	//Auxilary data may need to be destroyed left it here just in case
 }
 
