@@ -992,14 +992,9 @@ struct thread *thread_find(tid_t tid){
 		if (list_entry(next, struct thread, elem)->tid == tid){
 			return list_entry(next, struct thread, elem);
 		}
+		head = next;
 	}
+	return NULL;
 
-
-	value = list_search(&all_list, &tid_compare, &key.elem );
-	if (value == NULL){
-		return NULL;
-	} else {
-		return (list_entry(value, struct thread, elem));
-	}
 }
 // ---------------- END CHANGES ---------------- //
