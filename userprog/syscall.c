@@ -126,7 +126,7 @@ static void testMemoryAccess (void *esp){
 	  printf("Yaaaa! seg faulted at base!");
 	}
 	
-	if(verify_string((char*) esp
+
 	//end test
 }
 
@@ -271,16 +271,14 @@ static void syscall_handler (struct intr_frame *f){
 
 //FINISHED
 static void system_halt (struct intr_frame *f UNUSED){
-	printf("SYS_HALT called\n");
 	shutdown_power_off();
 }
 
 //Finished
 static void system_exit (struct intr_frame *f, int status UNUSED) {
-	printf("exiting\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
-	printf("done exiting \n");
+	PANIC("done exiting NEVER CALLED\n");
 }
 
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
@@ -289,7 +287,6 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 
 //Finished
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
-	printf("SYS_WAIT called DONE\n");
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
@@ -374,7 +371,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 //Returns the file or NULL if the fd is invalid
 struct file *file_for_fd (int fd){
 	struct process *process = thread_current()->process;
-	struct fdHashEntry key;
+	struct fd_hash_entry key;
 	key.fd = fd;
 
 	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
@@ -382,7 +379,7 @@ struct file *file_for_fd (int fd){
 		return NULL;
 	}
 
-	return hash_entry(fd_hash_elem, struct fdHashEntry, elem) ->open_file;
+	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem) ->open_file;
 }
 
 
@@ -448,13 +445,14 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 
 static bool verify_string(const char* str){
 
+	char c;
+	while (true){
+		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
+			return false;
+		}
+		if (c == '\0'){
+			return true;
+		}
+	}
 
-  for(; *str != '\0'; str++) { 
-    if(!is_user_vaddr(str) || get_user((unint8_t*)str) < 0) {
-      return false;
-    }
-  }
-
-  return true;
-  
 }

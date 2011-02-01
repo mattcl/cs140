@@ -151,7 +151,7 @@ static pid_t allocate_pid(void){
 bool initialize_process (struct process *p, struct thread *our_thread){
 	p->pid = allocate_pid();
 	p->parent_id = thread_current()->process->pid;
-	p->fdcount = 2;
+	p->fd_count = 2;
 	bool success = hash_init(&p->open_files, &fileHash, &fileCompare, NULL);
 	if (!success){
 		return false;
@@ -268,7 +268,7 @@ int process_wait (tid_t child_tid){
 		return -1;
 	} else {
 		//printf("Stuff");
-		struct processReturnCode key;
+		struct process_return_hash_entry key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);
 		struct hash_elem *returnCode = hash_find(&processes, &key.elem);
@@ -278,7 +278,7 @@ int process_wait (tid_t child_tid){
 			return -1;
 		}
 		lock_release(&cur->process->children_exit_codes_lock);
-		return hash_entry(returnCode, struct processReturnCode, elem)->exit_code;
+		return hash_entry(returnCode, struct process_return_hash_entry, elem)->exit_code;
 	}
 }
 
@@ -320,7 +320,7 @@ void process_exit (void){
 		// Parent PID still exists
 		struct process *parent = hash_entry(parent_process, struct process, elem);
 
-		struct processReturnCode *prc = calloc(1, sizeof(struct processReturnCode));
+		struct process_return_hash_entry *prc = calloc(1, sizeof(struct process_return_hash_entry));
 
 		prc->exit_code = cur->process->exit_code;
 		prc->child_pid = cur->process->pid;
@@ -794,12 +794,12 @@ static bool fileCompare (const struct hash_elem *a,
 						 void *aux UNUSED){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	return (hash_entry(a, struct fdHashEntry, elem)->fd <
-			hash_entry(b, struct fdHashEntry, elem)->fd);
+	return (hash_entry(a, struct fd_hash_entry, elem)->fd <
+			hash_entry(b, struct fd_hash_entry, elem)->fd);
 }
 
 static unsigned fileHash (const struct hash_elem *e, void *aux UNUSED){
-	return hash_int(hash_entry(e, struct fdHashEntry, elem)->fd);
+	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
 }
 
 static void fdEntryDestroy (struct hash_elem *e, void *aux UNUSED){
@@ -825,18 +825,18 @@ static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED){
 }
 
 static void exitCodeDestroy (struct hash_elem *e, void *aux UNUSED){
-	free(hash_entry(e, struct processReturnCode, elem));
+	free(hash_entry(e, struct process_return_hash_entry, elem));
 }
 
 static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED){
-	pid_t pid = hash_entry(e, struct processReturnCode, elem)->child_tid;
+	pid_t pid = hash_entry(e, struct process_return_hash_entry, elem)->child_tid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
 static bool exitCodeCompare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED){
-	return (hash_entry(a, struct processReturnCode, elem)->child_tid <
-			hash_entry(b, struct processReturnCode, elem)->child_tid);
+	return (hash_entry(a, struct process_return_hash_entry, elem)->child_tid <
+			hash_entry(b, struct process_return_hash_entry, elem)->child_tid);
 }
 
 

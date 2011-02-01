@@ -24,7 +24,7 @@ struct process {
 	// only this process can access these
 	// fields so no locking is needed
 	struct hash open_files; /*A hash of open file descriptors */
-	int fdcount;			/* The current count of file descriptors*/
+	int fd_count;			/* The current count of file descriptors*/
 
 	int exit_code;
 
@@ -40,13 +40,13 @@ struct process {
 	struct lock children_exit_codes_lock;
 };
 
-struct fdHashEntry {
+struct fd_hash_entry {
 	int fd; 				  /* hash key and File Descriptor*/
 	struct file *open_file;   /* Open file associated with this FD */
 	struct hash_elem elem;    /* hash elem for this fd entry*/
 };
 
-struct processReturnCode{
+struct process_return_hash_entry{
 	int exit_code;
 	pid_t child_pid;
 	tid_t child_tid;
