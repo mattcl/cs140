@@ -441,7 +441,7 @@ static void system_close(struct intr_frame *f, int fd ){
 
 	close_open_file(entry->open_file);
 
-	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, entry);
+	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 	if (returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		 * This Is obviously a huge problem so system KILLLLLLL!!!! */
