@@ -383,7 +383,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	off_t bytes_read = 0;
 	if(fd == STDIN_FILENO) {
 	  for( ; bytes_read <  size ; ++bytes_read){
-	    buffer[bytes_read] = input_getc();
+	    (char*)buffer + bytes_read = input_getc();
 	  } 
 	  f->eax = bytes_read;
 	}
