@@ -139,12 +139,12 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 }
 
 static void syscall_handler (struct intr_frame *f){
-	int ERROR = 0;
+	int error = 0;
 
 	void *esp = f->esp;
 
-	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
-	if (ERROR < 0) system_exit(f, -1);
+	int sys_call_num = get_user_int((uint32_t*)esp, &error);
+	if (error < 0) system_exit(f, -1);
 
 	//testMemoryAccess(esp);
 
@@ -156,74 +156,74 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		}
 		case SYS_EXIT:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_exit(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_EXEC:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_exec(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_WAIT:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_wait(f, (pid_t)arg1[0]);
 			break;
 		}
 		case SYS_CREATE:{
-			ERROR = set_args(esp, 2, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_create(f, (char*)arg1[0], (int)arg1[1]);
 			break;
 		}
 		case SYS_REMOVE:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_remove(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_OPEN:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_open(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_FILESIZE:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_filesize(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_READ:{
-			ERROR = set_args(esp, 3, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 3, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_WRITE:{
-			ERROR = set_args(esp, 3, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 3, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_SEEK:{
-			ERROR = set_args(esp, 2, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
 			break;
 		}
 		case SYS_TELL:{
-			ERROR = set_args(esp, 1, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_tell(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_CLOSE:{
-			ERROR = set_args(esp, 2, arg1);
-			if (ERROR < 0)system_exit(f, -1);
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
 			system_close(f, (int)arg1[0]);
 			break;
 		}
@@ -266,11 +266,13 @@ static void syscall_handler (struct intr_frame *f){
 
 //FINISHED
 static void system_halt (struct intr_frame *f UNUSED){
+	printf("SYS_HALT called\n");
 	shutdown_power_off();
 }
 
 //Finished
 static void system_exit (struct intr_frame *f, int status UNUSED) {
+	printf("SYS_EXIT\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
 	PANIC("done exiting NEVER CALLED\n");
@@ -297,7 +299,7 @@ static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
 }
 
 //finished
-static void system_open (struct intr_frame *f, const char *file_name UNUSED){
+static void system_open (struct intr_frame *f, const char *file_name){
 	printf("SYS_OPEN called\n");
 	if (!string_is_valid(file_name)){
 		system_exit(f, -1);
@@ -332,8 +334,16 @@ static void system_open (struct intr_frame *f, const char *file_name UNUSED){
 	f->eax = fd_entry->fd;
 }
 
-static void system_filesize(struct intr_frame *f, int fd UNUSED){
+static void system_filesize(struct intr_frame *f, int fd){
 	printf("SYS_FILESIZE called\n");
+	struct file *open_file = file_for_fd(fd);
+	if (open_file == NULL){
+		system_exit(f, -1);
+	}
+
+	lock_acquire(&filesys_lock);
+	f->eax = file_length(open_file);
+	lock_release(&filesys_lock);
 }
 
 static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED){
@@ -342,6 +352,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+	printf("SYS_WRITE called\n");
 	if (!buffer_is_valid(buffer, size)){
 		f->eax = -1;
 		system_exit(f, -1);
@@ -385,12 +396,21 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUS
 	printf("SYS_SEEK called\n");
 }
 
-static void system_tell(struct intr_frame *f, int fd UNUSED){
+static void system_tell(struct intr_frame *f, int fd){
 	printf("SYS_TELL called\n");
+	struct file *open_file = file_for_fd(fd);
+	if (open_file == NULL){
+		system_exit(f, -1);
+	}
+
+	lock_acquire(&filesys_lock);
+	f->eax = file_tell(open_file);
+	lock_release(&filesys_lock);
 }
 
 static void system_close(struct intr_frame *f, int fd UNUSED){
 	printf("SYS_CLOSE called\n");
+
 }
 
 //Returns the file or NULL if the fd is invalid
