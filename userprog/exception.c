@@ -153,13 +153,11 @@ static void page_fault (struct intr_frame *f){
 			       user ? "user" : "kernel");
 	//PANIC ("Page Fault");
 
-	kill(f);
-
 	if (user){
 		kill(f);
 	} else {
 		f->eip = (void*)f->eax;
-		f->eax = 0xffffffff;
+		f->eax = 0xffffffff;//-1
 	}
 	//kill (f);
 }

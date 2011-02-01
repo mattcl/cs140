@@ -33,6 +33,8 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static bool validate_user_string(const char* str);
 
+bool verify_buffer (void * buffer, size_t size);
+
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
@@ -71,6 +73,38 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
+
+	if(verify_buffer((char*)0x2, 300)){
+		printf("Verify buffer failed\n");
+	} else {
+		printf("Verify buffer passed test 1\n");
+	}
+
+	if (verify_buffer((char*)0xbffffffb, 20)){
+		printf("Verify buffer failed test 2\n");
+	} else {
+		printf("Verify buffer passed test 2\n");
+	}
+
+	if (verify_buffer((char*)0xbfffffde, 6 )){
+		printf("Verify buffer passed test 3\n");
+	} else {
+		printf("Verify buffer failed test 3\n");
+	}
+
+	if (verify_buffer((char*)0xbffffffb, 6)){
+		printf("Verify buffer failed test 4\n");
+	} else {
+		printf("Verify buffer passed test 4\n");
+	}
+
+	if (verify_buffer((char*)0x4ffffffb, 6)){
+		printf("Verify buffer failed test 4\n");
+	} else {
+		printf("Verify buffer passed test 4\n");
+	}
+
+
 	//end test
 }
 
@@ -95,7 +129,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0) system_exit(f, -1);
 
-	//testMemoryAccess(esp);
+	testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
@@ -216,6 +250,8 @@ static void syscall_handler (struct intr_frame *f){
 static void system_halt (struct intr_frame *f UNUSED){
 	printf("SYS_HALT called\n");
 }
+
+//Finished
 static void system_exit (struct intr_frame *f, int status UNUSED) {
 	printf("exiting\n");
 	thread_current()->process->exit_code = status;
@@ -227,8 +263,9 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 	printf("SYS_EXEC called\n");
 }
 
+//Finished
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
-	printf("SYS_WAIT called\n");
+	printf("SYS_WAIT called DONE\n");
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
@@ -256,6 +293,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 }
 
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+
 	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 
@@ -269,6 +307,31 @@ static void system_tell(struct intr_frame *f, int fd UNUSED){
 
 static void system_close(struct intr_frame *f, int fd UNUSED){
 	printf("SYS_CLOSE called\n");
+}
+
+
+bool verify_buffer (void * buffer, size_t size){
+	uint8_t *uaddr = (uint8_t*)buffer;
+	if (size < 0){
+		return false;
+	}
+	if (!is_user_vaddr(uaddr)){
+		return false;
+	}
+	if (get_user(uaddr) < 0){
+		return false;
+	}
+
+	uaddr += size;
+	if (!is_user_vaddr(uaddr)){
+		return false;
+	}
+
+	if (get_user(uaddr) < 0){
+		return false;
+	}
+
+	return true;
 }
 
 /*
