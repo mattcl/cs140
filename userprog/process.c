@@ -825,18 +825,20 @@ static struct list_elem *child_list_entry_gen(
 
 static struct child_list_entry *child_list_entry_tid (tid_t c_tid){
 	struct process *cur_process = thread_current()->process;
-	return list_entry(
-			child_list_entry_gen(cur_process, &c_tid, &is_equal_func_tid),
-			struct child_list_entry,
-			elem);
+	struct list_elem *temp = child_list_entry_gen(cur_process, &c_tid, &is_equal_func_tid);
+	if ( temp != NULL){
+		return list_entry( temp, struct child_list_entry,elem);
+	}
+	return NULL;
 }
 
 static struct child_list_entry *child_list_entry_pid(pid_t c_pid){
 	struct process *cur_process = thread_current()->process;
-	return list_entry(
-			child_list_entry_gen(cur_process, &c_pid, &is_equal_func_pid),
-			struct child_list_entry,
-			elem);
+	struct list_elem *temp = child_list_entry_gen(cur_process, &c_pid, &is_equal_func_pid);
+	if ( temp != NULL){
+		return list_entry( temp, struct child_list_entry,elem);
+	}
+	return NULL;
 }
 
 /* Takes a tid and returns the corresponding pid
