@@ -9,7 +9,11 @@
 
 static struct lock filesys_lock;
 
+<<<<<<< HEAD:userprog/syscall.c
+
+=======
 // THIS IS AN INTERNAL INTERRUPT HANDLER
+>>>>>>> 674945d60d73d9c7a8857d38341a57d1b1005ff0:userprog/syscall.c
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f UNUSED);
@@ -52,6 +56,7 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
+
 
 	input = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0){
