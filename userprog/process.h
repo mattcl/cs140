@@ -11,62 +11,83 @@
 // define a limit on the argument length
 #define MAX_ARG_LENGTH 256
 
-typedef uint32_t pid_t;
+typedef int32_t pid_t;
+#define PID_ERROR ((pid_t) -1)          /* Error value for tid_t. */
 
 static struct lock filesys_lock;
 
 struct process {
-	pid_t pid; 			   /* This processes ID. Also hash key */
-	struct hash_elem elem; /* The element in the processes hash*/
+	/* This processes ID. Also hash key */
+	pid_t pid;
+	pid_t parent_id;
 
-	pid_t parent_id;       /* The Id of the process that created it*/
+	/* The element in the processes hash*/
+	struct hash_elem elem;
 
+	/* The Id of the process that created it*/
+	//pid_t parent_id;
+
+	struct list children_list;
+
+	/*The thread which this process is running on*/
 	struct thread *owning_thread;
 
-	// only this process can access these
-	// fields so no locking is needed
-	struct hash open_files; /*A hash of open file descriptors */
-	int fd_count;			/* The current count of file descriptors*/
+	// only this process can access open_files
+	// so no locks are included
 
+	/*A hash of open file descriptors */
+	struct hash open_files;
+
+	/* The current count of file descriptors*/
+	int fd_count;
+
+	/* The exit code of this process.
+	 * MUST BE SET BEFORE thread_exit IS CALLED*/
 	int exit_code;
 
-	//Accessed with interrupts turned off
-	// These two are used when this process
-	// waits on a living child process
-	// Child waiting on also used in the exec
-	// functioning
+	/* The particular pid this thread is waiting on
+	 * You wait on the pid when you want to know the
+	 * processes pid after it is loaded*/
 	pid_t child_waiting_on_pid;
-	tid_t child_waiting_on_tid;
+
+	/*A semaphore that allows us to wait for child pid to exit*/
 	struct semaphore waiting_semaphore;
 
-	//These two are used to synchronize
-	// process exec and get the pid_t
+	/* The condition of whether a process created with exec finished
+	   loading */
 	struct condition pid_cond;
-	struct lock child_pid_lock;
 
-	//These two are accessed whenever a child
-	// process finishes
-	struct hash children_exit_codes;
-	struct lock children_exit_codes_lock;
+	/* The child process can't complete its creation until
+	 * it acquires this lock given that it exists */
+	struct lock child_pid_tid_lock;
+
+};
+
+struct child_list_entry{
+	pid_t child_pid;
+	tid_t child_tid;
+	int exit_code;
+	struct list_elem elem;
 };
 
 struct fd_hash_entry {
-	int fd; 				  /* hash key and File Descriptor*/
-	struct file *open_file;   /* Open file associated with this FD */
-	struct hash_elem elem;    /* hash elem for this fd entry*/
-};
+	/* hash key and File Descriptor*/
+	int fd;
 
-struct process_return_hash_entry{
-	int exit_code;
-	pid_t child_pid;
-	tid_t child_tid;
+	/* Open file associated with this FD */
+	struct file *open_file;
+
+	/* hash elem for this fd entry*/
 	struct hash_elem elem;
 };
 
 void process_init(void);
 
-bool pid_belongs_to_child(pid_t child);
-tid_t tid_for_pid(pid_t pid);
+//methods for dealing with pid's and tid's
+static tid_t child_pid_to_tid (pid_t c_pid);
+static pid_t child_tid_to_pid (tid_t c_tid);
+static struct list_elem *child_list_entry_tid (tid_t c_tid);
+static struct list_elem *child_list_entry_pid(pid_t c_pid);
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);

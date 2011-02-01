@@ -288,25 +288,28 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 		system_exit(f, -1);
 	}
 	struct process* cur = thread_current()->process;
-	lock_acquire(&cur->child_pid_lock);
+	lock_acquire(&cur->child_pid_tid_lock);
 	tid_t returned = process_execute(cmd_line);
 	if (returned == TID_ERROR){
 		f->eax = -1;
+		lock_release(&cur->child_pid_tid_lock);
 		return;
 	}
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on
-	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
-	lock_release(&cur->child_pid_lock);
+	cond_wait(&cur->pid_cond, &cur->child_pid_tid_lock);
+	lock_release(&cur->child_pid_tid_lock);
 	f->eax = cur->child_waiting_on_pid;
 }
 
 //Finished
 static void system_wait (struct intr_frame *f, pid_t pid){
-	if (!pid_belongs_to_child(pid)){
-		system_exit(f, -1);
+	tid_t child_tid;
+	if ((child_tid = child_pid_to_tid(pid)) == PID_ERROR){
+		f->eax = -1;
+		return;
 	}
-	f->eax = process_wait(tid_for_pid(pid));
+	f->eax = process_wait(child_tid);
 }
 
 //FinISHED

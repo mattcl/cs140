@@ -47,43 +47,12 @@ static bool process_hash_compare  (const struct hash_elem *a,
 static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 
-static unsigned exit_code_hash_func (const struct hash_elem *e, void *aux UNUSED);
-static bool exit_code_hash_compare (const struct hash_elem *a,
-		const struct hash_elem *b, void *aux UNUSED);
-static void exit_code_hash_destroy (struct hash_elem *e, void *aux UNUSED);
-
-bool pid_belongs_to_child(pid_t child){
-	struct process key;
-	key.pid = child;
-	bool success;
-	//All of this is inside of the lock because we need to
-	// be sure that the process still exists when we do the
-	// check for if the parent = the current pid
-	lock_acquire(&processes_hash_lock);
-	struct hash_elem *process = hash_find(&processes, &key.elem);
-	if (process == NULL){
-		// PID is no longer in use, I.E. exited
-		lock_release(&processes_hash_lock);
-		return false;
-	}
-	success = (thread_current()->process->pid == hash_entry(process, struct process, elem)->parent_id);
-	lock_release(&processes_hash_lock);
-	return success;
+typedef bool is_equal (struct child_list_entry *cle, void *c_tid);
+static bool is_equal_func_1 (struct child_list_entry *cle, void *c_tid){
+	return (list_entry(cle,struct child_list_entry,elem)->child_tid==*(tid_t*)c_tid);
 }
-
-
-tid_t tid_for_pid(pid_t pid){
-	struct process key;
-	key.pid = pid;
-	lock_acquire(&processes_hash_lock);
-	struct hash_elem *process = hash_find(&processes, &key.elem);
-	if (process == NULL){
-		// PID is no longer in use, I.E. exited
-		lock_release(&processes_hash_lock);
-		return TID_ERROR;
-	}
-	lock_release(&processes_hash_lock);
-	return hash_entry(process, struct process, elem)->owning_thread->tid;
+static bool is_equal_func_2 (struct child_list_entry *cle, void *c_pid){
+	return (list_entry(cle,struct child_list_entry,elem)->child_pid==*(pid_t*)c_pid);
 }
 
 void process_init(void){
@@ -103,6 +72,8 @@ void process_init(void){
 
 	thread_current()->process = global;
 
+	// Initializes this process with the parent process ID
+	// of 0
 	if (!initialize_process(global, thread_current())){
 		PANIC("ERROR initialzing the global process");
 	}
@@ -144,8 +115,12 @@ static pid_t allocate_pid(void){
 	return pid;
 }
 
-// called by thread create
-// Ran with interrupts off
+/* called by thread create and process_init
+ * Must be run with interrupts off
+ * Initializes the process and sets the process pointer
+ * In the thread that is being created with a parent_id
+ * Equal to the pid of creator thread
+ */
 bool initialize_process (struct process *p, struct thread *our_thread){
 	p->pid = allocate_pid();
 	p->parent_id = thread_current()->process->pid;
@@ -155,20 +130,14 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		return false;
 	}
 
-	success = hash_init(&p->children_exit_codes, &exit_code_hash_func, &exit_code_hash_compare, NULL);
-	if (!success){
-		return false;
-	}
-
 	sema_init(&p->waiting_semaphore, 0);
-	lock_init(&p->children_exit_codes_lock);
 
-	lock_init(&p->child_pid_lock);
+	list_init(&p->children_list);
+
+	lock_init(&p->child_pid_tid_lock);
 	cond_init(&p->pid_cond);
 
 	p->child_waiting_on_pid = 0;
-	p->child_waiting_on_tid = 0;
-	//p->owning_thread = our_thread;
 	our_thread->process = p;
 	p->exit_code = 0;
 
@@ -189,10 +158,21 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_) {
-	struct process *parent = parent_process_from_child(thread_current()->process);
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+
+	// Get parent process. We know that it is waiting on a
+	// signal if it called exec
+	lock_acquire(&processes_hash_lock);
+	struct process *parent = parent_process_from_child(cur_process);
+	lock_release(&processes_hash_lock);
+
+	// Parent hasn't exited yet so we can grab their lock
+	// so that they wait until set up is done
 	if (parent != NULL){
-		lock_acquire(&parent->child_pid_lock);
+		lock_acquire(&parent->child_pid_tid_lock);
 	}
+
 	char *file_name = file_name_;
 	struct intr_frame if_;
 	bool success;
@@ -208,19 +188,38 @@ static void start_process (void *file_name_) {
 	palloc_free_page (file_name);
 
 	if (!success) {
+		//BAD TIMES
 		if (parent != NULL){
-			parent->child_waiting_on_pid= -1;
-			cond_signal(&parent->pid_cond, &parent->child_pid_lock);
-			lock_release(&parent->child_pid_lock);
+			//communicate error with parent
+			parent->child_waiting_on_pid= PID_ERROR;
+			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+			lock_release(&parent->child_pid_tid_lock);
 		}
+		// Calls process Exit to clean up process and set error
+		// code for the parent to retrieve
+		cur_process->exit_code = PID_ERROR;
 		thread_exit ();
 	}
 	//printf("Finished loading\n");
 
 	if (parent != NULL){
-		parent->child_waiting_on_pid = thread_current()->process->pid;
-		cond_signal(&parent->pid_cond, &parent->child_pid_lock);
-		lock_release(&parent->child_pid_lock);
+		struct child_list_entry *cle = calloc(1, sizeof(struct child_list_entry));
+		if(cle != NULL){
+			cle->child_pid = cur_process->pid;
+			cle->child_tid = cur->tid;
+			list_push_front(&parent->children_list, &cle.elem);
+			parent->child_waiting_on_pid = cur_process->pid;
+		} else {
+			//Failed to allocate a handle on the child
+			parent->child_waiting_on_pid = PID_ERROR;
+		}
+		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+		lock_release(&parent->child_pid_tid_lock);
+
+		if (cle == NULL){
+			cur_process->exit_code = PID_ERROR;
+			thread_exit();
+		}
 	}
 
 	/* Start the user process by simulating a return from an
@@ -243,12 +242,15 @@ static void start_process (void *file_name_) {
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
-	printf("WAITING ON %u\n", child_tid);
-	if (child_tid == TID_ERROR){
-		return -1;
+	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
+	if (child_entry == NULL){
+		// not one of our children
+		return PID_ERROR;
 	}
-	struct thread *cur = thread_current();
-	bool invalid = false;
+
+	printf("WAITING ON %u\n", child_tid);
+
+	struct process *cur = thread_current()->process;
 
 	//Doing this with interrupts disabled because
 	// the child thread could begin thread exit in between
@@ -257,63 +259,26 @@ int process_wait (tid_t child_tid){
 	// freed memory
 	enum intr_level old_level = intr_disable();
 
+	// Needs interrupts off
 	struct thread* childthread = thread_find(child_tid);
 
-	if (childthread == NULL){
-		printf("CHildtrhead = NULL\n");
-
-		invalid = false; // could still be valid check our list
-	} else if (childthread->process->parent_id != cur->process->pid){
-		printf("Child not ours %u\n", child_tid);
-		invalid = true; // child is not really a child failure mode
-
-	} else {
+	if(childthread != NULL) {
 		printf("Waiting on child\n");
-		//Can change this from pid_t to tid_t if we move child
-		// waiting on to thread.h and we change it to tid_t
-		cur->process->child_waiting_on_tid = childthread->tid;
-
-		printf("SHOULD BE BLOCKING %u\n", child_tid);
-		sema_down(&cur->process->waiting_semaphore);
-		printf("Should be called after %u\n", child_tid);
-		invalid = false; // should be valid
+		cur->child_waiting_on_pid = childthread->process->pid;
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_pid);
+		sema_down(&cur->waiting_semaphore);
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_pid);
 	}
 	intr_set_level (old_level);
 
-	if (invalid){
-		return -1;
-	} else {
-		printf("Stuff");
-		struct process_return_hash_entry key;
-		key.child_tid = child_tid;
-		lock_acquire(&cur->process->children_exit_codes_lock);
-		struct hash_elem *returnCode = hash_find(&processes, &key.elem);
-		if (returnCode == NULL){
-			// Was not a child process of this process
-			lock_release(&cur->process->children_exit_codes_lock);
-			return -1;
-		}
-		lock_release(&cur->process->children_exit_codes_lock);
-		return hash_entry(returnCode, struct process_return_hash_entry, elem)->exit_code;
-	}
+	//retrieve exit code now, should be in the updated
+	// child_entry
+	lock_acquire(&cur->child_pid_tid_lock);
+	int exit_code = list_entry(child_entry, struct child_list_entry, elem)->exit_code;
+	lock_release(&cur->child_pid_tid_lock);
+	return exit_code;
 }
 
-
-/*
- * Returns a process * or NULL
- * MUST BE CALLED WITH THE procces_hash_lock HELD!!!
- */
-static struct process *parent_process_from_child (struct process* our_process){
-	struct process key;
-	key.pid = our_process->parent_id;
-	struct hash_elem *parent_process = hash_find(&processes, &key.elem);
-	if (parent_process != NULL){
-		return hash_entry(parent_process, struct process, elem);
-	} else {
-		return NULL;
-	}
-
-}
 
 /* Free the current process's resources.
  * And signals the parent that it has finished,
@@ -341,38 +306,32 @@ void process_exit (void){
 	}
 
 	//We are no longer viable processes and are being removed from the
-	// list of processes
+	// list of processes. The lock here also ensures that our parent
+	// has either exited or hasn't exited while we update information
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
 	struct process *parent = parent_process_from_child(cur_process);
 
-
 	if (parent != NULL){
 		printf("Parent not null\n");
 
-		struct process_return_hash_entry *prc = calloc(1, sizeof(struct process_return_hash_entry));
-
-		if (prc != NULL){
-			prc->exit_code = cur_process->exit_code;
-			prc->child_pid = cur_process->pid;
-			prc->child_tid = cur->tid;
-
-			//If this fails its eh
-			lock_acquire(&parent->children_exit_codes_lock);
-			struct hash_elem *process = hash_insert(&parent->children_exit_codes, &prc->elem);
-			if (process != NULL){
-				// We have just tried to put the exit code of an identical pid
-				// into the hash
-				// uh oh
-				PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
-			}
-			lock_release(&parent->children_exit_codes_lock);
+		//Get our list entry
+		struct list_entr *our_entry =
+				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_2);
+		if (our_entry != NULL){
+			lock_acquire(&parent->child_pid_tid_lock);
+			struct child_list_entry *entry = list_entry(our_entry,
+					struct child_list_entry, elem);
+			entry->exit_code = cur_process->exit_code;
+			lock_release(&parent->child_pid_tid_lock);
 		}
-		if (parent->child_waiting_on_tid == cur->tid){
+
+		if (parent->child_waiting_on_pid == cur->process->pid){
 			printf("Waking parent\n");
 			sema_up(&parent->waiting_semaphore);
 		} else {
+			//Debuging for deadlock
 			printf("not waking parent\n");
 		}
 	}
@@ -380,15 +339,22 @@ void process_exit (void){
 	lock_release(&processes_hash_lock);
 
 	if( deleted != &cur_process->elem){
-		// We pulled out a different proccess with the same pid
-		// uh oh
+		// We pulled out a different proccess with the same pid... uh oh
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
+
+	// Free all open files
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
-	lock_acquire(&cur_process->children_exit_codes_lock);
-	hash_destroy(&cur_process->children_exit_codes, &exit_code_hash_destroy);
-	lock_release(&cur_process->children_exit_codes_lock);
+	// We have already been removed from the list of processes and
+	// thus can't be found by our children. The locking here isn't
+	// necessary but doesn't hurt correctness
+	lock_acquire(&cur_process->child_pid_tid_lock);
+	while (!list_empty (&cur_process->children_list)){
+	       struct list_elem *e = list_pop_front (&cur_process->children_list);
+	       free (list_entry(e, struct child_list_entry, elem));
+	}
+	lock_release(&cur_process->child_pid_tid_lock);
 
 	free(cur_process);
 
@@ -823,7 +789,65 @@ static bool install_page (void *upage, void *kpage, bool writable) {
 			&& pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
+/*
+ * Returns a process * or NULL
+ * MUST BE CALLED WITH THE procces_hash_lock HELD!!!
+ */
+static struct process *parent_process_from_child (struct process* our_process){
+	struct process key;
+	key.pid = our_process->parent_id;
+	struct hash_elem *parent_process = hash_find(&processes, &key.elem);
+	if (parent_process != NULL){
+		return hash_entry(parent_process, struct process, elem);
+	} else {
+		return NULL;
+	}
+}
 
+static struct list_elem *child_list_entry_gen(struct process *process,								void *c_tid, bool tid,is_equal *func){
+	lock_acquire(&process->child_pid_tid_lock);
+	struct list_elem *h, *n;
+	h = list_begin(&process->children_list);
+	while ((n= list_next(h)) != list_end(&process->children_list)){
+		if(func(h, c_tid)){
+			lock_release(&process->child_pid_tid_lock);
+			return n;
+		}
+		h = n;
+	}
+	lock_release(&process->child_pid_tid_lock);
+	return NULL;
+}
+
+static struct list_elem *child_list_entry_tid (tid_t c_tid){
+	struct process *cur_process = thread_current()->process;
+	return child_list_entry_gen(cur_process, &c_tid, &is_equal_func_1);
+}
+
+static struct list_elem *child_list_entry_pid(pid_t c_pid){
+	struct process *cur_process = thread_current()->process;
+	return child_list_entry_gen(cur_process, &c_pid, &is_equal_func_2);
+}
+
+/* Takes a tid and returns the corresponding pid
+ * if it was a child, PID_ERROR otherwise*/
+static pid_t child_tid_to_pid (tid_t c_tid){
+	struct list_elem *child_entry = child_list_entry_tid(c_tid);
+	if (child_entry != NULL){
+		return list_entry(child_entry,struct child_list_entry,elem)->child_pid;
+	}
+	return PID_ERROR;
+}
+
+/* Takes a pid and returns the corresponding tid
+ * if it was a child, TID_ERROR otherwise*/
+static tid_t child_pid_to_tid (pid_t c_pid){
+	struct list_elem *child_entry = child_list_entry_pid(c_pid);
+	if (child_entry != NULL){
+		return list_entry(child_entry,struct child_list_entry,elem)->child_tid;
+	}
+	return PID_ERROR;
+}
 
 static bool file_hash_compare (const struct hash_elem *a,
 						 const struct hash_elem *b,
@@ -863,20 +887,4 @@ static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED){
 static void process_hash_entry_destroy (struct hash_elem *e UNUSED, void *aux UNUSED){
 	//Auxilary data may need to be destroyed left it here just in case
 }
-
-static void exit_code_hash_destroy (struct hash_elem *e, void *aux UNUSED){
-	free(hash_entry(e, struct process_return_hash_entry, elem));
-}
-
-static unsigned exit_code_hash_func (const struct hash_elem *e, void *aux UNUSED){
-	pid_t pid = hash_entry(e, struct process_return_hash_entry, elem)->child_tid;
-	return hash_bytes(&pid, (sizeof(pid_t)));
-}
-
-static bool exit_code_hash_compare (const struct hash_elem *a,
-		const struct hash_elem *b, void *aux UNUSED){
-	return (hash_entry(a, struct process_return_hash_entry, elem)->child_tid <
-			hash_entry(b, struct process_return_hash_entry, elem)->child_tid);
-}
-
 
