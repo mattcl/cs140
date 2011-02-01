@@ -30,24 +30,24 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 //HASH table functions
-static unsigned fileHash (const struct hash_elem *e, void *aux UNUSED);
-static bool fileCompare (const struct hash_elem *a,
+static unsigned file_hash_func (const struct hash_elem *e, void *aux UNUSED);
+static bool file_hash_compare (const struct hash_elem *a,
 						 const struct hash_elem *b,
 						 void *aux UNUSED);
-static void fdEntryDestroy (struct hash_elem *e, void *aux UNUSED);
+static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 
-static unsigned processHash (const struct hash_elem *a, void *aux UNUSED);
-static bool processCompare  (const struct hash_elem *a,
+static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED);
+static bool process_hash_compare  (const struct hash_elem *a,
 						     const struct hash_elem *b,
 		                     void *aux UNUSED);
-static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED);
+static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 
-static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED);
-static bool exitCodeCompare (const struct hash_elem *a,
+static unsigned exit_code_hash_func (const struct hash_elem *e, void *aux UNUSED);
+static bool exit_code_hash_compare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED);
-static void exitCodeDestroy (struct hash_elem *e, void *aux UNUSED);
+static void exit_code_hash_destroy (struct hash_elem *e, void *aux UNUSED);
 
 bool pid_belongs_to_child(pid_t child){
 	struct process key;
@@ -91,7 +91,7 @@ struct process *get_parent_process (struct process *child){
 }*/
 
 void process_init(void){
-	hash_init(&processes, &processHash, &processCompare, NULL);
+	hash_init(&processes, &process_hash_func, &process_hash_compare, NULL);
 	lock_init(&processes_hash_lock);
 	lock_init(&pid_lock);
 
@@ -152,12 +152,12 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	p->pid = allocate_pid();
 	p->parent_id = thread_current()->process->pid;
 	p->fd_count = 2;
-	bool success = hash_init(&p->open_files, &fileHash, &fileCompare, NULL);
+	bool success = hash_init(&p->open_files, &file_hash_func, &file_hash_compare, NULL);
 	if (!success){
 		return false;
 	}
 
-	success = hash_init(&p->children_exit_codes, &exitCodeHash, &exitCodeCompare, NULL);
+	success = hash_init(&p->children_exit_codes, &exit_code_hash_func, &exit_code_hash_compare, NULL);
 	if (!success){
 		return false;
 	}
@@ -322,20 +322,22 @@ void process_exit (void){
 
 		struct process_return_hash_entry *prc = calloc(1, sizeof(struct process_return_hash_entry));
 
-		prc->exit_code = cur->process->exit_code;
-		prc->child_pid = cur->process->pid;
-		prc->child_tid = cur->tid;
+		if (prc != NULL){
+			prc->exit_code = cur->process->exit_code;
+			prc->child_pid = cur->process->pid;
+			prc->child_tid = cur->tid;
 
-		//If this fails its eh
-		lock_acquire(&parent->children_exit_codes_lock);
-		struct hash_elem *process = hash_insert(&parent->children_exit_codes, &prc->elem);
-		if (process != NULL){
-			// We have just tried to put the exit code of an identical pid
-			// into the hash
-			// uh oh
-			PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+			//If this fails its eh
+			lock_acquire(&parent->children_exit_codes_lock);
+			struct hash_elem *process = hash_insert(&parent->children_exit_codes, &prc->elem);
+			if (process != NULL){
+				// We have just tried to put the exit code of an identical pid
+				// into the hash
+				// uh oh
+				PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+			}
+			lock_release(&parent->children_exit_codes_lock);
 		}
-		lock_release(&parent->children_exit_codes_lock);
 
 		if (parent->child_waiting_on == cur->process->pid){
 			sema_up(&parent->waiting_semaphore);
@@ -349,10 +351,10 @@ void process_exit (void){
 		// uh oh
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
-	hash_destroy(&cur->process->open_files, &fdEntryDestroy);
+	hash_destroy(&cur->process->open_files, &fd_hash_entry_destroy);
 
 	lock_acquire(&cur->process->children_exit_codes_lock);
-	hash_destroy(&cur->process->children_exit_codes, &exitCodeDestroy);
+	hash_destroy(&cur->process->children_exit_codes, &exit_code_hash_destroy);
 	lock_release(&cur->process->children_exit_codes_lock);
 
 	free(cur->process);
@@ -789,7 +791,7 @@ static bool install_page (void *upage, void *kpage, bool writable) {
 
 
 
-static bool fileCompare (const struct hash_elem *a,
+static bool file_hash_compare (const struct hash_elem *a,
 						 const struct hash_elem *b,
 						 void *aux UNUSED){
 	ASSERT(a != NULL);
@@ -798,15 +800,16 @@ static bool fileCompare (const struct hash_elem *a,
 			hash_entry(b, struct fd_hash_entry, elem)->fd);
 }
 
-static unsigned fileHash (const struct hash_elem *e, void *aux UNUSED){
+static unsigned file_hash_func (const struct hash_elem *e, void *aux UNUSED){
 	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
 }
 
-static void fdEntryDestroy (struct hash_elem *e, void *aux UNUSED){
+static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	//File close needs to be called here
+	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
 }
 
-static bool processCompare  (const struct hash_elem *a,
+static bool process_hash_compare  (const struct hash_elem *a,
 						     const struct hash_elem *b,
 		                     void *aux UNUSED){
 	ASSERT(a != NULL);
@@ -815,25 +818,25 @@ static bool processCompare  (const struct hash_elem *a,
 			hash_entry(b, struct process, elem)->pid);
 }
 
-static unsigned processHash (const struct hash_elem *a, void *aux UNUSED){
+static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED){
+static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	//Auxilary data may need to be destroyed left it here just in case
 }
 
-static void exitCodeDestroy (struct hash_elem *e, void *aux UNUSED){
+static void exit_code_hash_destroy (struct hash_elem *e, void *aux UNUSED){
 	free(hash_entry(e, struct process_return_hash_entry, elem));
 }
 
-static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED){
+static unsigned exit_code_hash_func (const struct hash_elem *e, void *aux UNUSED){
 	pid_t pid = hash_entry(e, struct process_return_hash_entry, elem)->child_tid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static bool exitCodeCompare (const struct hash_elem *a,
+static bool exit_code_hash_compare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED){
 	return (hash_entry(a, struct process_return_hash_entry, elem)->child_tid <
 			hash_entry(b, struct process_return_hash_entry, elem)->child_tid);

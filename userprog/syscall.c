@@ -31,8 +31,8 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUS
 static void system_tell(struct intr_frame *f, int fd UNUSED);
 static void system_close(struct intr_frame *f, int fd UNUSED);
 
-static bool verify_buffer (const void * buffer, unsigned int size);
-static bool verify_string(const char* str);
+static bool buffer_is_valid (const void * buffer, unsigned int size);
+static bool string_is_valid(const char* str);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static int get_user(const uint8_t *uaddr);
@@ -79,44 +79,44 @@ static void testMemoryAccess (void *esp){
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
 
-	if(verify_buffer((char*)0x2, 300)){
+	if(buffer_is_valid((char*)0x2, 300)){
 		printf("Verify buffer failed\n");
 	} else {
 		printf("Verify buffer passed test 1\n");
 	}
 
-	if (verify_buffer((char*)0xbffffffb, 20)){
+	if (buffer_is_valid((char*)0xbffffffb, 20)){
 		printf("Verify buffer failed test 2\n");
 	} else {
 		printf("Verify buffer passed test 2\n");
 	}
 
-	if (verify_buffer((char*)0xbfffffde, 6 )){
+	if (buffer_is_valid((char*)0xbfffffde, 6 )){
 		printf("Verify buffer passed test 3\n");
 	} else {
 		printf("Verify buffer failed test 3\n");
 	}
 
-	if (verify_buffer((char*)0xbffffffb, 6)){
+	if (buffer_is_valid((char*)0xbffffffb, 6)){
 		printf("Verify buffer failed test 4\n");
 	} else {
 		printf("Verify buffer passed test 4\n");
 	}
 
-	if (verify_buffer((char*)0x4ffffffb, 6)){
+	if (buffer_is_valid((char*)0x4ffffffb, 6)){
 		printf("Verify buffer failed test 4\n");
 	} else {
 		printf("Verify buffer passed test 4\n");
 	}
 	
 	//user string testing
-	if(verify_string((char*) 0x2) ){
+	if(string_is_valid((char*) 0x2) ){
 	  printf("NOoo, should have seg faulted at 0x2!!!");
 	} else {
 	  printf("yaa!, seg faluted at 0x2!!!");
 	}
 	
-	if(verify_string((char*) PHYS_BASE)){
+	if(string_is_valid((char*) PHYS_BASE)){
 	  printf("Nooo, should have seg faulted at BASE!!!");
 	} else {
 	  printf("Yaaaa! seg faulted at base!");
@@ -145,7 +145,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0) system_exit(f, -1);
 
-	testMemoryAccess(esp);
+	//testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
@@ -300,9 +300,40 @@ static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
 	printf("SYS_REMOVE called\n");
 }
 
+//finished
 static void system_open (struct intr_frame *f, const char *file_name UNUSED){
 	printf("SYS_OPEN called\n");
-	//make sure to increment fdcount in process struct
+	if (!string_is_valid(file_name)){
+		system_exit(f, -1);
+	}
+	struct file *opened_file;
+	lock_acquire(&filesys_lock);
+	opened_file = filesys_open(file_name);
+	lock_release(&filesys_lock);
+	if (opened_file  == NULL){
+		f->eax = -1;
+		return;
+	}
+
+	struct process *process = thread_current()->process;
+
+	struct fd_hash_entry *fd_entry = calloc(1, sizeof(struct fd_hash_entry));
+	if (fd_entry == NULL){
+		f->eax = -1;
+		return;
+	}
+
+	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry.elem);
+	if (returned != NULL){
+		// We have just tried to put the fd of an identical fd into the hash
+		// Table this is a problem with the hash table and should fail the kernel
+		// Cause our memory has been corrupted somehow
+		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+	}
+
+	fd_entry->fd =++ process->fd_count;
+	fd_entry->open_file = opened_file;
+	f->eax = fd_entry->fd;
 }
 
 static void system_filesize(struct intr_frame *f, int fd UNUSED){
@@ -315,7 +346,7 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	if (!verify_buffer(buffer, size)){
+	if (!buffer_is_valid(buffer, size)){
 		f->eax = -1;
 		system_exit(f, -1);
 	}
@@ -381,7 +412,7 @@ struct file *file_for_fd (int fd){
 }
 
 
-static bool verify_buffer (const void * buffer, unsigned int size){
+static bool buffer_is_valid (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -441,7 +472,7 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 	return error_code != -1;
 }
 
-static bool verify_string(const char* str){
+static bool string_is_valid(const char* str){
 	char c;
 	while (true){
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){

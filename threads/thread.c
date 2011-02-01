@@ -625,7 +625,7 @@ static struct thread *next_thread_to_run (void){
 		} else {
 			//Select the item off the queue with the highest priority
 			struct list_elem *e =
-					remove_list_max(&ready_list, &threadCompare);
+					remove_list_max(&ready_list, &thread_hash_compare);
 			ASSERT(e != NULL);
 			struct thread *t =  list_entry(e, struct thread,elem);
 			ASSERT(is_thread(t));
@@ -795,7 +795,7 @@ void thread_preempt(void){
 	if (!thread_mlfqs) {
 		if(!list_empty(&ready_list)){
 			struct thread *tHigh = list_entry(
-					list_max(&ready_list, &threadCompare, NULL),
+					list_max(&ready_list, &thread_hash_compare, NULL),
 					struct thread, elem);
 			if (tHigh->tmp_priority > cur->tmp_priority){
 				thread_yield();
@@ -885,7 +885,7 @@ void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
  * thread and list_elem *b which is a member of a thread and return true
  * if thread A has priority LESS than that of thread b
  */
-bool threadCompare (const struct list_elem *a,
+bool thread_hash_compare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
 	ASSERT(a != NULL);
