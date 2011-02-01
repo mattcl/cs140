@@ -277,8 +277,8 @@ int process_wait (tid_t child_tid){
  * And signals the parent that it has finished,
  * if the parent still exists and is waiting*/
 void process_exit (void){
-
 	struct thread *cur = thread_current ();
+	printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
