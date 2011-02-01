@@ -47,13 +47,15 @@ static bool process_hash_compare  (const struct hash_elem *a,
 static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 
-typedef bool is_equal (struct child_list_entry *cle, void *c_tid);
-static bool is_equal_func_1 (struct child_list_entry *cle, void *c_tid){
+typedef bool is_equal (struct list_elem *cle, void *c_tid);
+static bool is_equal_func_1 (struct list_elem *cle, void *c_tid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_tid==*(tid_t*)c_tid);
 }
-static bool is_equal_func_2 (struct child_list_entry *cle, void *c_pid){
+static bool is_equal_func_2 (struct list_elem *cle, void *c_pid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_pid==*(pid_t*)c_pid);
 }
+static struct list_elem *child_list_entry_gen(struct process *process,
+					void *c_tid, bool tid,is_equal *func);
 
 void process_init(void){
 	hash_init(&processes, &process_hash_func, &process_hash_compare, NULL);
@@ -265,16 +267,16 @@ int process_wait (tid_t child_tid){
 	if(childthread != NULL) {
 		printf("Waiting on child\n");
 		cur->child_waiting_on_pid = childthread->process->pid;
-		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_pid);
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);
 		sema_down(&cur->waiting_semaphore);
-		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_pid);
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);
 	}
 	intr_set_level (old_level);
 
 	//retrieve exit code now, should be in the updated
 	// child_entry
 	lock_acquire(&cur->child_pid_tid_lock);
-	int exit_code = list_entry(child_entry, struct child_list_entry, elem)->exit_code;
+	int exit_code = child_entry->exit_code;
 	lock_release(&cur->child_pid_tid_lock);
 	return exit_code;
 }
@@ -804,7 +806,8 @@ static struct process *parent_process_from_child (struct process* our_process){
 	}
 }
 
-static struct list_elem *child_list_entry_gen(struct process *process,								void *c_tid, bool tid,is_equal *func){
+static struct list_elem *child_list_entry_gen(struct process *process,
+					void *c_tid, bool tid,is_equal *func){
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h, *n;
 	h = list_begin(&process->children_list);
