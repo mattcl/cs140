@@ -56,6 +56,7 @@ struct processReturnCode{
 void process_init(void);
 
 bool pid_belongs_to_child(pid_t child);
+tid_t tid_for_pid(pid_t pid);
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);

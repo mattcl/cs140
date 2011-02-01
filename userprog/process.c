@@ -68,6 +68,20 @@ bool pid_belongs_to_child(pid_t child){
 	return success;
 }
 
+tid_t tid_for_pid(pid_t pid){
+	struct process key;
+	key.pid = pid;
+	lock_acquire(&processes_hash_lock);
+	struct hash_elem *process = hash_find(&processes, &key.elem);
+	if (process == NULL){
+		// PID is no longer in use, I.E. exited
+		lock_release(&processes_hash_lock);
+		return TID_ERROR;
+	}
+	lock_release(&processes_hash_lock);
+	return hash_entry(process, struct process, elem)->owning_thread->tid;
+}
+
 /* returns the parent process or NULL if the parent has
  * already been removed from the all process hash, or does
  * not exist
@@ -210,8 +224,11 @@ static void start_process (void *file_name_) {
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait (tid_t child_tid UNUSED){
-	struct thread* childthread;
+int process_wait (tid_t child_tid){
+	printf("WAITING ON %u\n", child_tid);
+	if (child_tid == TID_ERROR){
+		return -1;
+	}
 	struct thread *cur = thread_current();
 	bool invalid = false;
 
@@ -221,19 +238,28 @@ int process_wait (tid_t child_tid UNUSED){
 	// bring us back to hear and then we would be dereferencing
 	// freed memory
 	enum intr_level old_level = intr_disable();
-	childthread = thread_find(child_tid);
+
+	struct thread* childthread = thread_find(child_tid);
+
 	//Child has already exited
 	if (childthread == NULL){
+		printf("CHildtrhead = NULL\n");
+
 		invalid = false; // could still be valid check our list
 	} else if (childthread->process->parent_id != cur->process->pid){
+		printf("Child not ours %u\n", child_tid);
 		invalid = true; // child is not really a child failure mode
+
 	} else {
+		printf("Waiting on child\n");
 		//Can change this from pid_t to tid_t if we move child
 		// waiting on to thread.h and we change it to tid_t
 		cur->process->child_waiting_on = childthread->process->pid;
 
 		//Wait for child proccess to die
+		printf("SHOULD BE BLOCKING %u\n", child_tid);
 		sema_down(&cur->process->waiting_semaphore);
+		printf("Should be called after %u\n", child_tid);
 		invalid = false; // should be valid
 	}
 	intr_set_level (old_level);
@@ -241,6 +267,7 @@ int process_wait (tid_t child_tid UNUSED){
 	if (invalid){
 		return -1;
 	} else {
+		printf("Stuff");
 		struct processReturnCode key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);
@@ -260,6 +287,7 @@ int process_wait (tid_t child_tid UNUSED){
  * if the parent still exists and is waiting*/
 void process_exit (void){
 	struct thread *cur = thread_current ();
+	printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -307,10 +335,11 @@ void process_exit (void){
 			// uh oh
 			PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 		}
+		lock_release(&parent->children_exit_codes_lock);
+
 		if (parent->child_waiting_on == cur->process->pid){
 			sema_up(&parent->waiting_semaphore);
 		}
-		lock_release(&parent->children_exit_codes_lock);
 
 	}
 

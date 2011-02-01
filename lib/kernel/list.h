@@ -165,6 +165,10 @@ typedef bool list_less_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);
 
+// REturns neg numver if a less than, 0 if equal, pos if greater
+typedef int list_compare_gen (const struct list_elem *a,
+							  const struct list_elem *b);
+
 /* Operations on lists with ordered elements. */
 void list_sort (struct list *,
                 list_less_func *, void *aux);
@@ -179,8 +183,7 @@ struct list_elem *list_min (struct list *, list_less_func *, void *aux);
 
 // ----------- Begin Changes --------//
 struct list_elem *remove_list_max (struct list *list, list_less_func *less);
-struct list_elem *list_search(struct list *list,
-		list_less_func *less, struct list_elem *elem);
+
 void printList(struct list *list);
 // ------------End Changes --------//
 

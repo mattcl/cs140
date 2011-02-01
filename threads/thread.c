@@ -899,7 +899,6 @@ bool threadCompare (const struct list_elem *a,
 	}
 }
 
-
 /**
  * Initializes the mlfqs system
  */
@@ -976,19 +975,28 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 
 /*
  * Because accessing the all threads list needs to be done with
- * interrupts off, we must disable interrupts inside of this
+ * interrupts off, we must disable inteTid's %u\nrrupts inside of this
  * function. Returns NULL or a pointer to the thread
  */
 struct thread *thread_find(tid_t tid){
+	printf("TID requested %u\n", tid);
 	ASSERT (intr_get_level () == INTR_OFF);
 	struct thread key;
 	key.tid = tid;
 	struct list_elem* value;
-	value = list_search(&all_list, &threadCompare, &key.elem );
-	if (value == NULL){
+	if (list_empty(&all_list)){
 		return NULL;
-	} else {
-		return (list_entry(value, struct thread, elem));
 	}
+	struct list_elem *head, *next;
+	head = list_begin(&all_list);
+	while ((next= list_next(head)) != list_end(&all_list)){
+		printf("Tid's %u\n", (list_entry(next, struct thread, allelem)->tid));
+		if (list_entry(next, struct thread,  allelem)->tid == tid){
+			return list_entry(next, struct thread, allelem);
+		}
+		head = next;
+	}
+	return NULL;
+
 }
 // ---------------- END CHANGES ---------------- //
