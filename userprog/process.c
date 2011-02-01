@@ -242,7 +242,7 @@ static void start_process (void *file_name_) {
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
-	//printf("WAITING ON %u\n", child_tid);
+	printf("WAITING ON %u\n", child_tid);
 	if (child_tid == TID_ERROR){
 		return -1;
 	}
@@ -258,25 +258,23 @@ int process_wait (tid_t child_tid){
 
 	struct thread* childthread = thread_find(child_tid);
 
-	//Child has already exited
 	if (childthread == NULL){
-		//printf("CHildtrhead = NULL\n");
+		printf("CHildtrhead = NULL\n");
 
 		invalid = false; // could still be valid check our list
 	} else if (childthread->process->parent_id != cur->process->pid){
-		//printf("Child not ours %u\n", child_tid);
+		printf("Child not ours %u\n", child_tid);
 		invalid = true; // child is not really a child failure mode
 
 	} else {
-		//printf("Waiting on child\n");
+		printf("Waiting on child\n");
 		//Can change this from pid_t to tid_t if we move child
 		// waiting on to thread.h and we change it to tid_t
 		cur->process->child_waiting_on = childthread->process->pid;
 
-		//Wait for child proccess to die
-		//printf("SHOULD BE BLOCKING %u\n", child_tid);
+		printf("SHOULD BE BLOCKING %u\n", child_tid);
 		sema_down(&cur->process->waiting_semaphore);
-		//printf("Should be called after %u\n", child_tid);
+		printf("Should be called after %u\n", child_tid);
 		invalid = false; // should be valid
 	}
 	intr_set_level (old_level);
@@ -284,7 +282,7 @@ int process_wait (tid_t child_tid){
 	if (invalid){
 		return -1;
 	} else {
-		//printf("Stuff");
+		printf("Stuff");
 		struct process_return_hash_entry key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);
@@ -322,7 +320,7 @@ static struct process *parent_process_from_child (struct process* our_process){
 void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
-	//printf("Exiting process %u\n", cur->process->pid);
+	printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -341,9 +339,6 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	//struct process key;
-	//key.pid = cur->process->parent_id;
-
 	//We are no longer viable processes and are being removed from the
 	// list of processes
 	lock_acquire(&processes_hash_lock);
@@ -351,7 +346,9 @@ void process_exit (void){
 
 	struct process *parent = parent_process_from_child(cur_process);
 
+
 	if (parent != NULL){
+		printf("Parent not null\n");
 
 		struct process_return_hash_entry *prc = calloc(1, sizeof(struct process_return_hash_entry));
 
@@ -372,7 +369,10 @@ void process_exit (void){
 			lock_release(&parent->children_exit_codes_lock);
 		}
 		if (parent->child_waiting_on == cur_process->pid){
+			printf("Waking parent\n");
 			sema_up(&parent->waiting_semaphore);
+		} else {
+			printf("not waking parent\n");
 		}
 	}
 
