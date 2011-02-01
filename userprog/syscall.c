@@ -319,7 +319,7 @@ static void system_open (struct intr_frame *f, const char *file_name UNUSED){
 		return;
 	}
 
-	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry.elem);
+	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
 	if (returned != NULL){
 		// We have just tried to put the fd of an identical fd into the hash
 		// Table this is a problem with the hash table and should fail the kernel
