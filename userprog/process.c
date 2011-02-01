@@ -30,22 +30,24 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 //HASH table functions
-hash_action_func fdEntryDestroy (struct hash_elem *e, void *aux UNUSED);
-hash_less_func fileCompare (const struct hash_elem *a,
+static unsigned fileHash (const struct hash_elem *e, void *aux UNUSED);
+static bool fileCompare (const struct hash_elem *a,
 						 const struct hash_elem *b,
 						 void *aux UNUSED);
-hash_hash_func fileHash (const struct hash_elem *e, void *aux UNUSED);
-hash_action_func processEntryDestroy (struct hash_elem *e, void *aux UNUSED);
-hash_less_func processCompare  (const struct hash_elem *a,
+static void fdEntryDestroy (struct hash_elem *e, void *aux UNUSED);
+
+
+static unsigned processHash (const struct hash_elem *a, void *aux UNUSED);
+static bool processCompare  (const struct hash_elem *a,
 						     const struct hash_elem *b,
 		                     void *aux UNUSED);
-hash_hash_func processHash (const struct hash_elem *a, void *aux UNUSED);
+static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED);
 
 
-hash_action_func exitCodeEntryDestroy (struct hash_elem *e, void *aux UNUSED);
-hash_hash_func exitCodeHash (const struct hash_elem *e, void *aux UNUSED);
-hash_less_func exitCodeCompare (const struct hash_elem *a,
+static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED);
+static bool exitCodeCompare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED);
+static void exitCodeEntryDestroy (struct hash_elem *e, void *aux UNUSED);
 
 bool pid_belongs_to_child(pid_t child){
 	struct process key;
@@ -55,7 +57,7 @@ bool pid_belongs_to_child(pid_t child){
 	// be sure that the process still exists when we do the
 	// check for if the parent = the current pid
 	lock_acquire(&processes_hash_lock);
-	struct hash_elem *process = hash_find(&processes, &key);
+	struct hash_elem *process = hash_find(&processes, &key.elem);
 	if (process == NULL){
 		// PID is no longer in use, I.E. exited
 		lock_release(&processes_hash_lock);
@@ -69,13 +71,13 @@ bool pid_belongs_to_child(pid_t child){
 /* returns the parent process or NULL if the parent has
  * already been removed from the all process hash, or does
  * not exist
- */
+ *
 struct process *get_parent_process (struct process *child){
 
-}
+}*/
 
 void process_init(void){
-	hash_init(&processes, processHash, processCompare, NULL);
+	hash_init(&processes, &processHash, &processCompare, NULL);
 	lock_init(&processes_hash_lock);
 	lock_init(&pid_lock);
 }
@@ -126,7 +128,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		return false;
 	}
 
-	success = hash_init(&p->children_exit_codes, &exitCodeHash, &exitCodeCompare);
+	success = hash_init(&p->children_exit_codes, &exitCodeHash, &exitCodeCompare, NULL);
 	if (!success){
 		return false;
 	}
@@ -227,7 +229,7 @@ int process_wait (tid_t child_tid UNUSED){
 		struct processReturnCode key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);
-		struct hash_elem *returnCode = hash_find(&processes, &key);
+		struct hash_elem *returnCode = hash_find(&processes, &key.elem);
 		if (returnCode == NULL){
 			// Was not a child process of this process
 			lock_release(&cur->process->children_exit_codes_lock);
@@ -271,7 +273,7 @@ void process_exit (void){
 	struct hash_elem *deleted = hash_delete(&processes, &cur->process->elem);
 
 	//Try to get parent So that we can push our exit code
-	struct hash_elem *parent_process = hash_find(&processes, &key);
+	struct hash_elem *parent_process = hash_find(&processes, &key.elem);
 	if (parent_process != NULL){
 		// Parent PID still exists
 		struct process *parent = hash_entry(parent_process, struct process, elem);
@@ -285,7 +287,7 @@ void process_exit (void){
 		lock_acquire(&parent->children_exit_codes_lock);
 		struct hash_elem *process = hash_insert(&parent->children_exit_codes, &prc->elem);
 		if (parent->child_waiting_on = cur->process->pid){
-			sema_up(&parent->waiting_semaphore, 1);
+			sema_up(&parent->waiting_semaphore);
 		}
 		lock_release(&parent->children_exit_codes_lock);
 
