@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -982,9 +983,9 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 struct thread *thread_find(tid_t tid){
 	ASSERT (intr_get_level () == INTR_OFF);
 	struct thread key;
-	key ->tid = tid;
+	key.tid = tid;
 	struct list_elem* value;
-	value = list_search(&all_list, &threadCompare, key->elem );
+	value = list_search(&all_list, &threadCompare, &key.elem );
 	if (value == NULL){
 		return NULL;
 	} else {
