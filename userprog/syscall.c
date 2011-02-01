@@ -18,19 +18,19 @@ static struct lock filesys_lock;
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
 
-static void system_halt (struct intr_frame *f UNUSED);
-static void system_exit (struct intr_frame *f, int status UNUSED);
-static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED);
-static void system_wait (struct intr_frame *f, pid_t pid UNUSED);
-static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED);
-static void system_remove(struct intr_frame *f, const char *file_name UNUSED);
-static void system_open (struct intr_frame *f, const char *file_name UNUSED);
-static void system_filesize(struct intr_frame *f, int fd UNUSED);
-static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED);
+static void system_halt (struct intr_frame *f );
+static void system_exit (struct intr_frame *f, int status );
+static void system_exec (struct intr_frame *f, const char *cmd_line );
+static void system_wait (struct intr_frame *f, pid_t pid );
+static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size );
+static void system_remove(struct intr_frame *f, const char *file_name );
+static void system_open (struct intr_frame *f, const char *file_name );
+static void system_filesize(struct intr_frame *f, int fd );
+static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size );
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size);
-static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED);
-static void system_tell(struct intr_frame *f, int fd UNUSED);
-static void system_close(struct intr_frame *f, int fd UNUSED);
+static void system_seek(struct intr_frame *f, int fd, unsigned int position );
+static void system_tell(struct intr_frame *f, int fd );
+static void system_close(struct intr_frame *f, int fd );
 
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool string_is_valid(const char* str);
@@ -284,7 +284,6 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 //Finished
-
 static void system_wait (struct intr_frame *f, pid_t pid){
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
@@ -442,7 +441,7 @@ static void system_close(struct intr_frame *f, int fd ){
 
 	close_open_file(entry->open_file);
 
-	struct hash_elem *returned = hash_delete(thread_current()->process->open_files, entry);
+	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, entry);
 	if (returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		 * This Is obviously a huge problem so system KILLLLLLL!!!! */
