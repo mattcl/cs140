@@ -32,7 +32,7 @@
    operations, which can be valuable.) */
 
 static bool is_sorted (struct list_elem *a, struct list_elem *b,
-                       list_less_func *less, void *aux) UNUSED;
+                       list_less_func *compare, void *aux) UNUSED;
 
 /* Returns true if ELEM is a head, false otherwise. */
 static inline bool is_head (struct list_elem *elem){
@@ -293,11 +293,11 @@ void list_reverse (struct list *list){
    are in order according to LESS given auxiliary data AUX. */
 static bool is_sorted (struct list_elem *a,
 			           struct list_elem *b,
-			           list_less_func *less,
+			           list_less_func *compare,
 			           void *aux){
   if (a != b){
     while ((a = list_next (a)) != b){
-      if (less (a, list_prev (a), aux)){
+      if (compare (a, list_prev (a), aux)){
         return false;
       }
     }
@@ -440,17 +440,17 @@ void list_unique (struct list *list, struct list *duplicates,
  * or there were no matches
  */
 struct list_elem *list_search(struct list *list,
-		list_less_func *less, struct list_elem *elem){
+		list_compare_gen *compare, struct list_elem *elem){
 	struct list_elem *head, *next;
 	ASSERT (list != NULL);
-	ASSERT (less != NULL);
+	ASSERT (compare != NULL);
 	if (list_empty (list)){
 		return NULL;
 	}
 
 	head = list_begin (list);
 	while ((next = list_next (head)) != list_end (list)){
-		if (!less (elem, next, NULL) && !less (next, elem, NULL)){
+		if ( compare (elem, next) == 0){
 			return next;
 		} else {
 			head = next;

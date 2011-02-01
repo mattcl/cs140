@@ -900,11 +900,10 @@ bool threadCompare (const struct list_elem *a,
 }
 
 bool tid_compare ( const struct list_elem *a,
-			   	   const struct list_elem *b,
-			   	   void *aux UNUSED){
+			   	   const struct list_elem *b){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	return ((list_entry(a, struct thread, elem)->tid) <
+	return ((list_entry(a, struct thread, elem)->tid) -
 					(list_entry(b, struct thread, elem)->tid));
 }
 
