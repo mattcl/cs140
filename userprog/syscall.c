@@ -74,7 +74,7 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 	int i, ERR;
 	for (i = 0; i < num; i++){
 		//printf("Argument i pointer is %p", argument[i]);
-		argument[i] = get_user_int(arg(esp,(i+1)), &ERR);
+		argument[i] = get_user_int((uint32_t*)arg(esp,(i+1)), &ERR);
 		if (ERR < 0 ){
 			return ERR;
 		}
@@ -223,12 +223,12 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
+	printf("SYS_WAIT called\n");
+
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
-
-
-	printf("SYS_WAIT called\n");
+	f->eax = process_wait(tid_for_pid(pid));
 }
 
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){

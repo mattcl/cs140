@@ -68,6 +68,20 @@ bool pid_belongs_to_child(pid_t child){
 	return success;
 }
 
+tid_t tid_for_pid(pid_t pid){
+	struct process key;
+	key.pid = pid;
+	lock_acquire(&processes_hash_lock);
+	struct hash_elem *process = hash_find(&processes, &key.elem);
+	if (process == NULL){
+		// PID is no longer in use, I.E. exited
+		lock_release(&processes_hash_lock);
+		return TID_ERROR;
+	}
+	lock_release(&processes_hash_lock);
+	return hash_entry(process, struct process, elem)->owning_thread->tid;
+}
+
 /* returns the parent process or NULL if the parent has
  * already been removed from the all process hash, or does
  * not exist
@@ -210,7 +224,10 @@ static void start_process (void *file_name_) {
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait (tid_t child_tid UNUSED){
+int process_wait (tid_t child_tid){
+	if (child_tid != TID_ERROR){
+		return -1;
+	}
 	struct thread* childthread;
 	struct thread *cur = thread_current();
 	bool invalid = false;
