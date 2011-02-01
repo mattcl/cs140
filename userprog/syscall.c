@@ -12,7 +12,7 @@
 #include "filesys/file.h"
 #include "devices/shutdown.h"
 #include "threads/malloc.h"
-
+#include <unistd.h>
 static struct lock filesys_lock;
 
 // THIS IS AN INTERNAL INTERRUPT HANDLER
@@ -300,6 +300,7 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	lock_release(&filesys_lock);
 }
 
+//
 static void system_remove(struct intr_frame *f, const char *file_name) {
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
@@ -345,6 +346,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	f->eax = fd_entry->fd;
 }
 
+//FINISHED
 static void system_filesize(struct intr_frame *f, int fd){
 	printf("SYS_FILESIZE called\n");
 	struct file *open_file = file_for_fd(fd);
@@ -357,7 +359,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
-static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size UNUSED){
+static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
 	printf("SYS_READ called\n");
 	if(!buffer_is_valid(buffer, size)) {
 	  system_exit(f, -1);
@@ -366,19 +368,19 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	printf("SYS_WRITE called\n");
+	//printf("SYS_WRITE called\n");
 	if (!buffer_is_valid(buffer, size)){
 		
 		system_exit(f, -1);
 	}
-	if (fd == 0){
+	if (fd == STDIN_FILENO){
 		f->eax = -1;
 		system_exit(f, -1);
 	}
 
 	off_t bytes_written = 0;
 
-	if (fd == 1){
+	if (fd == STDOUT_FILENO){
 		bytes_written = size;
 		while (bytes_written > 0){
 			if (bytes_written  > MAX_SIZE_PUTBUF){
@@ -476,13 +478,10 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
-
 	uaddr += size;
-
 	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
-
 	return true;
 }
 
