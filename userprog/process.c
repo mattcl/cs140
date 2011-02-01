@@ -812,8 +812,8 @@ static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h, *n;
-	h = list_begin(&process->children_list);
-	while ((n= list_next(h)) != list_end(&process->children_list)){
+	h = list_head(&process->children_list);
+	while ((n = list_next(h)) != list_end(&process->children_list)){
 		if(func(h, c_tid)){
 			lock_release(&process->child_pid_tid_lock);
 			return n;
