@@ -38,11 +38,11 @@ static struct process *parent_process_from_child (struct process* child_process)
 //HASH table functions
 static unsigned file_hash_func (HASH_ELEM *e, AUX);
 static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
-static void fd_hash_entry_destroy (HASH_ELEM *e, AUX);
+static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
 
 static unsigned process_hash_func (HASH_ELEM *a, AUX);
 static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
-static void process_hash_entry_destroy (HASH_ELEM *e, AUX);
+static void process_hash_entry_destroy (struct hash_elem *e, AUX);
 
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
@@ -871,7 +871,7 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
 }
 
-static void fd_hash_entry_destroy (HASH_ELEM *e, AUX){
+static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	//File close needs to be called here
 	lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
@@ -891,7 +891,7 @@ static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void process_hash_entry_destroy (HASH_ELEM *e UNUSED, AUX){
+static void process_hash_entry_destroy (struct hash_elem *e UNUSED, AUX){
 	//Auxilary data may need to be destroyed left it here just in case
 }
 
