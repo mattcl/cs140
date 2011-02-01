@@ -406,10 +406,10 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	//printf("SYS_WRITE called\n");
-	if (!buffer_is_valid(buffer, size))
-		system_exit(f, -1);
-	}
-	if (fd == STDIN_FILENO){
+  if (!buffer_is_valid(buffer, size)){
+    system_exit(f, -1);
+  }
+  if (fd == STDIN_FILENO){
 		system_exit(f, -1);
 	}
 
@@ -463,7 +463,7 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	}
 	
 	lock_acquire(&filesys_lock);
-	f->eax = file_seek(open_file);
+	f->eax = file_seek(open_file, position);
 	lock_release(&filesys_lock);
 }
 
