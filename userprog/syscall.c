@@ -82,13 +82,19 @@ static void testMemoryAccess (void *esp){
 		printf("Verify buffer passed test 2\n");
 	}
 
-	if (!verify_buffer((char*)0xbfffffde, 6 )){
-		printf("Verify buffer failed test 3\n");
-	} else {
+	if (verify_buffer((char*)0xbfffffde, 6 )){
 		printf("Verify buffer passed test 3\n");
+	} else {
+		printf("Verify buffer failed test 3\n");
 	}
 
 	if (verify_buffer((char*)0xbffffffb, 6)){
+		printf("Verify buffer failed test 4\n");
+	} else {
+		printf("Verify buffer passed test 4\n");
+	}
+
+	if (verify_buffer((char*)0x4ffffffb, 6)){
 		printf("Verify buffer failed test 4\n");
 	} else {
 		printf("Verify buffer passed test 4\n");
@@ -314,6 +320,10 @@ bool verify_buffer (void * buffer, size_t size){
 	}
 
 	uaddr += size;
+	if (!is_user_vaddr(uaddr)){
+		return false;
+	}
+
 	printf("%p %d \n", uaddr, size);
 	if (get_user(uaddr) < 0){
 		return false;
