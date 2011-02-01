@@ -11,7 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/shutdown.h"
-#include "devices/input.c"
+#include "devices/input.h"
 #include "threads/malloc.h"
 #include <unistd.h>
 
