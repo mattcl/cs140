@@ -29,33 +29,35 @@ static struct lock pid_lock;			 /*A lock needed to increment it*/
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-
 static struct process *parent_process_from_child (struct process* child_process);
 
+// Shortcuts for lots of typing and possible errors
+#define HASH_ELEM const struct hash_elem
+#define AUX void *aux UNUSED
+
 //HASH table functions
-static unsigned file_hash_func (const struct hash_elem *e, void *aux UNUSED);
-static bool file_hash_compare (const struct hash_elem *a,
-						 const struct hash_elem *b,
-						 void *aux UNUSED);
-static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
+static unsigned file_hash_func (HASH_ELEM *e, AUX);
+static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
+static void fd_hash_entry_destroy (HASH_ELEM *e, AUX);
 
-
-static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED);
-static bool process_hash_compare  (const struct hash_elem *a,
-						     const struct hash_elem *b,
-		                     void *aux UNUSED);
-static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
+static unsigned process_hash_func (HASH_ELEM *a, AUX);
+static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
+static void process_hash_entry_destroy (HASH_ELEM *e, AUX);
 
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
-static bool is_equal_func_1 (struct list_elem *cle, void *c_tid){
+static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_tid==*(tid_t*)c_tid);
 }
-static bool is_equal_func_2 (struct list_elem *cle, void *c_pid){
+static bool is_equal_func_pid (struct list_elem *cle, void *c_pid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_pid==*(pid_t*)c_pid);
 }
+
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func);
+
+static struct child_list_entry *child_list_entry_pid(pid_t c_pid);
+static struct child_list_entry *child_list_entry_tid(tid_t c_tid);
 
 void process_init(void){
 	hash_init(&processes, &process_hash_func, &process_hash_compare, NULL);
@@ -320,9 +322,9 @@ void process_exit (void){
 
 		//Get our list entry
 		struct list_elem *our_entry =
-				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_2);
+				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 		if (our_entry != NULL){
-			lock_acquire(&parent->child_pid_tid_lock);
+			lock_acquire(&parent->cis_equal_func_pidhild_pid_tid_lock);
 			struct child_list_entry *entry = list_entry(our_entry,
 					struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
@@ -825,7 +827,7 @@ static struct list_elem *child_list_entry_gen(
 static struct child_list_entry *child_list_entry_tid (tid_t c_tid){
 	struct process *cur_process = thread_current()->process;
 	return list_entry(
-			child_list_entry_gen(cur_process, &c_tid, &is_equal_func_1),
+			child_list_entry_gen(cur_process, &c_tid, &is_equal_func_tid),
 			struct child_list_entry,
 			elem);
 }
@@ -833,7 +835,7 @@ static struct child_list_entry *child_list_entry_tid (tid_t c_tid){
 static struct child_list_entry *child_list_entry_pid(pid_t c_pid){
 	struct process *cur_process = thread_current()->process;
 	return list_entry(
-			child_list_entry_gen(cur_process, &c_pid, &is_equal_func_2),
+			child_list_entry_gen(cur_process, &c_pid, &is_equal_func_pid),
 			struct child_list_entry,
 			elem);
 }
@@ -858,20 +860,18 @@ tid_t child_pid_to_tid (pid_t c_pid){
 	return PID_ERROR;
 }
 
-static bool file_hash_compare (const struct hash_elem *a,
-						 const struct hash_elem *b,
-						 void *aux UNUSED){
+static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct fd_hash_entry, elem)->fd <
 			hash_entry(b, struct fd_hash_entry, elem)->fd);
 }
 
-static unsigned file_hash_func (const struct hash_elem *e, void *aux UNUSED){
+static unsigned file_hash_func (HASH_ELEM *e, AUX){
 	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
 }
 
-static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
+static void fd_hash_entry_destroy (HASH_ELEM *e, AUX){
 	//File close needs to be called here
 	lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
@@ -879,21 +879,22 @@ static void fd_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
-static bool process_hash_compare  (const struct hash_elem *a,
-						     const struct hash_elem *b,
-		                     void *aux UNUSED){
+static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct process, elem)->pid <
 			hash_entry(b, struct process, elem)->pid);
 }
 
-static unsigned process_hash_func (const struct hash_elem *a, void *aux UNUSED){
+static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void process_hash_entry_destroy (struct hash_elem *e UNUSED, void *aux UNUSED){
+static void process_hash_entry_destroy (HASH_ELEM *e UNUSED, AUX){
 	//Auxilary data may need to be destroyed left it here just in case
 }
+
+#undef HASH_ELEM
+#undef AUX
 

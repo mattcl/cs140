@@ -14,7 +14,7 @@
 typedef int32_t pid_t;
 #define PID_ERROR ((pid_t) -1)          /* Error value for tid_t. */
 
-static struct lock filesys_lock;
+struct lock filesys_lock;
 
 struct process {
 	/* This processes ID. Also hash key */
