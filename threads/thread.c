@@ -899,14 +899,6 @@ bool threadCompare (const struct list_elem *a,
 	}
 }
 
-bool tid_compare ( const struct list_elem *a,
-			   	   const struct list_elem *b){
-	ASSERT(a != NULL);
-	ASSERT(b != NULL);
-	return ((list_entry(a, struct thread, elem)->tid) -
-					(list_entry(b, struct thread, elem)->tid));
-}
-
 /**
  * Initializes the mlfqs system
  */
@@ -991,7 +983,18 @@ struct thread *thread_find(tid_t tid){
 	struct thread key;
 	key.tid = tid;
 	struct list_elem* value;
-	ASSERT(!list_empty(&all_list));
+	if (list_empty(&all_list)){
+		return NULL;
+	}
+	struct list_elem *head, *next;
+	head = list_begin(&all_list);
+	while ((next= list_next(head)) != list_end(&all_list)){
+		if (list_entry(next, struct thread, elem)->tid == tid){
+			return list_entry(next, struct thread, elem);
+		}
+	}
+
+
 	value = list_search(&all_list, &tid_compare, &key.elem );
 	if (value == NULL){
 		return NULL;
