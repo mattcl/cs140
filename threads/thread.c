@@ -991,6 +991,7 @@ struct thread *thread_find(tid_t tid){
 	struct thread key;
 	key.tid = tid;
 	struct list_elem* value;
+	ASSERT(!list_empty(&all_list));
 	value = list_search(&all_list, &tid_compare, &key.elem );
 	if (value == NULL){
 		return NULL;
