@@ -363,7 +363,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 	printf("SYS_FILESIZE called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
-		system_exit(f, -1);
+	  f->eax = -1;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -380,17 +380,37 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	if(fd == STDOUT_FILENO){
 	  system_exit(f, -1);
 	}
+	
+	off_t bytes_read = 0;
+	if(fd == STDIN_FILENO) {
+	  for( ; bytes_read <  size ; ++bytes_read){
+	    buffer[bytes_read] = input_getc();
+	  } 
+	  f->eax = bytes_read;
+	}
+
+	
+	struct file * file = file_for_fd(fd);
+
+	if (file == NULL){
+	  f->eax = -1;
+	}
+
+	lock_acquire(&filesys_lock);
+	bytes_read = file_read(file, buffer, size);
+	lock_release(&filesys_lock);
+	f->eax = bytes_read;
+
+	
 }
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	//printf("SYS_WRITE called\n");
-	if (!buffer_is_valid(buffer, size)){
-		
+	if (!buffer_is_valid(buffer, size))
 		system_exit(f, -1);
 	}
 	if (fd == STDIN_FILENO){
-		f->eax = -1;
 		system_exit(f, -1);
 	}
 
@@ -415,7 +435,8 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	struct file * open_file = file_for_fd(fd);
 
 	if (open_file == NULL){
-		system_exit (f, -1);
+	  f->eax = -1;
+	  return;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -424,8 +445,27 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	f->eax = bytes_written;
 }
 
-static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
+static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	printf("SYS_SEEK called\n");
+	struct file *file = file_for_fd(fd);
+	if(file == NULL){
+	  f->eax = -1;
+	  return;
+	}
+	
+	
+	lock_acquire(&filesys_lock);
+	off_t f_size = file_length(file);
+	lock_release(&filesys_lock);
+
+	if(f_size < position) {
+	  f->eax = -1;
+	  return;
+	}
+	
+	lock_acquire(&filesys_lock);
+	f->eax = file_seek(open_file);
+	lock_release(&filesys_lock);
 }
 
 //FINISHED
@@ -433,12 +473,15 @@ static void system_tell(struct intr_frame *f, int fd){
 	printf("SYS_TELL called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
-		system_exit(f, -1);
+	  f->eax = -1;
+	  return;
 	}
 
 	lock_acquire(&filesys_lock);
 	f->eax = file_tell(open_file);
 	lock_release(&filesys_lock);
+
+	
 }
 
 //FINISHED
