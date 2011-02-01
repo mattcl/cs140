@@ -308,7 +308,6 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 
 bool verify_buffer (void * buffer, size_t size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	printf("%p\n", uaddr);
 	if (size < 0){
 		return false;
 	}
@@ -324,7 +323,6 @@ bool verify_buffer (void * buffer, size_t size){
 		return false;
 	}
 
-	printf("%p %d \n", uaddr, size);
 	if (get_user(uaddr) < 0){
 		return false;
 	}
