@@ -979,7 +979,7 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
  * function. Returns NULL or a pointer to the thread
  */
 struct thread *thread_find(tid_t tid){
-	printf("TID requested %u\n", tid);
+	//printf("TID requested %u\n", tid);
 	ASSERT (intr_get_level () == INTR_OFF);
 	struct thread key;
 	key.tid = tid;
@@ -990,7 +990,7 @@ struct thread *thread_find(tid_t tid){
 	struct list_elem *head, *next;
 	head = list_begin(&all_list);
 	while ((next= list_next(head)) != list_end(&all_list)){
-		printf("Tid's %u\n", (list_entry(next, struct thread, allelem)->tid));
+		//printf("Tid's %u\n", (list_entry(next, struct thread, allelem)->tid));
 		if (list_entry(next, struct thread,  allelem)->tid == tid){
 			return list_entry(next, struct thread, allelem);
 		}

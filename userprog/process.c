@@ -203,7 +203,7 @@ static void start_process (void *file_name_) {
 	if (!success) {
 		thread_exit ();
 	}
-	printf("Finished loading\n");
+	//printf("Finished loading\n");
 
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -225,7 +225,7 @@ static void start_process (void *file_name_) {
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
-	printf("WAITING ON %u\n", child_tid);
+	//printf("WAITING ON %u\n", child_tid);
 	if (child_tid == TID_ERROR){
 		return -1;
 	}
@@ -243,23 +243,23 @@ int process_wait (tid_t child_tid){
 
 	//Child has already exited
 	if (childthread == NULL){
-		printf("CHildtrhead = NULL\n");
+		//printf("CHildtrhead = NULL\n");
 
 		invalid = false; // could still be valid check our list
 	} else if (childthread->process->parent_id != cur->process->pid){
-		printf("Child not ours %u\n", child_tid);
+		//printf("Child not ours %u\n", child_tid);
 		invalid = true; // child is not really a child failure mode
 
 	} else {
-		printf("Waiting on child\n");
+		//printf("Waiting on child\n");
 		//Can change this from pid_t to tid_t if we move child
 		// waiting on to thread.h and we change it to tid_t
 		cur->process->child_waiting_on = childthread->process->pid;
 
 		//Wait for child proccess to die
-		printf("SHOULD BE BLOCKING %u\n", child_tid);
+		//printf("SHOULD BE BLOCKING %u\n", child_tid);
 		sema_down(&cur->process->waiting_semaphore);
-		printf("Should be called after %u\n", child_tid);
+		//printf("Should be called after %u\n", child_tid);
 		invalid = false; // should be valid
 	}
 	intr_set_level (old_level);
@@ -267,7 +267,7 @@ int process_wait (tid_t child_tid){
 	if (invalid){
 		return -1;
 	} else {
-		printf("Stuff");
+		//printf("Stuff");
 		struct processReturnCode key;
 		key.child_tid = child_tid;
 		lock_acquire(&cur->process->children_exit_codes_lock);
@@ -287,7 +287,7 @@ int process_wait (tid_t child_tid){
  * if the parent still exists and is waiting*/
 void process_exit (void){
 	struct thread *cur = thread_current ();
-	printf("Exiting process %u\n", cur->process->pid);
+	//printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -581,7 +581,7 @@ static inline void adjust_stack_ptr(void **esp, size_t length){
 
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr){
-	printf("Setup stack\n");
+	//printf("Setup stack\n");
 	void *strPtrs[128];
 	int count = 0;
 	int i = 0;
@@ -595,7 +595,7 @@ static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_p
 	strlcpy(*esp, f_name, fn_len);
 
 	strPtrs[0] = *esp;
-	printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
+	//printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
@@ -606,40 +606,40 @@ static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_p
 
 		//put stuff into the stack
 		strlcpy(*esp, token, arg_len);
-		printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
+		//printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
 		strPtrs[++count] = *esp;
 
 	}
 
 	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
-	printf("ESP %p\n", *esp);
+	//printf("ESP %p\n", *esp);
 
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
-	printf("ESP %p, %d\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d\n", *esp, **(int**)esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
+		//printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
 	}
 
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
-	printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
+	//printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
 
 	// set argc (Count was an index but needs to be the number of args including filename)
 	push_4_byte_data(esp, (void*)(count+1));
 
-	printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
 
 	//push return address
 	push_4_byte_data(esp , NULL);
-	printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
 
-	printf("Returning from setting up stack %p\n", *esp);
+	//printf("Returning from setting up stack %p\n", *esp);
 	return true;
 
 }

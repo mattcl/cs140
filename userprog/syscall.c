@@ -3,9 +3,13 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
+#include <console.h>
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 static struct lock filesys_lock;
 
@@ -30,12 +34,17 @@ static void system_close(struct intr_frame *f, int fd UNUSED);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
+struct file *file_for_fd (int fd);
+
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static bool verify_string(const char* str);
 
-bool verify_buffer (void * buffer, size_t size);
+#define MAX_SIZE_PUTBUF 300
+
+bool verify_buffer (const void * buffer, unsigned int size);
 
 void syscall_init (void) {
+	lock_init(&filesys_lock);
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -58,7 +67,6 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("DIDNT SEGFAULT THE REAL ERROR\n");
 	}
-
 
 	input = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0){
@@ -142,7 +150,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0) system_exit(f, -1);
 
-	testMemoryAccess(esp);
+	//testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
@@ -260,8 +268,10 @@ static void syscall_handler (struct intr_frame *f){
 	}
 }
 
+//FINISHED
 static void system_halt (struct intr_frame *f UNUSED){
 	printf("SYS_HALT called\n");
+	shutdown_power_off();
 }
 
 //Finished
@@ -295,6 +305,7 @@ static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
 
 static void system_open (struct intr_frame *f, const char *file_name UNUSED){
 	printf("SYS_OPEN called\n");
+	//make sure to increment fdcount in process struct
 }
 
 static void system_filesize(struct intr_frame *f, int fd UNUSED){
@@ -305,9 +316,46 @@ static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned in
 	printf("SYS_READ called\n");
 }
 
+//FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
+	if (!verify_buffer(buffer, size)){
+		f->eax = -1;
+		system_exit(f, -1);
+	}
+	if (fd == 0){
+		f->eax = -1;
+		system_exit(f, -1);
+	}
 
-	printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
+	off_t bytes_written = 0;
+
+	if (fd == 1){
+		bytes_written = size;
+		while (bytes_written > 0){
+			if (bytes_written  > MAX_SIZE_PUTBUF){
+				putbuf(buffer, MAX_SIZE_PUTBUF);
+				bytes_written -= MAX_SIZE_PUTBUF;
+				buffer += MAX_SIZE_PUTBUF;
+			} else {
+				putbuf(buffer, bytes_written);
+				break;
+			}
+		}
+		f->eax = size; // return size
+		return;
+	}
+
+	struct file * open_file = file_for_fd(fd);
+
+	if (open_file == NULL){
+		system_exit (f, -1);
+	}
+
+	lock_acquire(&filesys_lock);
+	bytes_written = file_write(open_file, buffer, size);
+	lock_release(&filesys_lock);
+	f->eax = bytes_written;
+	//printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
@@ -322,25 +370,30 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 	printf("SYS_CLOSE called\n");
 }
 
+//Returns the file or NULL if the fd is invalid
+struct file *file_for_fd (int fd){
+	struct process *process = thread_current()->process;
+	struct fdHashEntry key;
+	key.fd = fd;
 
-bool verify_buffer (void * buffer, size_t size){
+	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
+	if (fd_hash_elem == NULL){
+		return NULL;
+	}
+
+	return hash_entry(fd_hash_elem, struct fdHashEntry, elem) ->open_file;
+}
+
+
+bool verify_buffer (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	if (size < 0){
-		return false;
-	}
-	if (!is_user_vaddr(uaddr)){
-		return false;
-	}
-	if (get_user(uaddr) < 0){
+	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
 
 	uaddr += size;
-	if (!is_user_vaddr(uaddr)){
-		return false;
-	}
 
-	if (get_user(uaddr) < 0){
+	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
 
