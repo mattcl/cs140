@@ -92,7 +92,7 @@ struct thread {
   /* Shared between thread.c and synch.c. */
   struct list_elem elem;       /* List element. */
   
-//#ifdef USERPROG
+#ifdef USERPROG
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
   struct process *process; /* Process data */
@@ -100,7 +100,7 @@ struct thread {
   // reachable inside the syscall interrupt handler so we
   // need a handle to the processes open files and other
   // data
-//#endif
+#endif
   
   // ------------ BEGIN CHANGES -------------//
     /* Owned by thread.c. */

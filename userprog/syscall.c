@@ -39,7 +39,7 @@ static bool validate_user_string(const char* str);
 
 #define MAX_SIZE_PUTBUF 300
 
-bool verify_buffer (void * buffer, unsigned int size);
+bool verify_buffer (const void * buffer, unsigned int size);
 
 void syscall_init (void) {
 	lock_init(&filesys_lock);
@@ -337,7 +337,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 		system_exit(f, -1);
 	}
 
-	struct fdHashEntry *fd_item = list_entry(fd_hash_elem, struct fdHashEntry, elem);
+	struct fdHashEntry *fd_item = hash_entry(fd_hash_elem, struct fdHashEntry, elem);
 
 	lock_acquire(&filesys_lock);
 	bytes_written = file_write(fd_item->open_file, buffer, size);
@@ -359,24 +359,15 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 }
 
 
-bool verify_buffer (void * buffer, unsigned int size){
+bool verify_buffer (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	if (size < 0){
-		return false;
-	}
-	if (!is_user_vaddr(uaddr)){
-		return false;
-	}
-	if (get_user(uaddr) < 0){
+	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
 
 	uaddr += size;
-	if (!is_user_vaddr(uaddr)){
-		return false;
-	}
 
-	if (get_user(uaddr) < 0){
+	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
 
