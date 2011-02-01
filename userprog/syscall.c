@@ -135,7 +135,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0) system_exit(f, -1);
 
-	testMemoryAccess(esp);
+	//testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
