@@ -227,6 +227,7 @@ static void start_process (void *file_name_) {
 int process_wait (tid_t child_tid){
 	printf("WAITING ON %u\n", child_tid);
 	if (child_tid != TID_ERROR){
+		printf("Returned negative -1\n");
 		return -1;
 	}
 	struct thread* childthread;
