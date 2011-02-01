@@ -276,7 +276,7 @@ static void system_exit (struct intr_frame *f, int status) {
 	printf("SYS_EXIT\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
-	PANIC("done exiting NEVER CALLED\n");
+	NOT_REACHED();
 }
 
 static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
@@ -284,6 +284,7 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 }
 
 //Finished
+
 static void system_wait (struct intr_frame *f, pid_t pid){
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
@@ -291,12 +292,22 @@ static void system_wait (struct intr_frame *f, pid_t pid){
 	f->eax = process_wait(tid_for_pid(pid));
 }
 
-static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){
-	printf("SYS_CREATE called\n");
+static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
+	if(!string_is_valid(file_name)){
+	  system_exit(f, -1);
+	}
+	lock_acquire(&filesys_lock);
+	f->eax = filesys_create(file_name, initial_size);
+	lock_release(&filesys_lock);
 }
 
-static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
-	printf("SYS_REMOVE called\n");
+static void system_remove(struct intr_frame *f, const char *file_name) {
+	if(!string_is_valid(file_name)){
+	  system_exit(f, -1);
+	}
+	lock_acquire(&filesys_lock);
+	f->eax = filesys_remove(file_name);
+	lock_release(&filesys_lock);
 }
 
 //finished
@@ -347,15 +358,18 @@ static void system_filesize(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
-static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size UNUSED){
+static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size UNUSED){
 	printf("SYS_READ called\n");
+	if(!buffer_is_valid(buffer, size)) {
+	  system_exit(f, -1);
+	}
 }
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	printf("SYS_WRITE called\n");
 	if (!buffer_is_valid(buffer, size)){
-		f->eax = -1;
+		
 		system_exit(f, -1);
 	}
 	if (fd == 0){
