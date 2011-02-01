@@ -385,15 +385,18 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		system_exit(f, -1);
 	}
 
-	off_t bytes_read = 0;
+	off_t bytes_read ;
+
+	char charBuffer = (char*) buffer;
 
 	if(fd == STDIN_FILENO) {
 
-	  for( ; bytes_read <  size ; ++bytes_read){
-	    (char*)buffer + bytes_read = input_getc();
-	  } 
-	  f->eax = bytes_read;
+		for( bytes_read = 0; bytes_read <  size ; ++bytes_read){
+			charBuffer[bytes_read]= input_getc();
+		}
 
+		f->eax = bytes_read;
+		return;
 	}
 
 
