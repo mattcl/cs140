@@ -407,7 +407,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	//printf("SYS_WRITE called\n");
-	if (!buffer_is_valid(buffer, size))
+	if (!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
 	}
 	if (fd == STDIN_FILENO){
