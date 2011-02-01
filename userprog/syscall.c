@@ -387,7 +387,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 	off_t bytes_read ;
 
-	char charBuffer = (char*) buffer;
+	char *charBuffer = (char*) buffer;
 
 	if(fd == STDIN_FILENO) {
 
@@ -469,14 +469,21 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	off_t f_size = file_length(file);
 	lock_release(&filesys_lock);
 
-	if(f_size < position) {
+	if (f_size < 0){
+		f->eax = -1;
+		return;
+	}
+
+	if((unsigned int) f_size < position) {
 		f->eax = -1;
 		return;
 	}
 
 	lock_acquire(&filesys_lock);
-	f->eax = file_seek(file, position);
+	file_seek(file, position);
 	lock_release(&filesys_lock);
+
+	f->eax = -1;
 }
 
 //FINISHED
