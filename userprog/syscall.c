@@ -14,7 +14,6 @@
 
 static struct lock filesys_lock;
 
-
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
 
@@ -32,28 +31,25 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUS
 static void system_tell(struct intr_frame *f, int fd UNUSED);
 static void system_close(struct intr_frame *f, int fd UNUSED);
 
+static bool verify_buffer (const void * buffer, unsigned int size);
+static bool verify_string(const char* str);
+
+static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
 struct file *file_for_fd (int fd);
 
-static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
-static bool verify_string(const char* str);
-
 #define MAX_SIZE_PUTBUF 300
-
-bool verify_buffer (const void * buffer, unsigned int size);
-
-void syscall_init (void) {
-	lock_init(&filesys_lock);
-	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-}
 
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
-
+void syscall_init (void) {
+	lock_init(&filesys_lock);
+	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+}
 
 static void testMemoryAccess (void *esp){
 	//printf("syscall esp %p\n", esp);
@@ -125,8 +121,6 @@ static void testMemoryAccess (void *esp){
 	} else {
 	  printf("Yaaaa! seg faulted at base!");
 	}
-	
-
 	//end test
 }
 
@@ -151,7 +145,7 @@ static void syscall_handler (struct intr_frame *f){
 	int sys_call_num = get_user_int((uint32_t*)esp, &ERROR);
 	if (ERROR < 0) system_exit(f, -1);
 
-	//testMemoryAccess(esp);
+	testMemoryAccess(esp);
 
 	uint32_t arg1 [3];
 
@@ -353,7 +347,6 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	bytes_written = file_write(open_file, buffer, size);
 	lock_release(&filesys_lock);
 	f->eax = bytes_written;
-	//printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
 }
 
 static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUSED){
@@ -383,7 +376,7 @@ struct file *file_for_fd (int fd){
 }
 
 
-bool verify_buffer (const void * buffer, unsigned int size){
+static bool verify_buffer (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if (!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -444,7 +437,6 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 }
 
 static bool verify_string(const char* str){
-
 	char c;
 	while (true){
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
