@@ -13,6 +13,8 @@
 
 typedef uint32_t pid_t;
 
+static struct lock filesys_lock;
+
 struct process {
 	pid_t pid; 			   /* This processes ID. Also hash key */
 	struct hash_elem elem; /* The element in the processes hash*/
@@ -31,8 +33,15 @@ struct process {
 	//Accessed with interrupts turned off
 	// These two are used when this process
 	// waits on a living child process
-	pid_t child_waiting_on;
+	// Child waiting on also used in the exec
+	// functioning
+	tid_t child_waiting_on;
 	struct semaphore waiting_semaphore;
+
+	//These two are used to synchronize
+	// process exec and get the pid_t
+	struct condition pid_cond;
+	struct lock child_pid_lock;
 
 	//These two are accessed whenever a child
 	// process finishes

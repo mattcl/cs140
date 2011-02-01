@@ -13,7 +13,6 @@
 #include "devices/shutdown.h"
 #include "threads/malloc.h"
 #include <unistd.h>
-static struct lock filesys_lock;
 
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
@@ -49,7 +48,6 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
 void syscall_init (void) {
-	lock_init(&filesys_lock);
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -279,8 +277,20 @@ static void system_exit (struct intr_frame *f, int status) {
 	NOT_REACHED();
 }
 
-static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
+static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	printf("SYS_EXEC called\n");
+	if (!string_is_valid(cmd_line)){
+		system_exit(f, -1);
+	}
+	struct process* cur = thread_current()->process;
+	lock_acquire(&cur->child_pid_lock);
+	tid_t returned = process_execute(cmd_line);
+
+	//wait until the child process is set up or fails
+	// the pid_t will be in child_waiting_on
+	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
+	lock_release(&cur->child_pid_lock);
+	f->eax = &cur->child_waiting_on;
 }
 
 //Finished
@@ -291,6 +301,7 @@ static void system_wait (struct intr_frame *f, pid_t pid){
 	f->eax = process_wait(tid_for_pid(pid));
 }
 
+//FinISHED
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
@@ -300,7 +311,7 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	lock_release(&filesys_lock);
 }
 
-//
+//FINISHED
 static void system_remove(struct intr_frame *f, const char *file_name) {
 	if(!string_is_valid(file_name)){
 	  system_exit(f, -1);
@@ -471,15 +482,6 @@ static void system_tell(struct intr_frame *f, int fd){
 	
 }
 
-// Called from process.c to ensure proper locking
-// while the process is being destroyed so that the
-// filesys isn't messed up
-void close_open_file (struct file *file){
-	lock_acquire(&filesys_lock);
-	file_close(file);
-	lock_release(&filesys_lock);
-}
-
 static void system_close(struct intr_frame *f, int fd ){
 	printf("SYS_CLOSE called\n");
 
@@ -488,7 +490,9 @@ static void system_close(struct intr_frame *f, int fd ){
 		return;
 	}
 
-	close_open_file(entry->open_file);
+	lock_acquire(&filesys_lock);
+	file_close(entry->open_file);
+	lock_release(&filesys_lock);
 
 	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 	if (returned == NULL){

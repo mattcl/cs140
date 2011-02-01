@@ -983,7 +983,6 @@ struct thread *thread_find(tid_t tid){
 	ASSERT (intr_get_level () == INTR_OFF);
 	struct thread key;
 	key.tid = tid;
-	struct list_elem* value;
 	if (list_empty(&all_list)){
 		return NULL;
 	}
