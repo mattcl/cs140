@@ -487,8 +487,6 @@ static void system_tell(struct intr_frame *f, int fd){
 	lock_acquire(&filesys_lock);
 	f->eax = file_tell(open_file);
 	lock_release(&filesys_lock);
-
-
 }
 
 //FINISHED
