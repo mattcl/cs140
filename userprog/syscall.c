@@ -70,7 +70,7 @@ static void testMemoryAccess (void *esp){
 }
 
 //returns -1 on segfault
-static int set_args(void *esp, int num, uint32_t **argument){
+static int set_args(void *esp, int num, uint32_t argument[]){
 	int i, ERR;
 	for (i = 0; i < num; i++){
 		//printf("Argument i pointer is %p", argument[i]);
@@ -100,73 +100,73 @@ static void syscall_handler (struct intr_frame *f){
 			break;
 		}
 		case SYS_EXIT:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_exit(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_EXEC:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_exec(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_WAIT:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_wait(f, (pid_t)arg1[0]);
 			break;
 		}
 		case SYS_CREATE:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_create(f, (char*)arg1[0], (int)arg1[1]);
 			break;
 		}
 		case SYS_REMOVE:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_remove(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_OPEN:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_open(f, (char*)arg1[0]);
 			break;
 		}
 		case SYS_FILESIZE:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_filesize(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_READ:{
-			ERROR = set_args(esp, 3, &arg1);
+			ERROR = set_args(esp, 3, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_WRITE:{
-			ERROR = set_args(esp, 3, &arg1);
+			ERROR = set_args(esp, 3, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
 			break;
 		}
 		case SYS_SEEK:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
 			break;
 		}
 		case SYS_TELL:{
-			ERROR = set_args(esp, 1, &arg1);
+			ERROR = set_args(esp, 1, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_tell(f, (int)arg1[0]);
 			break;
 		}
 		case SYS_CLOSE:{
-			ERROR = set_args(esp, 2, &arg1);
+			ERROR = set_args(esp, 2, arg1);
 			if (ERROR < 0)system_exit(f, -1);
 			system_close(f, (int)arg1[0]);
 			break;
