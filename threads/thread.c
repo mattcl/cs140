@@ -141,9 +141,6 @@ void thread_init (void){
 		load_avg = 0;
 	}
 
-#ifdef USERPROG
-	process_init();
-#endif
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -158,6 +155,11 @@ void thread_init (void){
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
+
+#ifdef USERPROG
+	process_init();
+#endif
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
