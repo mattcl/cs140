@@ -308,7 +308,7 @@ void process_exit (void){
 	hash_destroy(&cur->process->open_files, &fdEntryDestroy);
 
 	lock_acquire(&cur->process->children_exit_codes_lock);
-	hash_destroy(&cur->process->children_exit_codes, &exitCodeEntryDestroy);
+	hash_destroy(&cur->process->children_exit_codes, &exitCodeDestroy);
 	lock_release(&cur->process->children_exit_codes_lock);
 
 	free(cur->process);
