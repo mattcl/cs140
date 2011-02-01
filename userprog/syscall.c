@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/shutdown.h"
+#include "devices/input.c"
 #include "threads/malloc.h"
 #include <unistd.h>
 
@@ -56,7 +57,7 @@ static void testMemoryAccess (void *esp){
 	//printf("System Call number %d\n",sys_call_num);
 
 	//TEST user access
-        
+
 	int ERROR = 0;
 	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
 	if (ERROR < 0){
@@ -108,18 +109,18 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("Verify buffer passed test 4\n");
 	}
-	
+
 	//user string testing
 	if(string_is_valid((char*) 0x2) ){
-	  printf("NOoo, should have seg faulted at 0x2!!!");
+		printf("NOoo, should have seg faulted at 0x2!!!");
 	} else {
-	  printf("yaa!, seg faluted at 0x2!!!");
+		printf("yaa!, seg faluted at 0x2!!!");
 	}
-	
+
 	if(string_is_valid((char*) PHYS_BASE)){
-	  printf("Nooo, should have seg faulted at BASE!!!");
+		printf("Nooo, should have seg faulted at BASE!!!");
 	} else {
-	  printf("Yaaaa! seg faulted at base!");
+		printf("Yaaaa! seg faulted at base!");
 	}
 	//end test
 }
@@ -150,116 +151,116 @@ static void syscall_handler (struct intr_frame *f){
 	uint32_t arg1 [3];
 
 	switch (sys_call_num){
-		case SYS_HALT:{
-			system_halt(f);
-			break;
-		}
-		case SYS_EXIT:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_exit(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_EXEC:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_exec(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_WAIT:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_wait(f, (pid_t)arg1[0]);
-			break;
-		}
-		case SYS_CREATE:{
-			error = set_args(esp, 2, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_create(f, (char*)arg1[0], (int)arg1[1]);
-			break;
-		}
-		case SYS_REMOVE:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_remove(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_OPEN:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_open(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_FILESIZE:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_filesize(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_READ:{
-			error = set_args(esp, 3, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-			break;
-		}
-		case SYS_WRITE:{
-			error = set_args(esp, 3, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-			break;
-		}
-		case SYS_SEEK:{
-			error = set_args(esp, 2, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
-			break;
-		}
-		case SYS_TELL:{
-			error = set_args(esp, 1, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_tell(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_CLOSE:{
-			error = set_args(esp, 2, arg1);
-			if (error < 0)system_exit(f, -1);
-			system_close(f, (int)arg1[0]);
-			break;
-		}
-		// Project 3 Syscalls
-		case SYS_MMAP:{
-			printf("SYS_MMAP called\n");
-			break;
-		}
-		case SYS_MUNMAP:{
-			printf("SYS_MUNMAP called\n");
-			break;
-		}
-		//Progect 4 Syscalls
-		case SYS_CHDIR:{
-			printf("SYS_CHDIR called\n");
-			break;
-		}
-		case SYS_MKDIR:{
-			printf("SYS_MKDIR called\n");
-			break;
-		}
-		case SYS_READDIR:{
-			printf("SYS_READDIR called\n");
-			break;
-		}
-		case SYS_ISDIR:{
-			printf("SYS_ISDIR called\n");
-			break;
-		}
-		case SYS_INUMBER:{
-			printf("SYS_INUMBER called\n");
-			break;
-		}
-		default:{
-			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
-			break;
-		}
+	case SYS_HALT:{
+		system_halt(f);
+		break;
+	}
+	case SYS_EXIT:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_exit(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_EXEC:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_exec(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_WAIT:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_wait(f, (pid_t)arg1[0]);
+		break;
+	}
+	case SYS_CREATE:{
+		error = set_args(esp, 2, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_create(f, (char*)arg1[0], (int)arg1[1]);
+		break;
+	}
+	case SYS_REMOVE:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_remove(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_OPEN:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_open(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_FILESIZE:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_filesize(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_READ:{
+		error = set_args(esp, 3, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+		break;
+	}
+	case SYS_WRITE:{
+		error = set_args(esp, 3, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+		break;
+	}
+	case SYS_SEEK:{
+		error = set_args(esp, 2, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
+		break;
+	}
+	case SYS_TELL:{
+		error = set_args(esp, 1, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_tell(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_CLOSE:{
+		error = set_args(esp, 2, arg1);
+		if (error < 0)system_exit(f, -1);
+		system_close(f, (int)arg1[0]);
+		break;
+	}
+	// Project 3 Syscalls
+	case SYS_MMAP:{
+		printf("SYS_MMAP called\n");
+		break;
+	}
+	case SYS_MUNMAP:{
+		printf("SYS_MUNMAP called\n");
+		break;
+	}
+	//Progect 4 Syscalls
+	case SYS_CHDIR:{
+		printf("SYS_CHDIR called\n");
+		break;
+	}
+	case SYS_MKDIR:{
+		printf("SYS_MKDIR called\n");
+		break;
+	}
+	case SYS_READDIR:{
+		printf("SYS_READDIR called\n");
+		break;
+	}
+	case SYS_ISDIR:{
+		printf("SYS_ISDIR called\n");
+		break;
+	}
+	case SYS_INUMBER:{
+		printf("SYS_INUMBER called\n");
+		break;
+	}
+	default:{
+		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+		break;
+	}
 	}
 }
 
@@ -277,6 +278,7 @@ static void system_exit (struct intr_frame *f, int status) {
 	NOT_REACHED();
 }
 
+//FINISHED
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	printf("SYS_EXEC called\n");
 	if (!string_is_valid(cmd_line)){
@@ -285,12 +287,15 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	struct process* cur = thread_current()->process;
 	lock_acquire(&cur->child_pid_lock);
 	tid_t returned = process_execute(cmd_line);
-
+	if (returned == TID_ERROR){
+		f->eax = -1;
+		return;
+	}
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on
 	cond_wait(&cur->pid_cond, &cur->child_pid_lock);
 	lock_release(&cur->child_pid_lock);
-	f->eax = &cur->child_waiting_on;
+	f->eax = cur->child_waiting_on;
 }
 
 //Finished
@@ -304,7 +309,7 @@ static void system_wait (struct intr_frame *f, pid_t pid){
 //FinISHED
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
 	if(!string_is_valid(file_name)){
-	  system_exit(f, -1);
+		system_exit(f, -1);
 	}
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_create(file_name, initial_size);
@@ -314,7 +319,7 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 //FINISHED
 static void system_remove(struct intr_frame *f, const char *file_name) {
 	if(!string_is_valid(file_name)){
-	  system_exit(f, -1);
+		system_exit(f, -1);
 	}
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_remove(file_name);
@@ -362,7 +367,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 	printf("SYS_FILESIZE called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
-	  f->eax = -1;
+		f->eax = -1;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -373,26 +378,30 @@ static void system_filesize(struct intr_frame *f, int fd){
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
 	printf("SYS_READ called\n");
 	if(!buffer_is_valid(buffer, size)) {
-	  system_exit(f, -1);
+		system_exit(f, -1);
 	}
 
 	if(fd == STDOUT_FILENO){
-	  system_exit(f, -1);
+		system_exit(f, -1);
 	}
-	
+
 	off_t bytes_read = 0;
+
 	if(fd == STDIN_FILENO) {
+
 	  for( ; bytes_read <  size ; ++bytes_read){
 	    (char*)buffer + bytes_read = input_getc();
 	  } 
 	  f->eax = bytes_read;
+
 	}
 
-	
+
 	struct file * file = file_for_fd(fd);
 
 	if (file == NULL){
-	  f->eax = -1;
+		f->eax = -1;
+		return;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -400,16 +409,16 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	lock_release(&filesys_lock);
 	f->eax = bytes_read;
 
-	
+
 }
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	//printf("SYS_WRITE called\n");
-  if (!buffer_is_valid(buffer, size)){
-    system_exit(f, -1);
-  }
-  if (fd == STDIN_FILENO){
+	if (!buffer_is_valid(buffer, size)){
+		system_exit(f, -1);
+	}
+	if (fd == STDIN_FILENO){
 		system_exit(f, -1);
 	}
 
@@ -434,8 +443,8 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	struct file * open_file = file_for_fd(fd);
 
 	if (open_file == NULL){
-	  f->eax = -1;
-	  return;
+		f->eax = -1;
+		return;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -448,40 +457,42 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	printf("SYS_SEEK called\n");
 	struct file *file = file_for_fd(fd);
 	if(file == NULL){
-	  f->eax = -1;
-	  return;
+		f->eax = -1;
+		return;
 	}
-	
-	
+
+
 	lock_acquire(&filesys_lock);
 	off_t f_size = file_length(file);
 	lock_release(&filesys_lock);
 
 	if(f_size < position) {
-	  f->eax = -1;
-	  return;
+		f->eax = -1;
+		return;
 	}
-	
+
 	lock_acquire(&filesys_lock);
-	f->eax = file_seek(open_file, position);
+	f->eax = file_seek(file, position);
 	lock_release(&filesys_lock);
 }
 
+//FINISHED
 static void system_tell(struct intr_frame *f, int fd){
 	printf("SYS_TELL called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
-	  f->eax = -1;
-	  return;
+		f->eax = -1;
+		return;
 	}
 
 	lock_acquire(&filesys_lock);
 	f->eax = file_tell(open_file);
 	lock_release(&filesys_lock);
 
-	
+
 }
 
+//FINISHED
 static void system_close(struct intr_frame *f, int fd ){
 	printf("SYS_CLOSE called\n");
 
