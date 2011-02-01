@@ -33,7 +33,6 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
 
 void syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-	process_init();
 }
 
 // arg with INT == 0 is the system call number

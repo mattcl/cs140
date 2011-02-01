@@ -155,7 +155,7 @@ void thread_init (void){
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
-
+	process_init();
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
