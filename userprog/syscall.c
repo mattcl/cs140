@@ -9,11 +9,7 @@
 
 static struct lock filesys_lock;
 
-<<<<<<< HEAD:userprog/syscall.c
-
-=======
 // THIS IS AN INTERNAL INTERRUPT HANDLER
->>>>>>> 674945d60d73d9c7a8857d38341a57d1b1005ff0:userprog/syscall.c
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f UNUSED);
@@ -229,7 +225,6 @@ static void system_exec (struct intr_frame *f, const char *cmd_line UNUSED){
 
 static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
 	printf("SYS_WAIT called\n");
-
 	if (!pid_belongs_to_child(pid)){
 		system_exit(f, -1);
 	}
