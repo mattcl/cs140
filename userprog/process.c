@@ -80,6 +80,21 @@ void process_init(void){
 	hash_init(&processes, &processHash, &processCompare, NULL);
 	lock_init(&processes_hash_lock);
 	lock_init(&pid_lock);
+
+	//CREATE the GLOBAL process
+	struct process *global = calloc(1, sizeof(struct process));
+	if (global == NULL){
+		// We can't allocate the global process, this is bad
+		PANIC("We can't Allocate the global process");
+	}
+	global->pid = 0;
+
+	thread_current()->process = global;
+
+	if (!initialize_process(global, thread_current())){
+		PANIC("ERROR initialzing the global process");
+	}
+
 }
 
 /* Starts a new thread running a user program loaded from
