@@ -54,8 +54,8 @@ static bool is_equal_func_1 (struct list_elem *cle, void *c_tid){
 static bool is_equal_func_2 (struct list_elem *cle, void *c_pid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_pid==*(pid_t*)c_pid);
 }
-static struct list_elem *child_list_entry_gen(struct process *process,
-					void *c_tid, bool tid,is_equal *func);
+static struct list_elem *child_list_entry_gen(
+		struct process *process, void *c_tid, is_equal *func);
 
 void process_init(void){
 	hash_init(&processes, &process_hash_func, &process_hash_compare, NULL);
@@ -319,7 +319,7 @@ void process_exit (void){
 		printf("Parent not null\n");
 
 		//Get our list entry
-		struct list_entr *our_entry =
+		struct list_entry *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_2);
 		if (our_entry != NULL){
 			lock_acquire(&parent->child_pid_tid_lock);
@@ -806,8 +806,8 @@ static struct process *parent_process_from_child (struct process* our_process){
 	}
 }
 
-static struct list_elem *child_list_entry_gen(struct process *process,
-					void *c_tid, bool tid,is_equal *func){
+static struct list_elem *child_list_entry_gen(
+		struct process *process, void *c_tid, is_equal *func){
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h, *n;
 	h = list_begin(&process->children_list);
