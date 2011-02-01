@@ -363,6 +363,10 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	if(!buffer_is_valid(buffer, size)) {
 	  system_exit(f, -1);
 	}
+
+	if(fd == STDOUT_FILENO){
+	  system_exit(f, -1);
+	}
 }
 
 //FINISHED
