@@ -39,7 +39,7 @@ static bool validate_user_string(const char* str);
 
 #define MAX_SIZE_PUTBUF 300
 
-bool verify_buffer (void * buffer, size_t size);
+bool verify_buffer (void * buffer, unsigned int size);
 
 void syscall_init (void) {
 	lock_init(&filesys_lock);
@@ -359,7 +359,7 @@ static void system_close(struct intr_frame *f, int fd UNUSED){
 }
 
 
-bool verify_buffer (void * buffer, size_t size){
+bool verify_buffer (void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if (size < 0){
 		return false;
