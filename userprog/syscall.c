@@ -38,7 +38,7 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 struct file *file_for_fd (int fd);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
-static bool validate_user_string(const char* str);
+static bool verify_string(const char* str);
 
 #define MAX_SIZE_PUTBUF 300
 
@@ -60,7 +60,7 @@ static void testMemoryAccess (void *esp){
 	//printf("System Call number %d\n",sys_call_num);
 
 	//TEST user access
-
+        
 	int ERROR = 0;
 	unsigned int input = get_user_int((uint32_t*)0x2, &ERROR);
 	if (ERROR < 0){
@@ -112,8 +112,21 @@ static void testMemoryAccess (void *esp){
 	} else {
 		printf("Verify buffer passed test 4\n");
 	}
-
-
+	
+	//user string testing
+	if(verify_string((char*) 0x2) ){
+	  printf("NOoo, should have seg faulted at 0x2!!!");
+	} else {
+	  printf("yaa!, seg faluted at 0x2!!!");
+	}
+	
+	if(verify_string((char*) PHYS_BASE)){
+	  printf("Nooo, should have seg faulted at BASE!!!");
+	} else {
+	  printf("Yaaaa! seg faulted at base!");
+	}
+	
+	if(verify_string((char*) esp
 	//end test
 }
 
@@ -433,11 +446,11 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 	return error_code != -1;
 }
 
-static bool validate_user_string(const char* str){
+static bool verify_string(const char* str){
 
 
   for(; *str != '\0'; str++) { 
-    if(!is_user_vaddr(str) || get_user(str) == -1) {
+    if(!is_user_vaddr(str) || get_user((unint8_t*)str) < 0) {
       return false;
     }
   }
