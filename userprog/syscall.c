@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/shutdown.h"
+#include "threads/malloc.h"
 
 static struct lock filesys_lock;
 
