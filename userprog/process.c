@@ -47,7 +47,7 @@ static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED);
 static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED);
 static bool exitCodeCompare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED);
-static void exitCodeEntryDestroy (struct hash_elem *e, void *aux UNUSED);
+static void exitCodeDestroy (struct hash_elem *e, void *aux UNUSED);
 
 bool pid_belongs_to_child(pid_t child){
 	struct process key;
@@ -265,7 +265,6 @@ void process_exit (void){
 
 	struct process key;
 	key.pid = cur->process->parent_id;
-	bool success;
 
 	//We are no longer viable processes and are being removed from the
 	// list of processes
@@ -279,6 +278,7 @@ void process_exit (void){
 		struct process *parent = hash_entry(parent_process, struct process, elem);
 
 		struct processReturnCode *prc = calloc(1, sizeof(struct processReturnCode));
+
 		prc->exit_code = cur->process->exit_code;
 		prc->child_pid = cur->process->pid;
 		prc->child_tid = cur->tid;
@@ -286,7 +286,13 @@ void process_exit (void){
 		//If this fails its eh
 		lock_acquire(&parent->children_exit_codes_lock);
 		struct hash_elem *process = hash_insert(&parent->children_exit_codes, &prc->elem);
-		if (parent->child_waiting_on = cur->process->pid){
+		if (process != NULL){
+			// We have just tried to put the exit code of an identical pid
+			// into the hash
+			// uh oh
+			PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+		}
+		if (parent->child_waiting_on == cur->process->pid){
 			sema_up(&parent->waiting_semaphore);
 		}
 		lock_release(&parent->children_exit_codes_lock);
@@ -774,16 +780,16 @@ static void processEntryDestroy (struct hash_elem *e, void *aux UNUSED){
 	//Auxilary data may need to be destroyed left it here just in case
 }
 
-hash_action_func exitCodeEntryDestroy (struct hash_elem *e, void *aux UNUSED){
+static void exitCodeDestroy (struct hash_elem *e, void *aux UNUSED){
 	free(hash_entry(e, struct processReturnCode, elem));
 }
 
-hash_hash_func exitCodeHash (const struct hash_elem *e, void *aux UNUSED){
+static unsigned exitCodeHash (const struct hash_elem *e, void *aux UNUSED){
 	pid_t pid = hash_entry(e, struct processReturnCode, elem)->child_tid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-hash_less_func exitCodeCompare (const struct hash_elem *a,
+static bool exitCodeCompare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED){
 	return (hash_entry(a, struct processReturnCode, elem)->child_tid <
 			hash_entry(b, struct processReturnCode, elem)->child_tid);
