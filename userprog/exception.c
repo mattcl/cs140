@@ -4,7 +4,7 @@
 #include "../threads/interrupt.h"
 #include "../threads/thread.h"
 #include "exception.h"
-
+#include "process.h"
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -155,7 +155,7 @@ static void page_fault (struct intr_frame *f){
 	if (user){
 		kill(f);
 	} else {
-		f->eip = f->eax;
+		f->eip = (void)(*f->eax)();
 		f->eax = 0xffffffff;
 	}
 	//kill (f);
