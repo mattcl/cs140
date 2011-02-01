@@ -277,6 +277,7 @@ static void system_exit (struct intr_frame *f, int status) {
 	NOT_REACHED();
 }
 
+//FINISHED
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	printf("SYS_EXEC called\n");
 	if (!string_is_valid(cmd_line)){
@@ -427,6 +428,7 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position UNUS
 	printf("SYS_SEEK called\n");
 }
 
+//FINISHED
 static void system_tell(struct intr_frame *f, int fd){
 	printf("SYS_TELL called\n");
 	struct file *open_file = file_for_fd(fd);
@@ -439,6 +441,7 @@ static void system_tell(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
+//FINISHED
 static void system_close(struct intr_frame *f, int fd ){
 	printf("SYS_CLOSE called\n");
 
