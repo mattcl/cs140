@@ -166,7 +166,8 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	lock_init(&p->child_pid_lock);
 	cond_init(&p->pid_cond);
 
-	p->child_waiting_on = 0;
+	p->child_waiting_on_pid = 0;
+	p->child_waiting_on_tid = 0;
 	//p->owning_thread = our_thread;
 	our_thread->process = p;
 	p->exit_code = 0;
@@ -208,7 +209,7 @@ static void start_process (void *file_name_) {
 
 	if (!success) {
 		if (parent != NULL){
-			parent->child_waiting_on = -1;
+			parent->child_waiting_on_pid= -1;
 			cond_signal(&parent->pid_cond, &parent->child_pid_lock);
 			lock_release(&parent->child_pid_lock);
 		}
@@ -217,7 +218,7 @@ static void start_process (void *file_name_) {
 	//printf("Finished loading\n");
 
 	if (parent != NULL){
-		parent->child_waiting_on = thread_current()->process->pid;
+		parent->child_waiting_on_pid = thread_current()->process->pid;
 		cond_signal(&parent->pid_cond, &parent->child_pid_lock);
 		lock_release(&parent->child_pid_lock);
 	}
@@ -270,7 +271,7 @@ int process_wait (tid_t child_tid){
 		printf("Waiting on child\n");
 		//Can change this from pid_t to tid_t if we move child
 		// waiting on to thread.h and we change it to tid_t
-		cur->process->child_waiting_on = childthread->process->pid;
+		cur->process->child_waiting_on_tid = childthread->tid;
 
 		printf("SHOULD BE BLOCKING %u\n", child_tid);
 		sema_down(&cur->process->waiting_semaphore);
@@ -368,7 +369,7 @@ void process_exit (void){
 			}
 			lock_release(&parent->children_exit_codes_lock);
 		}
-		if (parent->child_waiting_on == cur_process->pid){
+		if (parent->child_waiting_on_tid == cur->tid){
 			printf("Waking parent\n");
 			sema_up(&parent->waiting_semaphore);
 		} else {

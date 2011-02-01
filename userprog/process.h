@@ -35,7 +35,8 @@ struct process {
 	// waits on a living child process
 	// Child waiting on also used in the exec
 	// functioning
-	pid_t child_waiting_on;
+	pid_t child_waiting_on_pid;
+	tid_t child_waiting_on_tid;
 	struct semaphore waiting_semaphore;
 
 	//These two are used to synchronize
