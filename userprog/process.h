@@ -13,6 +13,8 @@
 
 typedef uint32_t pid_t;
 
+static struct lock filesys_lock;
+
 struct process {
 	pid_t pid; 			   /* This processes ID. Also hash key */
 	struct hash_elem elem; /* The element in the processes hash*/

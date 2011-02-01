@@ -95,6 +95,8 @@ void process_init(void){
 	lock_init(&processes_hash_lock);
 	lock_init(&pid_lock);
 
+	lock_init(&filesys_lock);
+
 	//CREATE the GLOBAL process
 	struct process *global = calloc(1, sizeof(struct process));
 	if (global == NULL){
@@ -478,7 +480,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	process_activate ();
 
 	/* Open executable file. */
-	//file = filesys_open (file_name);
+
 	file = filesys_open (f_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -569,6 +571,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	done:
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
+
 	return success;
 }
 

@@ -48,7 +48,6 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
 void syscall_init (void) {
-	lock_init(&filesys_lock);
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
