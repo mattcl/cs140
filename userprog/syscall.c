@@ -13,6 +13,7 @@
 
 static struct lock filesys_lock;
 
+
 // THIS IS AN INTERNAL INTERRUPT HANDLER
 static void syscall_handler (struct intr_frame *);
 
@@ -34,6 +35,7 @@ static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
+static bool validate_user_string(const char* str);
 
 #define MAX_SIZE_PUTBUF 300
 
@@ -47,6 +49,8 @@ void syscall_init (void) {
 // arg with INT == 0 is the system call number
 // params are start at INT == 1
 #define arg(ESP, INT)(((int *)ESP) + INT)
+
+
 
 static void testMemoryAccess (void *esp){
 	//printf("syscall esp %p\n", esp);
@@ -424,3 +428,15 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 	return error_code != -1;
 }
 
+static bool validate_user_string(const char* str){
+
+
+  for(; *str != '\0'; str++) { 
+    if(!is_user_vaddr(str) || get_user(str) == -1) {
+      return false;
+    }
+  }
+
+  return true;
+  
+}
