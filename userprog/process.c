@@ -225,6 +225,7 @@ static void start_process (void *file_name_) {
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
+	printf("WAITING ON %u\n", child_tid);
 	if (child_tid != TID_ERROR){
 		return -1;
 	}
@@ -276,6 +277,7 @@ int process_wait (tid_t child_tid){
  * And signals the parent that it has finished,
  * if the parent still exists and is waiting*/
 void process_exit (void){
+
 	struct thread *cur = thread_current ();
 	uint32_t *pd;
 
@@ -324,10 +326,11 @@ void process_exit (void){
 			// uh oh
 			PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 		}
+		lock_release(&parent->children_exit_codes_lock);
+
 		if (parent->child_waiting_on == cur->process->pid){
 			sema_up(&parent->waiting_semaphore);
 		}
-		lock_release(&parent->children_exit_codes_lock);
 
 	}
 
