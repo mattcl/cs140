@@ -324,7 +324,7 @@ void process_exit (void){
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 		if (our_entry != NULL){
-			lock_acquire(&parent->cis_equal_func_pidhild_pid_tid_lock);
+			lock_acquire(&parent->child_pid_tid_lock);
 			struct child_list_entry *entry = list_entry(our_entry,
 					struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
