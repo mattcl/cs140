@@ -242,16 +242,23 @@ int process_wait (tid_t child_tid){
 	childthread = thread_find(child_tid);
 	//Child has already exited
 	if (childthread == NULL){
+		printf("CHildtrhead = NULL\n");
+
 		invalid = false; // could still be valid check our list
 	} else if (childthread->process->parent_id != cur->process->pid){
+		printf("Child not ours %u\n", child_tid);
 		invalid = true; // child is not really a child failure mode
+
 	} else {
+		printf("Waiting on child\n");
 		//Can change this from pid_t to tid_t if we move child
 		// waiting on to thread.h and we change it to tid_t
 		cur->process->child_waiting_on = childthread->process->pid;
 
 		//Wait for child proccess to die
+		printf("SHOULD BE BLOCKING %u\n", child_tid);
 		sema_down(&cur->process->waiting_semaphore);
+		printf("Should be called after %u\n", child_tid);
 		invalid = false; // should be valid
 	}
 	intr_set_level (old_level);
