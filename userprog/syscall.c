@@ -289,6 +289,11 @@ static void system_wait (struct intr_frame *f, pid_t pid UNUSED){
 
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size UNUSED){
 	printf("SYS_CREATE called\n");
+	if(!string_is_valid(file_name)){
+	  system_exit(f, -1);
+	}
+	  
+	
 }
 
 static void system_remove(struct intr_frame *f, const char *file_name UNUSED){
