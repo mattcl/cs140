@@ -811,14 +811,13 @@ static struct process *parent_process_from_child (struct process* our_process){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 	lock_acquire(&process->child_pid_tid_lock);
-	struct list_elem *h, *n;
+	struct list_elem *h;
 	h = list_head(&process->children_list);
-	while ((n = list_next(h)) != list_end(&process->children_list)){
+	while ((h = list_next(h)) != list_end(&process->children_list)){
 		if(func(h, c_tid)){
 			lock_release(&process->child_pid_tid_lock);
-			return n;
+			return h;
 		}
-		h = n;
 	}
 	lock_release(&process->child_pid_tid_lock);
 	return NULL;
