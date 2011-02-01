@@ -335,11 +335,11 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	struct file * open_file = file_for_fd(fd);
 
 	if (open_file == NULL){
-		exit (f, -1);
+		system_exit (f, -1);
 	}
 
 	lock_acquire(&filesys_lock);
-	bytes_written = file_write(file, buffer, size);
+	bytes_written = file_write(open_file, buffer, size);
 	lock_release(&filesys_lock);
 	f->eax = bytes_written;
 	//printf("SYS_WRITE called %d %s %d\n",fd, (char*)buffer, size);
