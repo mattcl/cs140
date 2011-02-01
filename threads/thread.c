@@ -981,9 +981,6 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 struct thread *thread_find(tid_t tid){
 	//printf("TID requested %u\n", tid);
 	ASSERT (intr_get_level () == INTR_OFF);
-	if (list_empty(&all_list)){
-		return NULL;
-	}
 	struct list_elem *head, *next;
 	head = list_begin(&all_list);
 	while ((next= list_next(head)) != list_end(&all_list)){

@@ -86,8 +86,8 @@ void process_init(void);
 //methods for dealing with pid's and tid's
 static tid_t child_pid_to_tid (pid_t c_pid);
 static pid_t child_tid_to_pid (tid_t c_tid);
-static struct list_elem *child_list_entry_tid (tid_t c_tid);
-static struct list_elem *child_list_entry_pid(pid_t c_pid);
+static struct child_list_entry *child_list_entry_tid (tid_t c_tid);
+static struct child_list_entry *child_list_entry_pid(pid_t c_pid);
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);

@@ -49,10 +49,10 @@ static void process_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 typedef bool is_equal (struct child_list_entry *cle, void *c_tid);
 static bool is_equal_func_1 (struct child_list_entry *cle, void *c_tid){
-	return (list_entry(cle,struct child_list_entry,elem)->child_tid==*(tid_t*)c_tid);
+	return ((list_entry(cle,struct child_list_entry,elem))->child_tid==*(tid_t*)c_tid);
 }
 static bool is_equal_func_2 (struct child_list_entry *cle, void *c_pid){
-	return (list_entry(cle,struct child_list_entry,elem)->child_pid==*(pid_t*)c_pid);
+	return ((list_entry(cle,struct child_list_entry,elem))->child_pid==*(pid_t*)c_pid);
 }
 
 void process_init(void){
@@ -207,7 +207,7 @@ static void start_process (void *file_name_) {
 		if(cle != NULL){
 			cle->child_pid = cur_process->pid;
 			cle->child_tid = cur->tid;
-			list_push_front(&parent->children_list, &cle.elem);
+			list_push_front(&parent->children_list, &cle->elem);
 			parent->child_waiting_on_pid = cur_process->pid;
 		} else {
 			//Failed to allocate a handle on the child
@@ -819,14 +819,20 @@ static struct list_elem *child_list_entry_gen(struct process *process,								vo
 	return NULL;
 }
 
-static struct list_elem *child_list_entry_tid (tid_t c_tid){
+static struct child_list_entry *child_list_entry_tid (tid_t c_tid){
 	struct process *cur_process = thread_current()->process;
-	return child_list_entry_gen(cur_process, &c_tid, &is_equal_func_1);
+	return list_entry(
+			child_list_entry_gen(cur_process, &c_tid, &is_equal_func_1),
+			struct child_list_entry,
+			elem);
 }
 
-static struct list_elem *child_list_entry_pid(pid_t c_pid){
+static struct child_list_entry *child_list_entry_pid(pid_t c_pid){
 	struct process *cur_process = thread_current()->process;
-	return child_list_entry_gen(cur_process, &c_pid, &is_equal_func_2);
+	return list_entry(
+			child_list_entry_gen(cur_process, &c_pid, &is_equal_func_2),
+			struct child_list_entry,
+			elem);
 }
 
 /* Takes a tid and returns the corresponding pid
