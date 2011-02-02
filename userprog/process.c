@@ -186,6 +186,8 @@ static void start_process (void *file_name_) {
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
+	printf(file_name_);
+
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
 	lock_acquire(&processes_hash_lock);
