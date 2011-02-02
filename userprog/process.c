@@ -360,11 +360,12 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
-		lock_acquire(&parent->child_pid_tid_lock);
+
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 
+		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
