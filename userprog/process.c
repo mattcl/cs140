@@ -273,6 +273,8 @@ int process_wait (tid_t child_tid){
 
 	struct process *cur = thread_current()->process;
 
+	printf("%d is waiting on %d\n", cur->pid, child_entry->child_pid);
+
 	//Doing this with interrupts disabled because
 	// the child thread could begin thread exit in between
 	// if it wasn't. Disable interrupts itself, and then
@@ -284,14 +286,13 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
-
+		printf("Actually waiting\n");
 		lock_acquire(&cur->child_pid_tid_lock);
 		cur->child_waiting_on_pid = childthread->process->pid;
 		lock_release(&cur->child_pid_tid_lock);
 
 		sema_down(&cur->waiting_semaphore);
 	}
-
 	intr_set_level (old_level);
 
 	//retrieve exit code now, should be in the updated
@@ -304,7 +305,7 @@ int process_wait (tid_t child_tid){
 	child_entry->exit_code = -1;
 
 	lock_release(&cur->child_pid_tid_lock);
-
+	printf("Returning %d \n", exit_code);
 	return exit_code;
 }
 
@@ -333,6 +334,8 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
+	printf("Exiting process %d\n", cur_process->pid);
+
 	//We are no longer viable processes and are being removed from the
 	// list of processes. The lock here also ensures that our parent
 	// has either exited or hasn't exited while we update information
@@ -342,6 +345,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
+		printf("Parent was non null\n");
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -354,9 +358,14 @@ void process_exit (void){
 		}
 
 		if (parent->child_waiting_on_pid == cur->process->pid){
+			printf("Waking up the parent\n");
 			sema_up(&parent->waiting_semaphore);
+		} else {
+			printf("Parent wasn't waiting\n");
 		}
 		lock_release(&parent->child_pid_tid_lock);
+	} else {
+		printf("Parent was null\n");
 	}
 
 	lock_release(&processes_hash_lock);
@@ -377,6 +386,7 @@ void process_exit (void){
 	       struct list_elem *e = list_pop_front (&cur_process->children_list);
 	       free (list_entry(e, struct child_list_entry, elem));
 	}
+
 	lock_release(&cur_process->child_pid_tid_lock);
 	free(cur_process->program_name);
 
