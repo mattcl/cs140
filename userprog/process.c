@@ -109,6 +109,8 @@ tid_t process_execute (const char *file_name) {
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
+		lock_release(&cur_process->child_pid_tid_lock);
+		return tid;
 	}
 
 	//wait until the child process is set up or fails
@@ -193,7 +195,10 @@ static void start_process (void *file_name_) {
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done
 	if (parent != NULL){
+		printf("Parent not null in start \n");
 		lock_acquire(&parent->child_pid_tid_lock);
+	}  else {
+		printf("Parent was null in start\n");
 	}
 
 	char *file_name = file_name_;
