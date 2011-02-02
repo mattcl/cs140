@@ -103,7 +103,7 @@ tid_t process_execute (const char *file_name) {
 
 	// make sure that the new process signals us that it has set up
 	lock_acquire(&cur_process->child_pid_tid_lock);
-	if (debug){printf("Waiting on thread create to return\n");};
+	//printf("Waiting on thread create to return\n");
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	if (tid == TID_ERROR){
@@ -117,7 +117,7 @@ tid_t process_execute (const char *file_name) {
 	// it through our child list
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
 
-	printf("Returned from waiting on child\n");
+	//printf("Returned from waiting on child\n");
 
 	lock_release(&cur_process->child_pid_tid_lock);
 
@@ -196,10 +196,10 @@ static void start_process (void *file_name_) {
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done
 	if (parent != NULL){
-		printf("Parent not null in start \n");
+		//printf("Parent not null in start \n");
 		lock_acquire(&parent->child_pid_tid_lock);
 	}  else {
-		printf("Parent was null in start\n");
+		//printf("Parent was null in start\n");
 	}
 
 	char *file_name = file_name_;
@@ -221,7 +221,7 @@ static void start_process (void *file_name_) {
 		if (parent != NULL){
 			//communicate error with parent
 			parent->child_waiting_on_pid= PID_ERROR;
-			printf("Signalling parent failure\n");
+			//printf("Signalling parent failure\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		}
@@ -230,7 +230,7 @@ static void start_process (void *file_name_) {
 		cur_process->exit_code = PID_ERROR;
 		thread_exit ();
 	}
-	//printf("Finished loading\n");
+	////printf("Finished loading\n");
 
 	if (parent != NULL){
 		struct child_list_entry *cle = calloc(1, sizeof(struct child_list_entry));
@@ -243,7 +243,7 @@ static void start_process (void *file_name_) {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
 		}
-		printf("Signalling parent success\n");
+		//printf("Signalling parent success\n");
 		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 		lock_release(&parent->child_pid_tid_lock);
 
@@ -279,7 +279,7 @@ int process_wait (tid_t child_tid){
 		return PID_ERROR;
 	}
 
-	printf("PROCESS WAIT\n");
+	//printf("PROCESS WAIT\n");
 
 	struct process *cur = thread_current()->process;
 
@@ -295,9 +295,9 @@ int process_wait (tid_t child_tid){
 
 	if(childthread != NULL) {
 		cur->child_waiting_on_pid = childthread->process->pid;
-		printf("Waiting on %u process %d from process %d\n", child_tid, child_entry->child_pid, cur->pid);
+		//printf("Waiting on %u process %d from process %d\n", child_tid, child_entry->child_pid, cur->pid);
 		sema_down(&cur->waiting_semaphore);
-		printf("Return from waiting %u process %d\n", child_tid, child_entry->child_pid);
+		//printf("Return from waiting %u process %d\n", child_tid, child_entry->child_pid);
 	}
 	intr_set_level (old_level);
 
@@ -316,7 +316,7 @@ int process_wait (tid_t child_tid){
 void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
-	printf("Exiting process %u\n", cur->process->pid);
+	//printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -344,7 +344,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
-		printf("Parent not null\n");
+		//printf("Parent not null\n");
 
 		//Get our list entry
 		struct list_elem *our_entry =
@@ -358,11 +358,11 @@ void process_exit (void){
 		}
 
 		if (parent->child_waiting_on_pid == cur->process->pid){
-			printf("Waking parent\n");
+			//printf("Waking parent\n");
 			sema_up(&parent->waiting_semaphore);
 		} else {
 			//Debuging for deadlock
-			printf("not waking parent\n");
+			//printf("not waking parent\n");
 		}
 	}
 

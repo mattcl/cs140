@@ -269,13 +269,13 @@ static void syscall_handler (struct intr_frame *f){
 
 //FINISHED
 static void system_halt (struct intr_frame *f UNUSED){
-	printf("SYS_HALT called\n");
+	//printf("SYS_HALT called\n");
 	shutdown_power_off();
 }
 
 //Finished
 static void system_exit (struct intr_frame *f UNUSED, int status) {
-	printf("SYS_EXIT\n");
+	//printf("SYS_EXIT\n");
 	thread_current()->process->exit_code = status;
 	thread_exit();
 	NOT_REACHED();
@@ -283,20 +283,20 @@ static void system_exit (struct intr_frame *f UNUSED, int status) {
 
 //FINISHED
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
-	printf("SYS_EXEC called\n");
+	//printf("SYS_EXEC called\n");
 	if (!string_is_valid(cmd_line)){
 		f->eax = -1;
 		return;
 	}
-	printf("Calling process_exec\n");
+	//printf("Calling process_exec\n");
 	tid_t returned = process_execute(cmd_line);
 	if (returned == TID_ERROR){
 		f->eax = -1;
 		return;
 	}
-	printf("Waiting on pid\n");
+	//printf("Waiting on pid\n");
 	f->eax = child_tid_to_pid(returned);
-	printf("Returning\n");
+	//printf("Returning\n");
 }
 
 //Finished
@@ -332,7 +332,7 @@ static void system_remove(struct intr_frame *f, const char *file_name) {
 
 //finished
 static void system_open (struct intr_frame *f, const char *file_name){
-	printf("SYS_OPEN called\n");
+	//printf("SYS_OPEN called\n");
 	if (!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
@@ -368,7 +368,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 
 //FINISHED
 static void system_filesize(struct intr_frame *f, int fd){
-	//printf("SYS_FILESIZE called\n");
+	////printf("SYS_FILESIZE called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
 		f->eax = -1;
@@ -380,7 +380,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 }
 
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	//printf("SYS_READ called %d %d\n", fd, size);
+	////printf("SYS_READ called %d %d\n", fd, size);
 	if(!buffer_is_valid(buffer, size)) {
 		system_exit(f, -1);
 	}
@@ -417,7 +417,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 //FINISHED
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	//printf("SYS_WRITE called\n");
+	////printf("SYS_WRITE called\n");
 	if (!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
 	}
@@ -457,7 +457,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 }
 
 static void system_seek(struct intr_frame *f, int fd, unsigned int position){
-	printf("SYS_SEEK called\n");
+	//printf("SYS_SEEK called\n");
 	struct file *file = file_for_fd(fd);
 	if(file == NULL){
 		f->eax = -1;
@@ -488,7 +488,7 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 
 //FINISHED
 static void system_tell(struct intr_frame *f, int fd){
-	printf("SYS_TELL called\n");
+	//printf("SYS_TELL called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
 		f->eax = -1;
@@ -502,7 +502,7 @@ static void system_tell(struct intr_frame *f, int fd){
 
 //FINISHED
 static void system_close(struct intr_frame *f UNUSED, int fd ){
-	printf("SYS_CLOSE called\n");
+	//printf("SYS_CLOSE called\n");
 
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	if (entry == NULL){
