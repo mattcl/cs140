@@ -601,15 +601,16 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 }
 
 static bool string_is_valid(const char* str){
-	char c;
+	int c;
 	while (true){
 		printf("Validating string\n");
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
 			return false;
 		}
-		if (c == '\0'){
+		if ((char)c == '\0'){
 			break;
 		}
+		str ++;
 	}
 	return true;
 }
