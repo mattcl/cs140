@@ -1,7 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/synch.h"
 #include "process.h"
@@ -276,7 +275,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 
 //Finished
-void system_exit (struct intr_frame *f UNUSED, int status) {
+void system_exit (struct intr_frame *f, int status) {
 	printf("%s: exit(%d)\n", thread_current()->process->program_name, status);
 	thread_current()->process->exit_code = status;
 	thread_exit();
