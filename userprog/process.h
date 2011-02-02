@@ -78,6 +78,7 @@ struct child_list_entry{
 	pid_t child_pid;
 	tid_t child_tid;
 	int exit_code;
+	bool has_exited;
 	struct list_elem elem;
 };
 
