@@ -102,7 +102,7 @@ tid_t process_execute (const char *file_name) {
 	struct process *cur_process = thread_current()->process;
 
 	// make sure that the new process signals us that it has set up
-	printf("Process %d acquires its child lock\n", cur_process);
+	printf("Process %d acquires its child lock1\n", cur_process);
 	lock_acquire(&cur_process->child_pid_tid_lock);
 	//printf("Waiting on thread create to return\n");
 	/* Create a new thread to execute FILE_NAME. */
@@ -111,7 +111,7 @@ tid_t process_execute (const char *file_name) {
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on, but we can get
 	// it through our child list
-	printf("Process %d waits on its child lock\n", cur_process);
+	printf("Process %d waits on its child lock1\n", cur_process);
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
 
 	if (tid == TID_ERROR){
@@ -549,6 +549,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	process_activate ();
 
 	/* Open executable file. */
+	printf("Process %d acquired BKL\n", t->process->pid);
 	lock_acquire(&filesys_lock);
 	file = filesys_open (f_name);
 	if (file == NULL) {
@@ -643,6 +644,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	done:
 	lock_release(&filesys_lock);
+	printf("Process %d releases BKL\n", t->process->pid);
 	return success;
 }
 
@@ -880,17 +882,20 @@ static struct process *parent_process_from_child (struct process* our_process){
 
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
-        printf("Thead %d is acuiring process->child_pid_tid_lock", thread_current()->process->pid);
+
+	printf("Process %d acquires own child lock", thread_current()->process->pid);
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while ((h = list_next(h)) != list_end(&process->children_list)){
 		if(func(h, c_tid)){
 			lock_release(&process->child_pid_tid_lock);
+			printf("Process %d releases own child lock", thread_current()->process->pid);
 			return h;
 		}
 	}
 	lock_release(&process->child_pid_tid_lock);
+	printf("Process %d releases own child lock", thread_current()->process->pid);
 	return NULL;
 }
 
@@ -945,11 +950,11 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 
 static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	//File close needs to be called here
-  printf("Thread %d acquiring filesys_lock\n", thread_current()->process->pid);
-        lock_acquire(&filesys_lock);
+	printf("Process %d acquiring filesys_lock In destructor\n", thread_current()->process->pid);
+    lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
 	lock_release(&filesys_lock);
-	printf("Thread %d acquiring filesys_lock\n", thread_current()->process->pid);
+	printf("Process %d acquiring filesys_lock In destructor\n", thread_current()->process->pid);
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
