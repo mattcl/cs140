@@ -114,7 +114,7 @@ tid_t process_execute (const char *file_name) {
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
-		return tid;
+		return TID_ERROR;
 	}
 
 	lock_release(&cur_process->child_pid_tid_lock);
@@ -186,8 +186,6 @@ static void start_process (void *file_name_) {
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
-	printf(file_name_);
-
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
 	lock_acquire(&processes_hash_lock);
@@ -234,17 +232,17 @@ static void start_process (void *file_name_) {
 			cle->child_tid = cur->tid;
 			list_push_front(&parent->children_list, &cle->elem);
 			parent->child_waiting_on_pid = cur_process->pid;
+			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+			lock_release(&parent->child_pid_tid_lock);
 		} else {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
 			cur_process->exit_code = PID_ERROR;
-		}
-		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
-		lock_release(&parent->child_pid_tid_lock);
-
-		if (cle == NULL){
+			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+			lock_release(&parent->child_pid_tid_lock);
 			thread_exit();
 		}
+
 	}
 
 	/* Start the user process by simulating a return from an
@@ -354,8 +352,8 @@ void process_exit (void){
 
 		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
-			struct child_list_entry *entry = list_entry(our_entry,
-					struct child_list_entry, elem);
+			struct child_list_entry *entry =
+					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
 		}
 

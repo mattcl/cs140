@@ -286,7 +286,13 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 		f->eax = -1;
 		return;
 	}
-	f->eax = child_tid_to_pid(returned);
+	pid_t ret =  child_tid_to_pid(returned);
+	if (ret == PID_ERROR){
+		f->eax = -1;
+		return;
+	} else {
+		f->eax = ret;
+	}
 }
 
 static void system_wait (struct intr_frame *f, pid_t pid){

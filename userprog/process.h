@@ -12,7 +12,7 @@
 #define MAX_ARG_LENGTH 256
 
 typedef int32_t pid_t;
-#define PID_ERROR ((pid_t) -1)          /* Error value for tid_t. */
+#define PID_ERROR ((pid_t)-1)          /* Error value for tid_t. */
 
 struct lock filesys_lock;
 
