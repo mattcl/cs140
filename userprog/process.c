@@ -851,6 +851,7 @@ static struct process *parent_process_from_child (struct process* our_process){
 
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
+        printf("Thead %d is acuiring process->child_pid_tid_lock", thread_current()->process->pid);
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h;
 	h = list_head(&process->children_list);
@@ -915,9 +916,11 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 
 static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	//File close needs to be called here
-	lock_acquire(&filesys_lock);
+  printf("Thread %d acquiring filesys_lock\n", thread_current()->process->pid);
+        lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
 	lock_release(&filesys_lock);
+	printf("Thread %d acquiring filesys_lock\n", thread_current()->process->pid);
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
