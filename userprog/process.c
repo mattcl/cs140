@@ -392,10 +392,10 @@ void process_exit (void){
 	free(cur_process->program_name);
 
 	free(cur_process);
-
+/*
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
-	lock_release(&filesys_lock);
+	lock_release(&filesys_lock);*/
 
 }
 
