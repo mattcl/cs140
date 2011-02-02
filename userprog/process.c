@@ -541,6 +541,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	}
 
+	t->process->executable_file = file;
+	/* We arrive here whether the load is successful or not. */
 	file_deny_write(t->process->executable_file);
 
 	/* Read program headers. */
@@ -611,9 +613,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
-	t->process->executable_file = file;
-	/* We arrive here whether the load is successful or not. */
-
 	lock_release(&filesys_lock);
 	return success;
 }
