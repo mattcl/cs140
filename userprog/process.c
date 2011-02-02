@@ -374,10 +374,10 @@ void process_exit (void){
 		}
 
 		if (parent->child_waiting_on_pid == cur_process->pid){
-			printf("Waking up the parent\n");
+			printf("Waking up the parent %d\n", parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		} else {
-			printf("Parent wasn't waiting\n");
+			printf("Parent wasn't waiting %d\n", parent->pid);
 		}
 		lock_release(&parent->child_pid_tid_lock);
 	} else {
