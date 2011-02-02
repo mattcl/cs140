@@ -189,7 +189,7 @@ static void start_process (void *file_name_) {
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
-	printf("Start %d\n", cur_process->pid);
+	//printf("Start %d\n", cur_process->pid);
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
 	lock_acquire(&processes_hash_lock);
@@ -278,7 +278,7 @@ int process_wait (tid_t child_tid){
 	// if it has we know that it is dead and we can just
 	// retrieve its exit code. This prevents race conditions
 	// with the child process exiting
-	printf("process wait %d\n", cur->pid);
+	//printf("process wait %d\n", cur->pid);
 	lock_acquire(&processes_hash_lock);
 
 	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
@@ -331,7 +331,7 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
-	printf("Exit %d\n", cur_process->pid);
+	//printf("Exit %d\n", cur_process->pid);
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 	pd = cur->pagedir;
@@ -353,7 +353,7 @@ void process_exit (void){
 	// has either exited or hasn't exited while we update information
 	// Lock prevents a parent from waiting on this process if we get to
 	// the lock first. This ensures that a waiting parent will be woken up
-	printf("Acquiring 1\n");
+	//printf("Acquiring 1\n");
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
@@ -367,11 +367,11 @@ void process_exit (void){
 	if (parent != NULL){
 
 		//Get our list entry
-		printf("Acquiring 2\n");
+		//printf("Acquiring 2\n");
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		printf("Releasing 2\n");
-		printf("Acquiring 3\n");
+		//printf("Releasing 2\n");
+		//printf("Acquiring 3\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
 			struct child_list_entry *entry =
@@ -379,15 +379,15 @@ void process_exit (void){
 			entry->exit_code = cur_process->exit_code;
 		}
 		lock_release(&parent->child_pid_tid_lock);
-		printf("releasing 3\n");
+		//printf("releasing 3\n");
 		//Wake parent up with this if
 		if (parent->child_waiting_on_pid == cur_process->pid){
-			printf("UPPING\n");
+			//printf("UPPING\n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
 	lock_release(&processes_hash_lock);
-	printf("releasing 1\n");
+	//printf("releasing 1\n");
 
 	// Free all open files Done without exterior locking
 	// each file will close with the filesys lock held
@@ -396,7 +396,7 @@ void process_exit (void){
 	// We have already been removed from the list of processes and
 	// thus can't be found by our children. The locking here isn't
 	// necessary but doesn't hurt correctness
-	printf("Acquiring 4\n");
+	//printf("Acquiring 4\n");
 	lock_acquire(&cur_process->child_pid_tid_lock);
 
 	while (!list_empty (&cur_process->children_list)){
@@ -405,15 +405,15 @@ void process_exit (void){
 	}
 
 	lock_release(&cur_process->child_pid_tid_lock);
-	printf("releasing 4\n");
+	//printf("releasing 4\n");
 	free(cur_process->program_name);
 
 	//close our executable allowing write access again
-	printf("Acquiring 5\n");
+	//printf("Acquiring 5\n");
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
-	printf("releasing 5\n");
+	//printf("releasing 5\n");
 
 	free(cur_process);
 }
