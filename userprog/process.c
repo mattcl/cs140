@@ -421,11 +421,11 @@ void process_exit (void){
 
 	free(cur_process);
 
-	printf("Process %d acquired BKL\n", cur_process->pid);
+	printf("Process %d acquired BKL 1\n", cur_process->pid);
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
-	printf("Process %d released BKL\n", cur_process->pid);
+	printf("Process %d released BKL 1\n", cur_process->pid);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -549,7 +549,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	process_activate ();
 
 	/* Open executable file. */
-	printf("Process %d acquired BKL\n", t->process->pid);
+	printf("Process %d acquired BKL 2\n", t->process->pid);
 	lock_acquire(&filesys_lock);
 	file = filesys_open (f_name);
 	if (file == NULL) {
@@ -644,7 +644,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	done:
 	lock_release(&filesys_lock);
-	printf("Process %d releases BKL\n", t->process->pid);
+	printf("Process %d releases BKL 2\n", t->process->pid);
 	return success;
 }
 
