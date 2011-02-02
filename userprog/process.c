@@ -955,6 +955,7 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
 	lock_release(&filesys_lock);
 	printf("Process %d acquiring filesys_lock In destructor\n", thread_current()->process->pid);
+
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
