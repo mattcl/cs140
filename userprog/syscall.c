@@ -603,7 +603,7 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 static bool string_is_valid(const char* str){
 	int c;
 	while (true){
-		printf("Validating string\n");
+		//printf("Validating string\n");
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
 			return false;
 		}
