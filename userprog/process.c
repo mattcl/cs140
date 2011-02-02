@@ -268,6 +268,7 @@ int process_wait (tid_t child_tid){
 	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
 	if (child_entry == NULL){
 		// not one of our children
+		printf("Child entry was null\n");
 		return PID_ERROR;
 	}
 
@@ -292,6 +293,8 @@ int process_wait (tid_t child_tid){
 		lock_release(&cur->child_pid_tid_lock);
 
 		sema_down(&cur->waiting_semaphore);
+	} else {
+		printf("Childthread was null\n");
 	}
 	intr_set_level (old_level);
 
@@ -334,7 +337,7 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	//printf("Exiting process %d\n", cur_process->pid);
+	printf("Exiting process %d\n", cur_process->pid);
 
 	//We are no longer viable processes and are being removed from the
 	// list of processes. The lock here also ensures that our parent
@@ -355,6 +358,7 @@ void process_exit (void){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
+			printf("Setting our entry code\n");
 		}
 
 		if (parent->child_waiting_on_pid == cur_process->pid){

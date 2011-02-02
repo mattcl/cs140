@@ -124,18 +124,15 @@ main (int argc, char *argv[])
   int howmany = is_at_root ? EXPECTED_REPETITIONS : 1;
   int i, expected_depth = -1;
 
-  for (i = 0; i < howmany; i++)
-    {
+  for (i = 0; i < howmany; i++){
       pid_t child_pid;
 
       /* Spawn a child that will be abnormally terminated.
          To speed the test up, do this only for processes
          spawned at a certain depth. */
-      if (n > EXPECTED_DEPTH_TO_PASS/2)
-        {
+      if (n > EXPECTED_DEPTH_TO_PASS/2) {
           child_pid = spawn_child (n + 1, CRASH);
-          if (child_pid != -1)
-            {
+          if (child_pid != -1){
               if (wait (child_pid) != -1)
                 printf ("crashed child should return -1.\n");
             }
@@ -155,29 +152,33 @@ main (int argc, char *argv[])
 
       /* Else wait for child to report how deeply it was able to recurse. */
       int reached_depth = wait (child_pid);
-      if (reached_depth == -1)
+      if (reached_depth == -1){
         printf ("wait returned -1.\n");
-
+        ASSERT(false);
+      }
       /* Record the depth reached during the first run; on subsequent
          runs, fail if those runs do not match the depth achieved on the
          first run. */
-      if (i == 0)
+      if (i == 0){
+    	  //set the expected depth based on the first depth
         expected_depth = reached_depth;
-      else if (expected_depth != reached_depth)
+      }else if (expected_depth != reached_depth){
         printf ("after run %d/%d, expected depth %d, actual depth %d.\n",
               i, howmany, expected_depth, reached_depth);
+      }
       ASSERT (expected_depth == reached_depth);
     }
 
   consume_some_resources ();
 
-  if (n == 0)
-    {
-      if (expected_depth < EXPECTED_DEPTH_TO_PASS)
-        printf ("should have forked at least %d times.\n", EXPECTED_DEPTH_TO_PASS);
-      printf ("success. program forked %d times Reached depth %d.\n", howmany, expected_depth);
-      printf ("end\n");
-    }
+  if (n == 0) {
+	  if (expected_depth < EXPECTED_DEPTH_TO_PASS){
+		  printf ("should have forked at least %d times.\n", EXPECTED_DEPTH_TO_PASS);
+		  ASSERT(false);
+	  }
+	  printf ("success. program forked %d times Reached depth %d.\n", howmany, expected_depth);
+	  printf ("end\n");
+  }
 
   return expected_depth;
 }
