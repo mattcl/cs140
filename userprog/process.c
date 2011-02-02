@@ -304,6 +304,9 @@ int process_wait (tid_t child_tid){
 	// child_entry
 	lock_acquire(&cur->child_pid_tid_lock);
 	int exit_code = child_entry->exit_code;
+
+	// This is lame I think that keeping the exit code for the process
+	// is so much more useful, sigh
 	child_entry->exit_code = -1;
 	lock_release(&cur->child_pid_tid_lock);
 	return exit_code;

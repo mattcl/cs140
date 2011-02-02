@@ -18,7 +18,6 @@
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f );
-static void system_exit (struct intr_frame *f, int status );
 static void system_exec (struct intr_frame *f, const char *cmd_line );
 static void system_wait (struct intr_frame *f, pid_t pid );
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size );
