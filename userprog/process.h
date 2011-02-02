@@ -50,9 +50,11 @@ struct process {
 	struct file *executable_file;
 
 	/* The particular pid this thread is waiting on
-	 * You wait on the pid when you want to know the
-	 * processes pid after it is loaded*/
+	 * If this pid exits it will increment the waiting
+	 * semaphore*/
 	pid_t child_waiting_on_pid;
+
+	bool child_pid_created;
 
 	/*A semaphore that allows us to wait for child pid to exit*/
 	struct semaphore waiting_semaphore;

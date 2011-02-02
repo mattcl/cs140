@@ -106,26 +106,27 @@ tid_t process_execute (const char *file_name) {
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 
-	//wait until the child process is set up or fails
-	// the pid_t will be in child_waiting_on, but we can get
-	// it through our child list
-	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
-
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
 		return TID_ERROR;
 	}
 
+	//wait until the child process is set up or fails. Must
+	// be after we know the thread is running that we wait on the
+	// lock. Our cur_process->child_pid_created field will contain
+	// whether it was successful or not
+	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
+
 	//Check to see if it set up correcly
-	if (cur_process->child_waiting_on_pid == PID_ERROR){
+	if (cur_process->child_pid_created == false){
 		lock_release(&cur_process->child_pid_tid_lock);
 		return TID_ERROR;
 	}
 
 	//If it set up correctly the tid will be in the list
 	// of children for this thread
-	cur_process->child_waiting_on_pid = PID_ERROR;
+	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
 
 	return tid;
@@ -163,9 +164,10 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	lock_init(&p->child_pid_tid_lock);
 	cond_init(&p->pid_cond);
 
-	p->child_waiting_on_pid = 0;
+	p->child_waiting_on_pid = -1;
+	p->child_pid_created = false;
 	our_thread->process = p;
-	p->exit_code = 0;
+	p->exit_code = -1;
 
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *process = hash_insert(&processes, &p->elem);
@@ -197,7 +199,8 @@ static void start_process (void *file_name_) {
 	lock_release(&processes_hash_lock);
 
 	// Parent hasn't exited yet so we can grab their lock
-	// so that they wait until set up is done
+	// so that they wait until set up is done and so we can
+	// signal them when set up is finished
 	if (parent != NULL){
 		printf("parent non null acquiring lock p pid %d\n", parent->pid);
 		lock_acquire(&parent->child_pid_tid_lock);
@@ -225,7 +228,7 @@ static void start_process (void *file_name_) {
 
 		if (parent != NULL){
 			//communicate error with parent
-			parent->child_waiting_on_pid= PID_ERROR;
+			parent->child_pid_created= false;
 			printf("Communicating failure\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
@@ -239,13 +242,13 @@ static void start_process (void *file_name_) {
 			cle->child_pid = cur_process->pid;
 			cle->child_tid = cur->tid;
 			list_push_front(&parent->children_list, &cle->elem);
-			parent->child_waiting_on_pid = cur_process->pid;
+			parent->child_pid_created = true;
 			printf("Success starting %d\n", cur_process->pid);
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		} else {
 			//Failed to allocate a handle on the child
-			parent->child_waiting_on_pid = PID_ERROR;
+			parent->child_pid_created = false;
 			cur_process->exit_code = -1;
 			printf("Failure starting %d\n",cur_process->pid);
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
@@ -313,6 +316,7 @@ int process_wait (tid_t child_tid){
 	//retrieve exit code now, should be in the updated
 	// child_entry
 	lock_acquire(&cur->child_pid_tid_lock);
+	cur->child_waiting_on_pid = -1; // NOT WAITING ON ANYTHING
 	int exit_code = child_entry->exit_code;
 
 	// This is lame I think that keeping the exit code for the process
