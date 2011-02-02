@@ -366,7 +366,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 
 //FINISHED
 static void system_filesize(struct intr_frame *f, int fd){
-	printf("SYS_FILESIZE called\n");
+	//printf("SYS_FILESIZE called\n");
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
 		f->eax = -1;
@@ -378,13 +378,13 @@ static void system_filesize(struct intr_frame *f, int fd){
 }
 
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	printf("SYS_READ called\n");
+	printf("SYS_READ called %d %d\n", fd, size);
 	if(!buffer_is_valid(buffer, size)) {
 		system_exit(f, -1);
 	}
 
 	if(fd == STDOUT_FILENO){
-		system_exit(f, -1);
+		f->eax = 0;
 	}
 
 	unsigned int bytes_read ;
@@ -392,11 +392,9 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	char *charBuffer = (char*) buffer;
 
 	if(fd == STDIN_FILENO) {
-
 		for( bytes_read = 0; bytes_read <  size ; ++bytes_read){
 			charBuffer[bytes_read]= input_getc();
 		}
-
 		f->eax = bytes_read;
 		return;
 	}
@@ -413,8 +411,6 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	bytes_read = file_read(file, buffer, size);
 	lock_release(&filesys_lock);
 	f->eax = bytes_read;
-
-
 }
 
 //FINISHED
