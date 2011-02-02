@@ -284,7 +284,11 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
+
+		lock_acquire(&cur->child_pid_tid_lock);
 		cur->child_waiting_on_pid = childthread->process->pid;
+		lock_release(&cur->child_pid_tid_lock);
+
 		sema_down(&cur->waiting_semaphore);
 	}
 
@@ -341,17 +345,18 @@ void process_exit (void){
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+
+		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
-			lock_acquire(&parent->child_pid_tid_lock);
 			struct child_list_entry *entry = list_entry(our_entry,
 					struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
-			lock_release(&parent->child_pid_tid_lock);
 		}
 
 		if (parent->child_waiting_on_pid == cur->process->pid){
 			sema_up(&parent->waiting_semaphore);
 		}
+		lock_release(&parent->child_pid_tid_lock);
 	}
 
 	lock_release(&processes_hash_lock);
