@@ -298,7 +298,7 @@ int process_wait (tid_t child_tid){
 	// Wait for process to signal us
 	//If child == NULL it has already exited
 	if(child != NULL){
-		cur->child_waiting_on_pid = child->child_pid_created;
+		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
 	} else {
