@@ -268,13 +268,13 @@ int process_wait (tid_t child_tid){
 	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
 	if (child_entry == NULL){
 		// not one of our children
-		printf("Child entry was null\n");
+		//printf("Child entry was null\n");
 		return PID_ERROR;
 	}
 
 	struct process *cur = thread_current()->process;
 
-	printf("%d is waiting on %d\n", cur->pid, child_entry->child_pid);
+	//printf("%d is waiting on %d\n", cur->pid, child_entry->child_pid);
 
 	//Doing this with interrupts disabled because
 	// the child thread could begin thread exit in between
@@ -287,14 +287,14 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
-		printf("Actually waiting\n");
+		//printf("Actually waiting\n");
 		lock_acquire(&cur->child_pid_tid_lock);
 		cur->child_waiting_on_pid = childthread->process->pid;
 		lock_release(&cur->child_pid_tid_lock);
 
 		sema_down(&cur->waiting_semaphore);
 	} else {
-		printf("Childthread was null\n");
+		//printf("Childthread was null\n");
 	}
 	intr_set_level (old_level);
 
@@ -308,7 +308,7 @@ int process_wait (tid_t child_tid){
 	child_entry->exit_code = -1;
 
 	lock_release(&cur->child_pid_tid_lock);
-	printf("Returning %d \n", exit_code);
+	//printf("Returning %d \n", exit_code);
 	return exit_code;
 }
 
@@ -337,7 +337,7 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	printf("Exiting process %d\n", cur_process->pid);
+	//printf("Exiting process %d\n", cur_process->pid);
 
 	//We are no longer viable processes and are being removed from the
 	// list of processes. The lock here also ensures that our parent
@@ -348,7 +348,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
-		printf("Parent was non null\n");
+		//printf("Parent was non null\n");
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -358,18 +358,18 @@ void process_exit (void){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
-			printf("Setting our entry code\n");
+		//	printf("Setting our entry code %d\n", cur_process->exit_code);
 		}
 
 		if (parent->child_waiting_on_pid == cur_process->pid){
 			printf("Waking up the parent\n");
-			sema_up(&parent->waiting_semaphore);
+			//sema_up(&parent->waiting_semaphore);
 		} else {
-			printf("Parent wasn't waiting\n");
+			//printf("Parent wasn't waiting\n");
 		}
 		lock_release(&parent->child_pid_tid_lock);
 	} else {
-		printf("Parent was null\n");
+		//printf("Parent was null\n");
 	}
 
 	lock_release(&processes_hash_lock);
