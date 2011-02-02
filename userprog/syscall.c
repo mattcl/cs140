@@ -145,7 +145,7 @@ static void syscall_handler (struct intr_frame *f){
 	int error = 0;
 
 	uint32_t sp = get_user_int(&f->esp, &error);
-	if (error < 0)system_exit(f, -1);
+	if (error < 0) system_exit(f, -1);
 
 	void *esp = (void*) sp;
 
@@ -163,7 +163,7 @@ static void syscall_handler (struct intr_frame *f){
 	}
 	case SYS_EXIT:{
 		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
+		if (error < 0) system_exit(f, -1);
 		system_exit(f, (int)arg1[0]);
 		break;
 	}
