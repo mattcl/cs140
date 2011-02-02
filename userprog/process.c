@@ -419,13 +419,13 @@ void process_exit (void){
 
 	free(cur_process->program_name);
 
-	free(cur_process);
-
 	printf("Process %d acquired BKL 1\n", cur_process->pid);
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	printf("Process %d released BKL 1\n", cur_process->pid);
+
+	free(cur_process);
 }
 
 /* Sets up the CPU for running user code in the current
