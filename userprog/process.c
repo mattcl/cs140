@@ -213,7 +213,6 @@ static void start_process (void *file_name_) {
 	if_.eflags = FLAG_IF | FLAG_MBS;
 	success = load (file_name, &if_.eip, &if_.esp);
 
-	/* If load failed, quit. */
 	palloc_free_page (file_name);
 
 	if (!success) {
@@ -305,6 +304,10 @@ int process_wait (tid_t child_tid){
 	// child_entry
 	lock_acquire(&cur->child_pid_tid_lock);
 	int exit_code = child_entry->exit_code;
+
+	// This is lame I think that keeping the exit code for the process
+	// is so much more useful, sigh
+	child_entry->exit_code = -1;
 	lock_release(&cur->child_pid_tid_lock);
 	return exit_code;
 }
@@ -386,7 +389,13 @@ void process_exit (void){
 	}
 	lock_release(&cur_process->child_pid_tid_lock);
 
+	free(cur_process->program_name);
+
 	free(cur_process);
+/*
+	lock_acquire(&filesys_lock);
+	file_close(cur_process->executable_file);
+	lock_release(&filesys_lock);*/
 
 }
 
@@ -490,12 +499,16 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
 	strlcpy(arg_buffer, file_name, len);
 	
-
 	char *f_name, *token, *save_ptr;
 	
 	// extract the filename from the args
 	f_name = strtok_r(arg_buffer, " ", &save_ptr);
 	token = strtok_r(NULL, " ", &save_ptr);
+
+	size_t fn_len = strlen(f_name) + 1;
+	t->process->program_name = calloc( fn_len , sizeof(char));
+	ASSERT(t->process->program_name != NULL);
+	strlcpy(t->process->program_name, f_name , fn_len);
 
 	// ---------- END CHANGES ----------//
 
@@ -527,6 +540,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 		goto done;
 
 	}
+
+	t->process->executable_file = file;
+	/* We arrive here whether the load is successful or not. */
+	file_deny_write(t->process->executable_file);
 
 	/* Read program headers. */
 	file_ofs = ehdr.e_phoff;
@@ -596,8 +613,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
-	/* We arrive here whether the load is successful or not. */
-	file_close (file);
 	lock_release(&filesys_lock);
 	return success;
 }
@@ -895,7 +910,7 @@ static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 }
 
 static unsigned file_hash_func (HASH_ELEM *e, AUX){
-	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
+	return hash_bytes(&hash_entry(e, struct fd_hash_entry, elem)->fd, sizeof(int));
 }
 
 static void fd_hash_entry_destroy (struct hash_elem *e, AUX){

@@ -1,7 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/synch.h"
 #include "process.h"
@@ -18,7 +17,6 @@
 static void syscall_handler (struct intr_frame *);
 
 static void system_halt (struct intr_frame *f );
-static void system_exit (struct intr_frame *f, int status );
 static void system_exec (struct intr_frame *f, const char *cmd_line );
 static void system_wait (struct intr_frame *f, pid_t pid );
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size );
@@ -144,6 +142,9 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 static void syscall_handler (struct intr_frame *f){
 	int error = 0;
 
+	get_user_int(f->esp, &error);
+	if (error < 0) system_exit(f, -1);
+
 	void *esp = f->esp;
 
 	int sys_call_num = get_user_int((uint32_t*)esp, &error);
@@ -160,7 +161,7 @@ static void syscall_handler (struct intr_frame *f){
 	}
 	case SYS_EXIT:{
 		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
+		if (error < 0) system_exit(f, -1);
 		system_exit(f, (int)arg1[0]);
 		break;
 	}
@@ -274,8 +275,8 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 
 //Finished
-static void system_exit (struct intr_frame *f UNUSED, int status) {
-	//printf("SYS_EXIT\n");
+void system_exit (struct intr_frame *f, int status) {
+	printf("%s: exit(%d)\n", thread_current()->process->program_name, status);
 	thread_current()->process->exit_code = status;
 	thread_exit();
 	NOT_REACHED();
@@ -353,7 +354,11 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		return;
 	}
 
+	fd_entry->fd = ++(process->fd_count);
+	fd_entry->open_file = opened_file;
+
 	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
+
 	if (returned != NULL){
 		// We have just tried to put the fd of an identical fd into the hash
 		// Table this is a problem with the hash table and should fail the kernel
@@ -361,8 +366,6 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
-	fd_entry->fd =++ process->fd_count;
-	fd_entry->open_file = opened_file;
 	f->eax = fd_entry->fd;
 }
 
@@ -372,6 +375,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
 		f->eax = -1;
+		return;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -387,6 +391,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 	if(fd == STDOUT_FILENO){
 		f->eax = 0;
+		return;
 	}
 
 	unsigned int bytes_read ;
@@ -400,7 +405,6 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		f->eax = bytes_read;
 		return;
 	}
-
 
 	struct file * file = file_for_fd(fd);
 
@@ -464,6 +468,10 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 		return;
 	}
 
+	if (fd == STDIN_FILENO){
+		f->eax = -1;
+		return;
+	}
 
 	lock_acquire(&filesys_lock);
 	off_t f_size = file_length(file);
@@ -508,6 +516,10 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	if (entry == NULL){
 		return;
 	}
+
+	//if fd was stdin or stdout it CAN'T be in the
+	// fd table so it won't get here if STDIN or STDOUT
+	// is passed in
 
 	lock_acquire(&filesys_lock);
 	file_close(entry->open_file);
