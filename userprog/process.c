@@ -273,7 +273,7 @@ int process_wait (tid_t child_tid){
 
 	struct process *cur = thread_current()->process;
 
-	//printf("%d is waiting on %d\n", cur->pid, child_entry->child_pid);
+	printf("%d is waiting on %d\n", cur->pid, child_entry->child_pid);
 
 	//Doing this with interrupts disabled because
 	// the child thread could begin thread exit in between
@@ -286,7 +286,7 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
-		//printf("Actually waiting\n");
+		printf("Actually waiting\n");
 		lock_acquire(&cur->child_pid_tid_lock);
 		cur->child_waiting_on_pid = childthread->process->pid;
 		lock_release(&cur->child_pid_tid_lock);
@@ -305,7 +305,7 @@ int process_wait (tid_t child_tid){
 	child_entry->exit_code = -1;
 
 	lock_release(&cur->child_pid_tid_lock);
-	//printf("Returning %d \n", exit_code);
+	printf("Returning %d \n", exit_code);
 	return exit_code;
 }
 
@@ -345,7 +345,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
-		//printf("Parent was non null\n");
+		printf("Parent was non null\n");
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -358,15 +358,15 @@ void process_exit (void){
 		}
 
 		if (parent->child_waiting_on_pid == cur_process->pid){
-			//printf("Waking up the parent\n");
+			printf("Waking up the parent\n");
 			sema_up(&parent->waiting_semaphore);
 		} else {
-			//printf("Parent wasn't waiting\n");
+			printf("Parent wasn't waiting\n");
 		}
 		lock_release(&parent->child_pid_tid_lock);
-	} //else {
-		//printf("Parent was null\n");
-	//}
+	} else {
+		printf("Parent was null\n");
+	}
 
 	lock_release(&processes_hash_lock);
 
