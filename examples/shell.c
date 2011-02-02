@@ -63,7 +63,10 @@ read_line (char line[], size_t size)
           *pos = '\0';
           putchar ('\n');
           return;
-
+        case '\n':
+        	*pos = '\0';
+        	putchar('\n');
+        	return;
         case '\b':
           backspace (&pos, line);
           break;
