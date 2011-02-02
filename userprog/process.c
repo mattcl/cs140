@@ -102,24 +102,30 @@ tid_t process_execute (const char *file_name) {
 	struct process *cur_process = thread_current()->process;
 
 	// make sure that the new process signals us that it has set up
+	printf("Process %d acquires its child lock\n", cur_process);
 	lock_acquire(&cur_process->child_pid_tid_lock);
 	//printf("Waiting on thread create to return\n");
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-	if (tid == TID_ERROR){
-		palloc_free_page (fn_copy);
-		lock_release(&cur_process->child_pid_tid_lock);
-		return tid;
-	}
 
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on, but we can get
 	// it through our child list
+	printf("Process %d waits on its child lock\n", cur_process);
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
+
+	if (tid == TID_ERROR){
+		palloc_free_page (fn_copy);
+		lock_release(&cur_process->child_pid_tid_lock);
+		printf("Process %d releases its child lock\n", cur_process);
+		return tid;
+	}
 
 	//printf("Returned from waiting on child\n");
 
+
 	lock_release(&cur_process->child_pid_tid_lock);
+	printf("Process %d releases its child lock\n", cur_process);
 
 	//Check to see if it set up correcly
 	if (cur_process->child_waiting_on_pid == PID_ERROR){
@@ -167,9 +173,12 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	our_thread->process = p;
 	p->exit_code = 0;
 
+	printf("Process %d acquires process lock\n", p->parent_id);
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *process = hash_insert(&processes, &p->elem);
+
 	lock_release(&processes_hash_lock);
+	printf("Process %d releases process lock\n", p->parent_id);
 
 	// returns something if it wasn't inserted of NULL if it
 	// was inserted. Go Figure. If process == NULL all is good
@@ -189,14 +198,18 @@ static void start_process (void *file_name_) {
 
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
+	printf("Process %d acquires process lock\n", cur_process->pid);
 	lock_acquire(&processes_hash_lock);
 	struct process *parent = parent_process_from_child(cur_process);
+
 	lock_release(&processes_hash_lock);
+	printf("Process %d releases process lock\n", cur_process->pid);
 
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done
 	if (parent != NULL){
 		//printf("Parent not null in start \n");
+		printf("Process %d acquired parent %d child lock\n", cur_process->pid, parent->pid);
 		lock_acquire(&parent->child_pid_tid_lock);
 	}  else {
 		//printf("Parent was null in start\n");
@@ -223,6 +236,7 @@ static void start_process (void *file_name_) {
 			//printf("Signalling parent failure\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
+			printf("Process %d release and signal parent %d child lock\n", cur_process->pid, parent->pid);
 		}
 		// Calls process Exit to clean up process and set error
 		// code for the parent to retrieve
@@ -241,16 +255,20 @@ static void start_process (void *file_name_) {
 		} else {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
+			cur_process->exit_code = PID_ERROR;
 		}
 		//printf("Signalling parent success\n");
 		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 		lock_release(&parent->child_pid_tid_lock);
+		printf("Process %d release and signal parent %d child lock\n", cur_process->pid, parent->pid);
 
 		if (cle == NULL){
-			cur_process->exit_code = PID_ERROR;
 			thread_exit();
 		}
 	}
+
+	printf("Process %d LEAVES KERNEL SPACE\n", cur_process->pid);
+
 
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -294,7 +312,7 @@ int process_wait (tid_t child_tid){
 
 	if(childthread != NULL) {
 		cur->child_waiting_on_pid = childthread->process->pid;
-		//printf("Waiting on %u process %d from process %d\n", child_tid, child_entry->child_pid, cur->pid);
+		printf("Waiting on %u process %d from process %d\n", child_tid, child_entry->child_pid, cur->pid);
 		sema_down(&cur->waiting_semaphore);
 		//printf("Return from waiting %u process %d\n", child_tid, child_entry->child_pid);
 	}
@@ -302,13 +320,17 @@ int process_wait (tid_t child_tid){
 
 	//retrieve exit code now, should be in the updated
 	// child_entry
+	printf("Process %d acquired own child lock\n", cur->pid);
 	lock_acquire(&cur->child_pid_tid_lock);
 	int exit_code = child_entry->exit_code;
 
 	// This is lame I think that keeping the exit code for the process
 	// is so much more useful, sigh
 	child_entry->exit_code = -1;
+
 	lock_release(&cur->child_pid_tid_lock);
+	printf("Process %d released own child lock\n", cur->pid);
+
 	return exit_code;
 }
 
@@ -341,6 +363,7 @@ void process_exit (void){
 	//We are no longer viable processes and are being removed from the
 	// list of processes. The lock here also ensures that our parent
 	// has either exited or hasn't exited while we update information
+	printf("Process %d acquired proccess lock\n", cur_process->pid);
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
@@ -353,15 +376,17 @@ void process_exit (void){
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 		if (our_entry != NULL){
+			printf("Process %d acquire parent %d child lock\n", cur_process->pid, parent->pid);
 			lock_acquire(&parent->child_pid_tid_lock);
 			struct child_list_entry *entry = list_entry(our_entry,
 					struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
 			lock_release(&parent->child_pid_tid_lock);
+			printf("Process %d released parent %d child lock\n", cur_process->pid, parent->pid);
 		}
 
 		if (parent->child_waiting_on_pid == cur->process->pid){
-			//printf("Waking parent\n");
+			printf("Process %d wakes up parent %d \n", cur_process->pid, parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		} else {
 			//Debuging for deadlock
@@ -370,6 +395,7 @@ void process_exit (void){
 	}
 
 	lock_release(&processes_hash_lock);
+	printf("Process %d released process lock\n", cur_process->pid);
 
 	if( deleted != &cur_process->elem){
 		// We pulled out a different proccess with the same pid... uh oh
@@ -382,21 +408,24 @@ void process_exit (void){
 	// We have already been removed from the list of processes and
 	// thus can't be found by our children. The locking here isn't
 	// necessary but doesn't hurt correctness
+	printf("Process %d acquired own child lock\n", cur_process->pid);
 	lock_acquire(&cur_process->child_pid_tid_lock);
 	while (!list_empty (&cur_process->children_list)){
 	       struct list_elem *e = list_pop_front (&cur_process->children_list);
 	       free (list_entry(e, struct child_list_entry, elem));
 	}
 	lock_release(&cur_process->child_pid_tid_lock);
+	printf("Process %d released own child lock\n", cur_process->pid);
 
 	free(cur_process->program_name);
 
 	free(cur_process);
-/*
+
+	printf("Process %d acquired BKL\n", cur_process->pid);
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
-	lock_release(&filesys_lock);*/
-
+	lock_release(&filesys_lock);
+	printf("Process %d released BKL\n", cur_process->pid);
 }
 
 /* Sets up the CPU for running user code in the current
