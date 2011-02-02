@@ -360,21 +360,17 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
+		lock_acquire(&parent->child_pid_tid_lock);
 		//Get our list entry
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 
-
-		// we lock this so that we can add our entry to the parents
-		// exit_code list without race conditions from other children
-		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
 		}
 		lock_release(&parent->child_pid_tid_lock);
-
 
 		//Wake parent up with this if
 		if (parent->child_waiting_on_pid == cur_process->pid){
