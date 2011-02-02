@@ -51,21 +51,25 @@ struct process {
 
 	/* The particular pid this thread is waiting on
 	 * If this pid exits it will increment the waiting
-	 * semaphore*/
+	 * semaphore. Only used for process wait/exit*/
 	pid_t child_waiting_on_pid;
 
-	bool child_pid_created;
-
-	/*A semaphore that allows us to wait for child pid to exit*/
+	/*A semaphore that allows us to wait for child pid to exit
+	 * only used in wait/exit*/
 	struct semaphore waiting_semaphore;
 
+	/* Whether the child pid was successfully created or not
+	 * only used for only used in processExecute/start_process*/
+	bool child_pid_created;
+
 	/* The condition of whether a process created with exec finished
-	   loading */
+	   loading
+	   only used for only used in processExecute/start_process*/
 	struct condition pid_cond;
 
 	/* The child process can't complete its creation until
 	 * it acquires this lock given that it exists I.E. that the parent
-	 * exists still*/
+	 * exists still. USED wherever any of the last 4 objects are used*/
 	struct lock child_pid_tid_lock;
 
 };
