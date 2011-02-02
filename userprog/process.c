@@ -102,7 +102,7 @@ tid_t process_execute (const char *file_name) {
 	struct process *cur_process = thread_current()->process;
 
 	// make sure that the new process signals us that it has set up
-	printf("Process %d acquires its child lock1\n", cur_process);
+	printf("Process %d acquires its child lock1\n", cur_process->pid);
 	lock_acquire(&cur_process->child_pid_tid_lock);
 	//printf("Waiting on thread create to return\n");
 	/* Create a new thread to execute FILE_NAME. */
@@ -111,13 +111,13 @@ tid_t process_execute (const char *file_name) {
 	//wait until the child process is set up or fails
 	// the pid_t will be in child_waiting_on, but we can get
 	// it through our child list
-	printf("Process %d waits on its child lock1\n", cur_process);
+	printf("Process %d waits on its child lock1\n", cur_process->pid);
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
 
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
-		printf("Process %d releases its child lock\n", cur_process);
+		printf("Process %d releases its child lock\n", cur_process->pid);
 		return tid;
 	}
 
@@ -125,7 +125,7 @@ tid_t process_execute (const char *file_name) {
 
 
 	lock_release(&cur_process->child_pid_tid_lock);
-	printf("Process %d releases its child lock\n", cur_process);
+	printf("Process %d releases its child lock\n", cur_process->pid);
 
 	//Check to see if it set up correcly
 	if (cur_process->child_waiting_on_pid == PID_ERROR){
@@ -883,19 +883,19 @@ static struct process *parent_process_from_child (struct process* our_process){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 
-	printf("Process %d acquires own child lock", thread_current()->process->pid);
+	printf("Process %d acquires own child lock\n", thread_current()->process->pid);
 	lock_acquire(&process->child_pid_tid_lock);
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while ((h = list_next(h)) != list_end(&process->children_list)){
 		if(func(h, c_tid)){
 			lock_release(&process->child_pid_tid_lock);
-			printf("Process %d releases own child lock", thread_current()->process->pid);
+			printf("Process %d releases own child lock\n", thread_current()->process->pid);
 			return h;
 		}
 	}
 	lock_release(&process->child_pid_tid_lock);
-	printf("Process %d releases own child lock", thread_current()->process->pid);
+	printf("Process %d releases own child lock\n", thread_current()->process->pid);
 	return NULL;
 }
 
