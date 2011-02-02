@@ -240,14 +240,14 @@ static void start_process (void *file_name_) {
 			cle->child_tid = cur->tid;
 			list_push_front(&parent->children_list, &cle->elem);
 			parent->child_waiting_on_pid = cur_process->pid;
-			printf("Success starting %d\n");
+			printf("Success starting %d\n", cur_process->pid);
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		} else {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
-			cur_process->exit_code = PID_ERROR;
-			printf("Failure starting %d\n");
+			cur_process->exit_code = -1;
+			printf("Failure starting %d\n",cur_process->pid);
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 			thread_exit();
@@ -255,7 +255,7 @@ static void start_process (void *file_name_) {
 
 	}
 
-	printf("Process %d enters user space\n");
+	printf("Process %d enters user space\n",cur_process->pid);
 
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
