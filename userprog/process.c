@@ -103,7 +103,7 @@ tid_t process_execute (const char *file_name) {
 
 	// make sure that the new process signals us that it has set up
 	lock_acquire(&cur_process->child_pid_tid_lock);
-
+	if (debug){printf("Waiting on thread create to return\n");};
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	if (tid == TID_ERROR){
@@ -117,7 +117,7 @@ tid_t process_execute (const char *file_name) {
 	// it through our child list
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
 
-	if(debug){printf("Should have waited till child set up\n");}
+	printf("Should have waited till child set up\n");
 
 	lock_release(&cur_process->child_pid_tid_lock);
 
@@ -196,10 +196,10 @@ static void start_process (void *file_name_) {
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done
 	if (parent != NULL){
-		if(debug){printf("Parent not null in start \n");}
+		printf("Parent not null in start \n");
 		lock_acquire(&parent->child_pid_tid_lock);
 	}  else {
-		if(debug){printf("Parent was null in start\n");}
+		printf("Parent was null in start\n");
 	}
 
 	char *file_name = file_name_;
@@ -221,7 +221,7 @@ static void start_process (void *file_name_) {
 		if (parent != NULL){
 			//communicate error with parent
 			parent->child_waiting_on_pid= PID_ERROR;
-			if(debug){printf("Signalling parent\n");}
+			printf("Signalling parent\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		}
@@ -230,7 +230,7 @@ static void start_process (void *file_name_) {
 		cur_process->exit_code = PID_ERROR;
 		thread_exit ();
 	}
-	//if(debug){printf("Finished loading\n");}
+	//printf("Finished loading\n");
 
 	if (parent != NULL){
 		struct child_list_entry *cle = calloc(1, sizeof(struct child_list_entry));
@@ -243,7 +243,7 @@ static void start_process (void *file_name_) {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
 		}
-		if(debug){printf("Signalling parent\n");}
+		printf("Signalling parent\n");
 		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 		lock_release(&parent->child_pid_tid_lock);
 
@@ -279,7 +279,7 @@ int process_wait (tid_t child_tid){
 		return PID_ERROR;
 	}
 
-	if(debug){printf("PROCESS WAIT ON %u\n", child_tid);}
+	printf("PROCESS WAIT ON %u\n", child_tid);
 
 	struct process *cur = thread_current()->process;
 
@@ -294,11 +294,11 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
-		if(debug){printf("Waiting on child!!!!\n");}
+		printf("Waiting on child!!!!\n");
 		cur->child_waiting_on_pid = childthread->process->pid;
-		if(debug){printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);}
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);
 		sema_down(&cur->waiting_semaphore);
-		if(debug){printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);}
+		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);
 	}
 	intr_set_level (old_level);
 
@@ -317,7 +317,7 @@ int process_wait (tid_t child_tid){
 void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
-	if(debug){printf("Exiting process %u\n", cur->process->pid);}
+	printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -345,7 +345,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if (parent != NULL){
-		if(debug){printf("Parent not null\n");}
+		printf("Parent not null\n");
 
 		//Get our list entry
 		struct list_elem *our_entry =
@@ -359,11 +359,11 @@ void process_exit (void){
 		}
 
 		if (parent->child_waiting_on_pid == cur->process->pid){
-			if(debug){printf("Waking parent\n");}
+			printf("Waking parent\n");
 			sema_up(&parent->waiting_semaphore);
 		} else {
 			//Debuging for deadlock
-			if(debug){printf("not waking parent\n");}
+			printf("not waking parent\n");
 		}
 	}
 
@@ -614,7 +614,7 @@ static inline void adjust_stack_ptr(void **esp, size_t length){
 
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr){
-	//if(debug){printf("Setup stack\n");}
+	//printf("Setup stack\n");
 	void *strPtrs[128];
 	int count = 0;
 	int i = 0;
@@ -628,7 +628,7 @@ static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_p
 	strlcpy(*esp, f_name, fn_len);
 
 	strPtrs[0] = *esp;
-	//if(debug){printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);}
+	//printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
@@ -639,40 +639,40 @@ static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_p
 
 		//put stuff into the stack
 		strlcpy(*esp, token, arg_len);
-		//if(debug){printf("ESP %p %s %s\n", *esp, *(char**)esp, token);}
+		//printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
 		strPtrs[++count] = *esp;
 
 	}
 
 	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
-	//if(debug){printf("ESP %p\n", *esp);}
+	//printf("ESP %p\n", *esp);
 
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
-	//if(debug){printf("ESP %p, %d\n", *esp, **(int**)esp);}
+	//printf("ESP %p, %d\n", *esp, **(int**)esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		//if(debug){printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);}
+		//printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
 	}
 
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
-	//if(debug){printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);}
+	//printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
 
 	// set argc (Count was an index but needs to be the number of args including filename)
 	push_4_byte_data(esp, (void*)(count+1));
 
-	//if(debug){printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);}
+	//printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
 
 	//push return address
 	push_4_byte_data(esp , NULL);
-	//if(debug){printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);}
+	//printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
 
-	//if(debug){printf("Returning from setting up stack %p\n", *esp);}
+	//printf("Returning from setting up stack %p\n", *esp);
 	return true;
 
 }

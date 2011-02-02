@@ -285,16 +285,18 @@ static void system_exit (struct intr_frame *f UNUSED, int status) {
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	printf("SYS_EXEC called\n");
 	if (!string_is_valid(cmd_line)){
-		system_exit(f, -1);
+		f->eax = -1;
+		return;
 	}
-
+	printf("Calling process_exec\n");
 	tid_t returned = process_execute(cmd_line);
 	if (returned == TID_ERROR){
 		f->eax = -1;
 		return;
 	}
-
+	printf("Waiting on pid\n");
 	f->eax = child_tid_to_pid(returned);
+	printf("Returning\n");
 }
 
 //Finished
