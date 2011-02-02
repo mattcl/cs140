@@ -237,7 +237,6 @@ static void start_process (void *file_name_) {
 		if(cle != NULL){
 			cle->child_pid = cur_process->pid;
 			cle->child_tid = cur->tid;
-			cle->has_exited = false;
 			list_push_front(&parent->children_list, &cle->elem);
 			parent->child_pid_created = true;
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
@@ -288,18 +287,14 @@ int process_wait (tid_t child_tid){
 	}
 
 	struct process *child = process_lookup(child_entry->child_pid);
-	if (child == NULL){
-		// We have inconsistency with our list structure
-		PANIC("INCONSISTENCY DETECTED!!!!");
-	}
-
 
 	//We know that the process can't exit untill it acquires the process
 	// lock so set the waiting pid to its process pid so that it will
 	// signal us when it is done exiting
 
 	// Wait for process to signal us
-	if(!child_entry->has_exited){
+	//If child == NULL it has already exited
+	if(child != NULL){
 		cur->child_waiting_on_pid = child->child_pid_created;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
