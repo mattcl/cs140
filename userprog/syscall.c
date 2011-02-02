@@ -380,7 +380,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 }
 
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	printf("SYS_READ called %d %d\n", fd, size);
+	//printf("SYS_READ called %d %d\n", fd, size);
 	if(!buffer_is_valid(buffer, size)) {
 		system_exit(f, -1);
 	}
@@ -603,12 +603,13 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 static bool string_is_valid(const char* str){
 	char c;
 	while (true){
+		printf("Validating string\n");
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
 			return false;
 		}
 		if (c == '\0'){
-			return true;
+			break;
 		}
 	}
-
+	return true;
 }
