@@ -137,7 +137,7 @@ main (int argc, char *argv[])
           if (child_pid != -1)
             {
               if (wait (child_pid) != -1)
-                printf ("crashed child should return -1.");
+                printf ("crashed child should return -1.\n");
             }
           /* If spawning this child failed, so should
              the next spawn_child below. */
@@ -156,7 +156,7 @@ main (int argc, char *argv[])
       /* Else wait for child to report how deeply it was able to recurse. */
       int reached_depth = wait (child_pid);
       if (reached_depth == -1)
-        printf ("wait returned -1.");
+        printf ("wait returned -1.\n");
 
       /* Record the depth reached during the first run; on subsequent
          runs, fail if those runs do not match the depth achieved on the
@@ -164,7 +164,7 @@ main (int argc, char *argv[])
       if (i == 0)
         expected_depth = reached_depth;
       else if (expected_depth != reached_depth)
-        printf ("after run %d/%d, expected depth %d, actual depth %d.",
+        printf ("after run %d/%d, expected depth %d, actual depth %d.\n",
               i, howmany, expected_depth, reached_depth);
       ASSERT (expected_depth == reached_depth);
     }
@@ -174,9 +174,9 @@ main (int argc, char *argv[])
   if (n == 0)
     {
       if (expected_depth < EXPECTED_DEPTH_TO_PASS)
-        printf ("should have forked at least %d times.", EXPECTED_DEPTH_TO_PASS);
-      printf ("success. program forked %d times Reached depth %d.", howmany, expected_depth);
-      printf ("end");
+        printf ("should have forked at least %d times.\n", EXPECTED_DEPTH_TO_PASS);
+      printf ("success. program forked %d times Reached depth %d.\n", howmany, expected_depth);
+      printf ("end\n");
     }
 
   return expected_depth;
