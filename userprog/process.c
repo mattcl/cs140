@@ -189,6 +189,7 @@ static void start_process (void *file_name_) {
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
+	printf("Start %d\n", cur_process->pid);
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
 	lock_acquire(&processes_hash_lock);
@@ -277,6 +278,7 @@ int process_wait (tid_t child_tid){
 	// if it has we know that it is dead and we can just
 	// retrieve its exit code. This prevents race conditions
 	// with the child process exiting
+	printf("process wait %d\n", cur->pid);
 	lock_acquire(&processes_hash_lock);
 
 	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
@@ -285,6 +287,7 @@ int process_wait (tid_t child_tid){
 		lock_release(&processes_hash_lock);
 		return PID_ERROR;
 	}
+
 
 	struct process *child = process_lookup(child_entry->child_pid);
 
@@ -324,10 +327,11 @@ int process_wait (tid_t child_tid){
  * And signals the parent that it has finished,
  * if the parent still exists and is waiting*/
 void process_exit (void){
+
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
-
+	printf("Exit %d\n", cur_process->pid);
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 	pd = cur->pagedir;
