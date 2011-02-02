@@ -498,7 +498,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	token = strtok_r(NULL, " ", &save_ptr);
 
 	size_t fn_len = strlen(f_name) + 1;
-	t->process->program_name = malloc( fn_len );
+	t->process->program_name = calloc( fn_len , sizeof(char));
 	ASSERT(t->process->program_name != NULL);
 	strlcpy(t->process->program_name, f_name , fn_len);
 
