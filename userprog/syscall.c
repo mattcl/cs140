@@ -144,10 +144,10 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 static void syscall_handler (struct intr_frame *f){
 	int error = 0;
 
-	uint32_t sp = get_user_int(&f->esp, &error);
+	uint32_t sp = get_user_int(f->esp, &error);
 	if (error < 0) system_exit(f, -1);
 
-	void *esp = (void*) sp;
+	void *esp = f->esp;
 
 	int sys_call_num = get_user_int((uint32_t*)esp, &error);
 	if (error < 0) system_exit(f, -1);
