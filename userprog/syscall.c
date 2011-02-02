@@ -408,7 +408,6 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		return;
 	}
 
-
 	struct file * file = file_for_fd(fd);
 
 	if (file == NULL){
@@ -471,6 +470,10 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 		return;
 	}
 
+	if (fd == STDIN_FILENO){
+		f->eax = -1;
+		return;
+	}
 
 	lock_acquire(&filesys_lock);
 	off_t f_size = file_length(file);
@@ -515,6 +518,9 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	if (entry == NULL){
 		return;
 	}
+
+
+
 
 	lock_acquire(&filesys_lock);
 	file_close(entry->open_file);
