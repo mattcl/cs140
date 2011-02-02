@@ -107,12 +107,13 @@ int
 main (int argc, char *argv[])
 {
   int n;
-
+  printf("N is %d\n", n);
   n = argc > 1 ? atoi (argv[1]) : 0;
   bool is_at_root = (n == 0);
-  if (is_at_root)
+  if (is_at_root){
     msg ("begin");
-
+    printf("begin\n");
+  }
   /* If -k is passed, crash this process. */
   if (argc > 2 && !strcmp(argv[2], "-k"))
     {
@@ -146,8 +147,10 @@ main (int argc, char *argv[])
       child_pid = spawn_child (n + 1, RECURSE);
 
       /* If maximum depth is reached, return result. */
-      if (child_pid == -1)
+      if (child_pid == -1){
+    	printf("Returning n %d\n", n);
         return n;
+      }
 
       /* Else wait for child to report how deeply it was able to recurse. */
       int reached_depth = wait (child_pid);

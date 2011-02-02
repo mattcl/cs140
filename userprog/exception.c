@@ -83,7 +83,7 @@ static void kill (struct intr_frame *f) {
          expected.  Kill the user process.  */
 		printf ("%s: dying due to interrupt %#04x (%s).\n",
 				thread_name (), f->vec_no, intr_name (f->vec_no));
-		intr_dump_frame (f);
+		//intr_dump_frame (f);
 
 		system_exit(f, -1);
 
