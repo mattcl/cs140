@@ -519,8 +519,9 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		return;
 	}
 
-
-
+	//if fd was stdin or stdout it CAN'T be in the
+	// fd table so it won't get here if STDIN or STDOUT
+	// is passed in
 
 	lock_acquire(&filesys_lock);
 	file_close(entry->open_file);
