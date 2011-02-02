@@ -891,6 +891,7 @@ static struct list_elem *child_list_entry_gen(
 		}
 	}
 	lock_release(&process->child_pid_tid_lock);
+ printf("Thead %d is realeasing process->child_pid_tid_lock", thread_current()->process->pid);
 	return NULL;
 }
 
@@ -949,7 +950,7 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
         lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
 	lock_release(&filesys_lock);
-	printf("Thread %d acquiring filesys_lock\n", thread_current()->process->pid);
+	printf("Thread %d realesing filesys_lock\n", thread_current()->process->pid);
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
 
