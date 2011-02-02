@@ -45,6 +45,9 @@ struct process {
 	 * MUST BE SET BEFORE thread_exit IS CALLED*/
 	int exit_code;
 
+	/*Program name malloced*/
+	char *program_name;
+
 	/* The particular pid this thread is waiting on
 	 * You wait on the pid when you want to know the
 	 * processes pid after it is loaded*/
@@ -58,7 +61,8 @@ struct process {
 	struct condition pid_cond;
 
 	/* The child process can't complete its creation until
-	 * it acquires this lock given that it exists */
+	 * it acquires this lock given that it exists I.E. that the parent
+	 * exists still*/
 	struct lock child_pid_tid_lock;
 
 };

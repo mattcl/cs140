@@ -213,7 +213,6 @@ static void start_process (void *file_name_) {
 	if_.eflags = FLAG_IF | FLAG_MBS;
 	success = load (file_name, &if_.eip, &if_.esp);
 
-	/* If load failed, quit. */
 	palloc_free_page (file_name);
 
 	if (!success) {
@@ -386,6 +385,8 @@ void process_exit (void){
 	}
 	lock_release(&cur_process->child_pid_tid_lock);
 
+	free(cur_process->program_name);
+
 	free(cur_process);
 
 }
@@ -486,16 +487,19 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	int i;
 
 	// --------- BEGIN CHANGES -------- //
-	char arg_buffer[MAX_ARG_LENGTH];
-	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
+	char arg_buffer[MAX_ARG_LENGTH+1];
+	size_t len = strnlen(file_name, MAX_ARG_LENGTH) ;
 	strlcpy(arg_buffer, file_name, len);
 	
-
 	char *f_name, *token, *save_ptr;
 	
 	// extract the filename from the args
 	f_name = strtok_r(arg_buffer, " ", &save_ptr);
 	token = strtok_r(NULL, " ", &save_ptr);
+
+	size_t store_length = srnlen(f_name, MAX_ARG_LENGTH);
+	t->process->program_name = malloc(store_length +1);
+	strlcpy(t->process->program_name, f_name, store_length);
 
 	// ---------- END CHANGES ----------//
 
@@ -596,6 +600,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
+
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
 	lock_release(&filesys_lock);

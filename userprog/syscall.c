@@ -275,7 +275,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 
 //Finished
 static void system_exit (struct intr_frame *f UNUSED, int status) {
-	//printf("SYS_EXIT\n");
+	printf("%s: exit(%d)\n", thread_current()->process->program_name, status);
 	thread_current()->process->exit_code = status;
 	thread_exit();
 	NOT_REACHED();
