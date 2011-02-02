@@ -99,13 +99,32 @@ tid_t process_execute (const char *file_name) {
 		return TID_ERROR;
 	}
 	strlcpy (fn_copy, file_name, PGSIZE);
-	/*probably want to copy the rest of the argument here.  We also
-	  need to make sure the stack pointer is correct. */
+
+	struct process *cur_process = thread_current()->process;
+
+	// make sure that the new process signals us that it has set up
+	lock_acquire(&cur_process->child_pid_tid_lock);
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 	}
+
+	//wait until the child process is set up or fails
+	// the pid_t will be in child_waiting_on, but we can get
+	// it through our child list
+	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
+
+	lock_release(&cur_process->child_pid_tid_lock);
+
+	//Check to see if it set up correcly
+	if (cur_process->child_waiting_on_pid == PID_ERROR){
+		return TID_ERROR;
+	}
+
+	//If it set up correctly the tid will be in the list
+	// of children for this thread
 	return tid;
 }
 
