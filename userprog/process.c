@@ -394,7 +394,6 @@ void process_exit (void){
 	free(cur_process);
 
 	lock_acquire(&filesys_lock);
-	file_allow_write(cur_process->executable_file);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 
@@ -542,6 +541,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	}
 
+	file_deny_write(t->process->executable_file);
+
 	/* Read program headers. */
 	file_ofs = ehdr.e_phoff;
 	for (i = 0; i < ehdr.e_phnum; i++){
@@ -611,7 +612,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 
 	done:
 	t->process->executable_file = file;
-	file_deny_write(t->process->executable_file);
 	/* We arrive here whether the load is successful or not. */
 
 	lock_release(&filesys_lock);
