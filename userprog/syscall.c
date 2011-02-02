@@ -143,7 +143,7 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 static void syscall_handler (struct intr_frame *f){
 	int error = 0;
 
-	uint32_t sp = get_user_int(f->esp, &error);
+	get_user_int(f->esp, &error);
 	if (error < 0) system_exit(f, -1);
 
 	void *esp = f->esp;
@@ -276,7 +276,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 }
 
 //Finished
-static void system_exit (struct intr_frame *f UNUSED, int status) {
+void system_exit (struct intr_frame *f UNUSED, int status) {
 	printf("%s: exit(%d)\n", thread_current()->process->program_name, status);
 	thread_current()->process->exit_code = status;
 	thread_exit();
