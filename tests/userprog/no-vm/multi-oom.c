@@ -108,11 +108,11 @@ main (int argc, char *argv[])
 {
   int n;
   n = argc > 1 ? atoi (argv[1]) : 0;
-  printf("N is %d\n", n);
+  //printf("N is %d\n", n);
   bool is_at_root = (n == 0);
   if (is_at_root){
     msg ("begin");
-    printf("begin\n");
+    //printf("begin\n");
   }
   /* If -k is passed, crash this process. */
   if (argc > 2 && !strcmp(argv[2], "-k"))
@@ -141,7 +141,7 @@ main (int argc, char *argv[])
         }
 
       /* Now spawn the child that will recurse. */
-      printf("Spawn new child recursive %d\n", n+1);
+     // printf("Spawn new child recursive %d\n", n+1);
       child_pid = spawn_child (n + 1, RECURSE);
 
       /* If maximum depth is reached, return result. */
