@@ -375,6 +375,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 	struct file *open_file = file_for_fd(fd);
 	if (open_file == NULL){
 		f->eax = -1;
+		return;
 	}
 
 	lock_acquire(&filesys_lock);
@@ -390,6 +391,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 	if(fd == STDOUT_FILENO){
 		f->eax = 0;
+		return;
 	}
 
 	unsigned int bytes_read ;
