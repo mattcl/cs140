@@ -123,10 +123,11 @@ tid_t process_execute (const char *file_name) {
 		return TID_ERROR;
 	}
 
-	cur_process->child_waiting_on_pid = 0;
-	lock_release(&cur_process->child_pid_tid_lock);
 	//If it set up correctly the tid will be in the list
 	// of children for this thread
+	cur_process->child_waiting_on_pid = PID_ERROR;
+	lock_release(&cur_process->child_pid_tid_lock);
+
 	return tid;
 }
 
@@ -187,6 +188,8 @@ static void start_process (void *file_name_) {
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
+	printf("Starting process %d\n", cur_process->pid);
+
 	// Get parent process. We know that it is waiting on a
 	// signal if it called exec
 	lock_acquire(&processes_hash_lock);
@@ -196,6 +199,7 @@ static void start_process (void *file_name_) {
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done
 	if (parent != NULL){
+		printf("parent non null acquiring lock p pid %d\n", parent->pid);
 		lock_acquire(&parent->child_pid_tid_lock);
 	}
 
@@ -214,15 +218,18 @@ static void start_process (void *file_name_) {
 
 	if (!success) {
 		//BAD TIMES
-		if (parent != NULL){
-			//communicate error with parent
-			parent->child_waiting_on_pid= PID_ERROR;
-			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
-			lock_release(&parent->child_pid_tid_lock);
-		}
+		printf("Failure\n");
 		// Calls process Exit to clean up process and set error
 		// code for the parent to retrieve
 		cur_process->exit_code = PID_ERROR;
+
+		if (parent != NULL){
+			//communicate error with parent
+			parent->child_waiting_on_pid= PID_ERROR;
+			printf("Communicating failure\n");
+			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+			lock_release(&parent->child_pid_tid_lock);
+		}
 		thread_exit ();
 	}
 
@@ -233,18 +240,22 @@ static void start_process (void *file_name_) {
 			cle->child_tid = cur->tid;
 			list_push_front(&parent->children_list, &cle->elem);
 			parent->child_waiting_on_pid = cur_process->pid;
+			printf("Success starting %d\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		} else {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
 			cur_process->exit_code = PID_ERROR;
+			printf("Failure starting %d\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 			thread_exit();
 		}
 
 	}
+
+	printf("Process %d enters user space\n");
 
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
