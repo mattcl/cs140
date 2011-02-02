@@ -65,6 +65,7 @@ consume_some_resources (void)
 static int NO_INLINE
 consume_some_resources_and_die (int seed)
 {
+
   consume_some_resources ();
   random_init (seed);
   int *PHYS_BASE = (int *)0xC0000000;
@@ -170,7 +171,7 @@ main (int argc, char *argv[])
     {
       if (expected_depth < EXPECTED_DEPTH_TO_PASS)
         fail ("should have forked at least %d times.", EXPECTED_DEPTH_TO_PASS);
-      msg ("success. program forked %d times.", howmany);
+      msg ("success. program forked %d times Reached depth %d.", howmany, expected_depth);
       msg ("end");
     }
 
