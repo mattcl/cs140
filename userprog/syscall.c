@@ -356,7 +356,11 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		return;
 	}
 
+	fd_entry->fd = ++(process->fd_count);
+	fd_entry->open_file = opened_file;
+
 	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
+
 	if (returned != NULL){
 		// We have just tried to put the fd of an identical fd into the hash
 		// Table this is a problem with the hash table and should fail the kernel
@@ -364,8 +368,6 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
-	fd_entry->fd =++ process->fd_count;
-	fd_entry->open_file = opened_file;
 	f->eax = fd_entry->fd;
 }
 

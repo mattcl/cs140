@@ -901,7 +901,7 @@ static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 }
 
 static unsigned file_hash_func (HASH_ELEM *e, AUX){
-	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
+	return hash_byetes(hash_entry(e, struct fd_hash_entry, elem)->fd, sizeof(int));
 }
 
 static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
