@@ -117,13 +117,14 @@ tid_t process_execute (const char *file_name) {
 		return TID_ERROR;
 	}
 
-	lock_release(&cur_process->child_pid_tid_lock);
-
 	//Check to see if it set up correcly
 	if (cur_process->child_waiting_on_pid == PID_ERROR){
+		lock_release(&cur_process->child_pid_tid_lock);
 		return TID_ERROR;
 	}
+
 	cur_process->child_waiting_on_pid = 0;
+	lock_release(&cur_process->child_pid_tid_lock);
 	//If it set up correctly the tid will be in the list
 	// of children for this thread
 	return tid;
