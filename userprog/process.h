@@ -49,7 +49,7 @@ struct process {
 	 * You wait on the pid when you want to know the
 	 * processes pid after it is loaded*/
 	pid_t child_waiting_on_pid;
-	tid_t child_waiting_on_tid;
+
 	/*A semaphore that allows us to wait for child pid to exit*/
 	struct semaphore waiting_semaphore;
 

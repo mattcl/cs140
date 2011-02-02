@@ -405,7 +405,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	struct file * file = file_for_fd(fd);
 
 	if (file == NULL){
-		f->eax = -1;
+		f->eax = 0;
 		return;
 	}
 
