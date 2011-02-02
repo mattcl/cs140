@@ -47,6 +47,7 @@ struct process {
 
 	/*Program name malloced*/
 	char *program_name;
+	file *executable_file;
 
 	/* The particular pid this thread is waiting on
 	 * You wait on the pid when you want to know the

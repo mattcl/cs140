@@ -393,6 +393,11 @@ void process_exit (void){
 
 	free(cur_process);
 
+	lock_acquire(&filesys_lock);
+	file_allow_write(cur_process->executable_file);
+	file_close(cur_process->executable_file);
+	lock_release(&filesys_lock);
+
 }
 
 /* Sets up the CPU for running user code in the current
@@ -605,9 +610,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
-
+	t->process->executable_file = file;
+	file_deny_write(t->process->executable_file);
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+
 	lock_release(&filesys_lock);
 	return success;
 }
