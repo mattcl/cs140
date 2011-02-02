@@ -358,7 +358,7 @@ void process_exit (void){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
-			printf("Setting our entry code %d\n", cur_process->exit);
+			printf("Setting our entry code %d\n", cur_process->exit_code);
 		}
 
 		if (parent->child_waiting_on_pid == cur_process->pid){
