@@ -1,12 +1,27 @@
 #!/bin/sh
+
+function cwarn() {
+    COLOR='\033[01;31m'
+    RESET='\033[00;00m'
+    MESSAGE=${@:-"${RESET}Error: No message passed"}
+    echo -e "${COLOR}${MESSAGE}${RESET}"
+}
+
+function cinfo() {
+    COLOR='\033[01;32m'
+    RESET='\033[00;00m'
+    MESSAGE=${@:-"${RESET}Error: No message passed"}
+    echo -e "${COLOR}${MESSAGE}${RESET}"
+}
+
 echo $0
-echo cleaning
+cinfo "cleaning"
 make clean
-echo building
-make
-echo creating filesystem
-./gen_filesys.sh insult test1
+cinfo "building"
+make | grep "error"
+cinfo "creating filesystem"
+./gen_filesys.sh insult test1 | grep "error"
 
 pintos -q run test1
 
-echo done
+cinfo "run done"
