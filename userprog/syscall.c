@@ -287,7 +287,7 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if (!string_is_valid(cmd_line)){
 		system_exit(f, -1);
 	}
-	struct process* cur = thread_current()->process;
+
 	tid_t returned = process_execute(cmd_line);
 	if (returned == TID_ERROR){
 		f->eax = -1;

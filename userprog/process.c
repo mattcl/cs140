@@ -118,6 +118,8 @@ tid_t process_execute (const char *file_name) {
 	// it through our child list
 	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
 
+	printf("Should have waited till child set up\n");
+
 	lock_release(&cur_process->child_pid_tid_lock);
 
 	//Check to see if it set up correcly
@@ -220,6 +222,7 @@ static void start_process (void *file_name_) {
 		if (parent != NULL){
 			//communicate error with parent
 			parent->child_waiting_on_pid= PID_ERROR;
+			printf("Signalling parent\n");
 			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 			lock_release(&parent->child_pid_tid_lock);
 		}
@@ -241,6 +244,7 @@ static void start_process (void *file_name_) {
 			//Failed to allocate a handle on the child
 			parent->child_waiting_on_pid = PID_ERROR;
 		}
+		printf("Signalling parent\n");
 		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
 		lock_release(&parent->child_pid_tid_lock);
 
@@ -276,7 +280,7 @@ int process_wait (tid_t child_tid){
 		return PID_ERROR;
 	}
 
-	printf("WAITING ON %u\n", child_tid);
+	printf("PROCESS WAIT ON %u\n", child_tid);
 
 	struct process *cur = thread_current()->process;
 
@@ -291,7 +295,7 @@ int process_wait (tid_t child_tid){
 	struct thread* childthread = thread_find(child_tid);
 
 	if(childthread != NULL) {
-		printf("Waiting on child\n");
+		printf("Waiting on child!!!!\n");
 		cur->child_waiting_on_pid = childthread->process->pid;
 		printf("SHOULD BE BLOCKING %u process %d\n", child_tid, child_entry->child_pid);
 		sema_down(&cur->waiting_semaphore);
