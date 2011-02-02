@@ -367,20 +367,19 @@ void process_exit (void){
 
 		// we lock this so that we can add our entry to the parents
 		// exit_code list without race conditions from other children
-		// We also through the wake up code inside the lock for safety
 		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
 			entry->exit_code = cur_process->exit_code;
 		}
+		lock_release(&parent->child_pid_tid_lock);
+
 
 		//Wake parent up with this if
 		if (parent->child_waiting_on_pid == cur_process->pid){
 			sema_up(&parent->waiting_semaphore);
 		}
-
-		lock_release(&parent->child_pid_tid_lock);
 	}
 	lock_release(&processes_hash_lock);
 
