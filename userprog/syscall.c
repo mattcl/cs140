@@ -430,7 +430,6 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	if (fd == STDOUT_FILENO){
 		bytes_written = size;
 		while (bytes_written > 0){
-			printf("Writing bytes\n");
 			if (bytes_written  > MAX_SIZE_PUTBUF){
 				putbuf(buffer, MAX_SIZE_PUTBUF);
 				bytes_written -= MAX_SIZE_PUTBUF;
