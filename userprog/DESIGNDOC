@@ -158,7 +158,12 @@ count and then a null return address.
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
-
+strtok is not safe because it does not have a seperate save_ptr parameter.
+This means that it must use a static data to keep track of it's place in
+the string.  This is not thread safe.  Also, if we consider consider that
+str_tok could be called in multiple places/functions in a program, 
+unintentional sequential calls of str_tok with NULL as the first argument
+will result in bad times.
 
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
