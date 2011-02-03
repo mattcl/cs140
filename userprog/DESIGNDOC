@@ -154,7 +154,8 @@ count and then a null return address.
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
-strtok is not safe because it does not have a seperate save_ptr parameter.
+
+Strtok is not safe because it does not have a seperate save_ptr parameter.
 This means that it must use a static data to keep track of it's place in
 the string.  This is not thread safe.  Also, if we consider consider that
 str_tok could be called in multiple places/functions in a program, 
@@ -164,14 +165,19 @@ will result in bad times.
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
 1. To parse the input the shell is given we have to go into kernel mode,
 parse the string, and then we may possibly have to go back into user mode
 to report the error, a lot of wasted time. 
+
 2. As the kernel currently stands it will will not parse multiple word 
 arguments.  We would have to change the way we parse the inputs to be able
 to handle this.  In general, when we change any aspect of how this input
 is parsed, we would have to modify our kernel code, a risky operation
-that could generate bugs.
+that could generate bugs. I.E. echo 'askdlfj aksdflj asdkf' will split 
+each token up along the delimeter space in the kernel and if it were 
+parsed in the shell we could actually pass the string in quotes as one 
+command line argument.
 
 			     SYSTEM CALLS
 			     ============
