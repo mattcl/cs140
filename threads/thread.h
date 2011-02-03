@@ -170,7 +170,6 @@ bool thread_hash_compare (const struct list_elem *a,
 					void *aux);
 void thread_preempt(void);
 
-struct thread *thread_find(tid_t tid);
 // ------------- END CHANGES --------------- //
 
 #endif /* threads/thread.h */
