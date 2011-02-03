@@ -74,22 +74,24 @@ struct process {
 
 };
 
+/* An entry into the list of children that a particular process
+   has. This includes all the information needed by the parent
+   process to determine the run status of a child and its exit
+   code */
 struct child_list_entry{
-	pid_t child_pid;
-	tid_t child_tid;
-	int exit_code;
-	struct list_elem elem;
+	pid_t child_pid;      /*pid of a child process*/
+	tid_t child_tid;	  /*tid of a child process*/
+	int exit_code;		  /*The exit code of this process*/
+	struct list_elem elem;/*list elem for child process list*/
 };
 
+/* An entry into the open file hash of a process
+ * It allows us to accurately and quickly tell if the process
+ * currently owns a fd. And get its underlying file*/
 struct fd_hash_entry {
-	/* hash key and File Descriptor*/
-	int fd;
-
-	/* Open file associated with this FD */
-	struct file *open_file;
-
-	/* hash elem for this fd entry*/
-	struct hash_elem elem;
+	int fd;				    /* hash key and File Descriptor*/
+	struct file *open_file; /* Open file associated with this FD */
+	struct hash_elem elem;  /* hash elem for this fd entry*/
 };
 
 void process_init(void);

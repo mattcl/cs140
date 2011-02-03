@@ -32,7 +32,7 @@ static void system_close(struct intr_frame *f, int fd );
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
-static unsigned int get_user_int(const uint32_t *uaddr, int *ERROR);
+static unsigned int get_user_int(const uint32_t *uaddr, int *error);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
@@ -87,116 +87,116 @@ static void syscall_handler (struct intr_frame *f){
 	uint32_t arg1 [4];
 
 	switch (sys_call_num){
-	case SYS_HALT:{
-		system_halt(f);
-		break;
-	}
-	case SYS_EXIT:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0) system_exit(f, -1);
-		system_exit(f, (int)arg1[0]);
-		break;
-	}
-	case SYS_EXEC:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_exec(f, (char*)arg1[0]);
-		break;
-	}
-	case SYS_WAIT:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_wait(f, (pid_t)arg1[0]);
-		break;
-	}
-	case SYS_CREATE:{
-		error = set_args(esp, 2, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_create(f, (char*)arg1[0], (int)arg1[1]);
-		break;
-	}
-	case SYS_REMOVE:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_remove(f, (char*)arg1[0]);
-		break;
-	}
-	case SYS_OPEN:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_open(f, (char*)arg1[0]);
-		break;
-	}
-	case SYS_FILESIZE:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_filesize(f, (int)arg1[0]);
-		break;
-	}
-	case SYS_READ:{
-		error = set_args(esp, 3, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-		break;
-	}
-	case SYS_WRITE:{
-		error = set_args(esp, 3, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-		break;
-	}
-	case SYS_SEEK:{
-		error = set_args(esp, 2, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
-		break;
-	}
-	case SYS_TELL:{
-		error = set_args(esp, 1, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_tell(f, (int)arg1[0]);
-		break;
-	}
-	case SYS_CLOSE:{
-		error = set_args(esp, 2, arg1);
-		if (error < 0)system_exit(f, -1);
-		system_close(f, (int)arg1[0]);
-		break;
-	}
-	// Project 3 Syscalls
-	case SYS_MMAP:{
-		printf("SYS_MMAP called\n");
-		break;
-	}
-	case SYS_MUNMAP:{
-		printf("SYS_MUNMAP called\n");
-		break;
-	}
-	//Progect 4 Syscalls
-	case SYS_CHDIR:{
-		printf("SYS_CHDIR called\n");
-		break;
-	}
-	case SYS_MKDIR:{
-		printf("SYS_MKDIR called\n");
-		break;
-	}
-	case SYS_READDIR:{
-		printf("SYS_READDIR called\n");
-		break;
-	}
-	case SYS_ISDIR:{
-		printf("SYS_ISDIR called\n");
-		break;
-	}
-	case SYS_INUMBER:{
-		printf("SYS_INUMBER called\n");
-		break;
-	}
-	default:{
-		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
-		break;
-	}
+		case SYS_HALT:{
+			system_halt(f);
+			break;
+		}
+		case SYS_EXIT:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0) system_exit(f, -1);
+			system_exit(f, (int)arg1[0]);
+			break;
+		}
+		case SYS_EXEC:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_exec(f, (char*)arg1[0]);
+			break;
+		}
+		case SYS_WAIT:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_wait(f, (pid_t)arg1[0]);
+			break;
+		}
+		case SYS_CREATE:{
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_create(f, (char*)arg1[0], (int)arg1[1]);
+			break;
+		}
+		case SYS_REMOVE:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_remove(f, (char*)arg1[0]);
+			break;
+		}
+		case SYS_OPEN:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_open(f, (char*)arg1[0]);
+			break;
+		}
+		case SYS_FILESIZE:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_filesize(f, (int)arg1[0]);
+			break;
+		}
+		case SYS_READ:{
+			error = set_args(esp, 3, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+			break;
+		}
+		case SYS_WRITE:{
+			error = set_args(esp, 3, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+			break;
+		}
+		case SYS_SEEK:{
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
+			break;
+		}
+		case SYS_TELL:{
+			error = set_args(esp, 1, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_tell(f, (int)arg1[0]);
+			break;
+		}
+		case SYS_CLOSE:{
+			error = set_args(esp, 2, arg1);
+			if (error < 0)system_exit(f, -1);
+			system_close(f, (int)arg1[0]);
+			break;
+		}
+		// Project 3 Syscalls
+		case SYS_MMAP:{
+			printf("SYS_MMAP called\n");
+			break;
+		}
+		case SYS_MUNMAP:{
+			printf("SYS_MUNMAP called\n");
+			break;
+		}
+		//Progect 4 Syscalls
+		case SYS_CHDIR:{
+			printf("SYS_CHDIR called\n");
+			break;
+		}
+		case SYS_MKDIR:{
+			printf("SYS_MKDIR called\n");
+			break;
+		}
+		case SYS_READDIR:{
+			printf("SYS_READDIR called\n");
+			break;
+		}
+		case SYS_ISDIR:{
+			printf("SYS_ISDIR called\n");
+			break;
+		}
+		case SYS_INUMBER:{
+			printf("SYS_INUMBER called\n");
+			break;
+		}
+		default:{
+			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+			break;
+		}
 	}
 }
 
@@ -286,9 +286,9 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
 
 	if (returned != NULL){
-		// We have just tried to put the fd of an identical fd into the hash
-		// Table this is a problem with the hash table and should fail the kernel
-		// Cause our memory has been corrupted somehow
+		/* We have just tried to put the fd of an identical fd into the hash
+		 Table this is a problem with the hash table and should fail the kernel
+		 Cause our memory has been corrupted somehow */
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
@@ -432,9 +432,8 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		return;
 	}
 
-	//if fd was stdin or stdout it CAN'T be in the
-	// fd table so it won't get here if STDIN or STDOUT
-	// is passed in
+	/*if fd was stdin or stdout it CAN'T be in the fd table
+	so it won't get here if STDIN or STDOUT  is passed in*/
 	lock_acquire(&filesys_lock);
 	file_close(entry->open_file);
 	lock_release(&filesys_lock);
@@ -442,7 +441,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 	if (returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
-		 * This Is obviously a huge problem so system KILLLLLLL!!!! */
+		  This Is obviously a huge problem so system KILLLLLLL!!!! */
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 	}
 
@@ -481,24 +480,23 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	return true;
 }
 
-/*
- * Returns a unsigned int representing 4 bytes of data
- * if there was a segfault it will set
- * ERROR will be negative, positive otherwise
- */
-static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
+
+ /* Returns a unsigned int representing 4 bytes of data
+  if there was a segfault it will set
+  ERROR will be negative, positive otherwise*/
+static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){
 	uint8_t *uaddr = (uint8_t*)uaddr_in;
 	uint32_t returnValue = 0;
 	uint8_t output [4];
 	int i;
 	for (i = 0; i < 4; i ++){
 		if (!is_user_vaddr(uaddr)){
-			*ERROR = -1;
+			*error = -1;
 			return 0;
 		}
 		int fromMemory = get_user(uaddr);
 		if (fromMemory == -1){
-			*ERROR = -1;
+			*error = -1;
 			return 0;
 		}
 		output[i] = (uint8_t) fromMemory;
@@ -508,7 +506,7 @@ static unsigned int get_user_int(const uint32_t *uaddr_in, int *ERROR){
 	for (i = 3; i >=0; i --){
 		returnValue = ((returnValue << 8) + (uint8_t)output[i]);
 	}
-	*ERROR = 1;
+	*error = 1;
 	return returnValue;
 }
 
