@@ -60,11 +60,11 @@ void syscall_init (void) {
 
 //returns -1 on segfault
 static int set_args(void *esp, int num, uint32_t argument[]){
-	int i, ERR;
+	int i, err;
 	for (i = 0; i < num; i++){
-		argument[i] = get_user_int((uint32_t*)arg(esp,(i+1)), &ERR);
-		if (ERR < 0 ){
-			return ERR;
+		argument[i] = get_user_int((uint32_t*)arg(esp,(i+1)), &err);
+		if (err < 0 ){
+			return err;
 		}
 	}
 	return 1;
