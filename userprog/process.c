@@ -24,7 +24,6 @@
 static struct hash processes;			 /*A hash of all created processes*/
 static struct lock processes_hash_lock;  /*A lock on that hash table*/
 static struct lock pid_lock;			 /*A lock needed to increment it*/
-static bool debug = true;
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -43,7 +42,6 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
 
 static unsigned process_hash_func (HASH_ELEM *a, AUX);
 static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
-static void process_hash_entry_destroy (struct hash_elem *e, AUX);
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
 static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
@@ -199,11 +197,14 @@ static void start_process (void *file_name_) {
 	// Parent hasn't exited yet so we can grab their lock
 	// so that they wait until set up is done and so we can
 	// signal them when set up is finished
+	// Every process that is exec'd has a parent waiting on
+	// it to be initialized
 	if (parent != NULL){
 		//Signaling and releasing this lock will resume
 		// parent execution in process_execute
 		lock_acquire(&parent->child_pid_tid_lock);
 	}
+
 
 	char *file_name = file_name_;
 	struct intr_frame if_;
@@ -278,7 +279,6 @@ int process_wait (tid_t child_tid){
 	// if it has we know that it is dead and we can just
 	// retrieve its exit code. This prevents race conditions
 	// with the child process exiting
-	//printf("process wait %d\n", cur->pid);
 	lock_acquire(&processes_hash_lock);
 
 	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
@@ -331,7 +331,6 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
-	//printf("Exit %d\n", cur_process->pid);
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 	pd = cur->pagedir;
@@ -353,7 +352,6 @@ void process_exit (void){
 	// has either exited or hasn't exited while we update information
 	// Lock prevents a parent from waiting on this process if we get to
 	// the lock first. This ensures that a waiting parent will be woken up
-	//printf("Acquiring 1\n");
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
@@ -367,11 +365,8 @@ void process_exit (void){
 	if (parent != NULL){
 
 		//Get our list entry
-		//printf("Acquiring 2\n");
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		//printf("Releasing 2\n");
-		//printf("Acquiring 3\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if (our_entry != NULL){
 			struct child_list_entry *entry =
@@ -379,42 +374,38 @@ void process_exit (void){
 			entry->exit_code = cur_process->exit_code;
 		}
 		lock_release(&parent->child_pid_tid_lock);
-		//printf("releasing 3\n");
 		//Wake parent up with this if
 		if (parent->child_waiting_on_pid == cur_process->pid){
-			//printf("UPPING\n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
 	lock_release(&processes_hash_lock);
-	//printf("releasing 1\n");
 
 	// Free all open files Done without exterior locking
 	// each file will close with the filesys lock held
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
-	// We have already been removed from the list of processes and
-	// thus can't be found by our children. The locking here isn't
-	// necessary but doesn't hurt correctness
-	//printf("Acquiring 4\n");
-	lock_acquire(&cur_process->child_pid_tid_lock);
-
+	/* We do not need to lock this because all children of
+	 * this process need to go through acquiring a handle
+	 * for this process through the all process hash table
+	 * but our process is not in it so it won't be found and
+	 * thus updates can not occur to the list after this
+	 * process has finally released the all process lock.
+	 * Plus the only way to add things to the list is to create
+	 * a new process. And this thread can't be exiting and creating
+	 * simultaneously
+	 */
 	while (!list_empty (&cur_process->children_list)){
 	       struct list_elem *e = list_pop_front (&cur_process->children_list);
 	       free (list_entry(e, struct child_list_entry, elem));
 	}
 
-	lock_release(&cur_process->child_pid_tid_lock);
-	//printf("releasing 4\n");
 	free(cur_process->program_name);
 
 	//close our executable allowing write access again
-	//printf("Acquiring 5\n");
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
-	//printf("releasing 5\n");
-
 	free(cur_process);
 }
 
@@ -953,9 +944,7 @@ static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void process_hash_entry_destroy (struct hash_elem *e UNUSED, AUX){
-	//Auxilary data may need to be destroyed left it here just in case
-}
+
 
 #undef HASH_ELEM
 #undef AUX
