@@ -39,14 +39,19 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 static struct file *file_for_fd (int fd);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
+/*Maximum size of output to to go into the putbuf command*/
 #define MAX_SIZE_PUTBUF 300
 
 /* Standard file descriptors.  */
 #define	STDIN_FILENO	0	/* Standard input.  */
 #define	STDOUT_FILENO	1	/* Standard output.  */
 
-// arg with INT == 0 is the system call number
-// params are start at INT == 1
+/*arg with INT == 0 is the system call number
+	Macro to easily get the n'th argument passed to
+	the system call. INT is the argument you want.
+	0 is the system call number and 1 - n are the
+	arguments
+*/
 #define arg(ESP, INT)(((int *)ESP) + INT)
 
 void syscall_init (void) {
@@ -593,7 +598,6 @@ static bool put_user (uint8_t *udst, uint8_t byte){
 static bool string_is_valid(const char* str){
 	int c;
 	while (true){
-		//printf("Validating string\n");
 		if (!is_user_vaddr(str) || (c = get_user((uint8_t*)str)) < 0){
 			return false;
 		}

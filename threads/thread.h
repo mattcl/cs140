@@ -95,11 +95,13 @@ struct thread {
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
-  struct process *process; /* Process data */
+
   // process needs to be here because only the thread is
   // reachable inside the syscall interrupt handler so we
   // need a handle to the processes open files and other
   // data
+  struct process *process; /* Process data */
+
 #endif
   
   // ------------ BEGIN CHANGES -------------//

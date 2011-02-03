@@ -1,5 +1,5 @@
 		     +--------------------------+
-       	       	     |		CS 140		|
+       	     |	    	CS 140		    |
 		     | PROJECT 2: USER PROGRAMS	|
 		     | 	   DESIGN DOCUMENT     	|
 		     +--------------------------+
@@ -8,18 +8,10 @@
 
 >> Fill in the names and email addresses of your group members.
 
+Sam Oluwalana <hhwr85@stanford.edu>
 John-Ashton Allen <bglp05@stanford.edu>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Matt Chun-lum <mchunlum@stanford.edu>
 
----- PRELIMINARIES ----
-
->> If you have any preliminary comments on your submission, notes for the
->> TAs, or extra credit, please give them here.
-
->> Please cite any offline or online sources you consulted while
->> preparing your submission, other than the Pintos documentation, course
->> text, lecture notes, and course staff.
 
 			   ARGUMENT PASSING
 			   ================
@@ -30,21 +22,149 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+
+// PROCESS.H
+
+// define a limit on the command line length
+#define MAX_ARG_LENGTH 256
+
+typedef int32_t pid_t;
+#define PID_ERROR ((pid_t)-1) /* Error value for pid_t. */
+
+
+/* A lock on the filesystem, acquired whenever
+	we access the filesystem through a call.
+	Shared between process.c and syscall.c */
+struct lock filesys_lock;
+
+struct process {
+	/* This processes ID. Also hash key */
+	pid_t pid;
+	
+	/*The id of the parent process that created
+	   This process */
+	pid_t parent_id;
+
+	/* The element in the processes hash
+		A static hash in process.c*/
+	struct hash_elem elem;
+
+	/* The Id of the process that created it*/
+	//pid_t parent_id;
+
+	struct list children_list;
+
+	/*The thread which this process is running on*/
+	struct thread *owning_thread;
+
+	// only this process can access its 
+	// open_files hash so no locks are included
+
+	/*A hash of open file descriptors */
+	struct hash open_files;
+
+	/* The current count of file descriptors*/
+	int fd_count;
+
+	/* The exit code of this process.
+	 * MUST BE SET BEFORE thread_exit IS CALLED*/
+	int exit_code;
+
+	/*Program name malloced*/
+	char *program_name;
+	
+	/* the file that we are running*/
+	struct file *executable_file;
+
+	/* The particular pid this thread is waiting on.
+	 * When the waited on pid exits it will increment the waiting
+	 * semaphore. Only used for process wait/exit*/
+	pid_t child_waiting_on_pid;
+
+	/*A semaphore that allows us to wait for child pid to exit
+	 * initialized to 0 and decrements when in needs to wait on
+	 * a child process to finish. Incremented by the child process
+	 * only used in wait/exit*/
+	struct semaphore waiting_semaphore;
+
+	/* Whether the child pid was successfully created or not
+	 * only used for only used in processExecute/start_process*/
+	bool child_pid_created;
+
+	/* The condition of whether a process created with exec finished
+	   loading only used for only used in processExecute/start_process*/
+	struct condition pid_cond;
+
+	/* The child process can't complete its creation until
+	 * it acquires this lock given that it exists I.E. that the parent
+	 * exists still. USED wherever any of the last 4 objects are used*/
+	struct lock child_pid_tid_lock;
+
+};
+
+/* An entry into the list of children that a particular process
+   has. This includes all the information needed by the parent 
+   process to determine the run status of a child and its exit 
+   code */
+struct child_list_entry{
+	pid_t child_pid; 
+	tid_t child_tid;
+	int exit_code;
+	struct list_elem elem;
+};
+
+/* An entry into the open file hash of a process
+ * It allows us to accurately and quickly tell if the process
+ * currently owns a fd. And get its underlying file*/
+struct fd_hash_entry {
+	/* hash key and File Descriptor*/
+	int fd;
+
+	/* Open file associated with this FD */
+	struct file *open_file;
+
+	/* hash elem for this fd entry*/
+	struct hash_elem elem;
+};
+
+//Thread.h 
+ADDED 
+
+ struct process *process; /* Process data */
+
+to the thread struct;
+It is a handle to the process that is running on this
+thread
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
-First we push the arguments on the stack in order (i.e. we first
->> push the filename onto the stack).
+
+We first validate the input and make sure that the command line is less than
+256 characters, if it is longer then we truncate it. This makes sure we can't 
+overflow the stack page.
+Then we tokenize the string and push all of the data onto the stack keeping
+a pointer to the beginning of each argument pushed in a char * [128]. Which is
+the maximum number of arguments that can be stored in 256 characters. After we 
+push all of the arguments onto the stack. we then word align the data. Push a
+empty 4 bytes of data which corresponds to argv[argc] then iterate through our
+char*[] in reverse order (I.E. start at arg count and decrement). After that we
+set the argv to point to the last argument, argv[0]. We then push the 4 bytes of
+count and then a null return address.
+
 
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+
 
 			     SYSTEM CALLS
 			     ============
@@ -55,14 +175,49 @@ First we push the arguments on the stack in order (i.e. we first
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/*Maximum size of output to to go into the putbuf command*/
+#define MAX_SIZE_PUTBUF 300
+
+/* Standard file descriptors.  */
+#define	STDIN_FILENO	0	/* Standard input.  */
+#define	STDOUT_FILENO	1	/* Standard output.  */
+
+/*arg with INT == 0 is the system call number
+	Macro to easily get the n'th argument passed to
+	the system call. INT is the argument you want. 
+	0 is the system call number and 1 - n are the 
+	arguments
+*/
+#define arg(ESP, INT)(((int *)ESP) + INT)
+
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+FD's are unique to the process. They are used to index into the open_files
+hash for each process. They are the hash keys for each entry. Because we use
+them as the keys to the hash table and because they are unique to each process
+we know that a process can only request data from a fd if it is open and 
+belongs to them. FD 0, and 1 are not in the open_files hash, this is on 
+purpose. Because they are not in the open_files hash when a user tries 
+to close them it is as if they tried to close any other file they haven't
+opened and so will fail without having to make extra checks.
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+Reading data from user space first goes through verification. The methods
+used are to verify any 4 bytes of data (sizeof(int, char *, etc)), to
+verify buffers where the size is specified, and to verify strings where 
+size is not specified. After verifying we proceed as normal because we know
+that the data passed in was valid. The verification process tries to access
+the data and if a page fault occurs it will kill the process. 
+
+Writing from kernel to user space uses the same method, we verify the buffer
+references valid locations in user space. If it does we perform the request
+if not we fail.
+
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -71,8 +226,46 @@ First we push the arguments on the stack in order (i.e. we first
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+Because we just dereference the data in the verification step and act only
+when the dereferencing produces a page fault we don't call pagedir_get_page()
+but rather wait for the MMU to validate it or not. The cost of verifying 
+before hand is 2 times the number of bytes required memory accesses. 
+
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+Wait is closely related with exit. Wait first acquires the proccesses
+hash lock. This lock is required for a process to finish exiting and 
+to remove itself from the hash table of all processes. After acquiring
+the lock the process that is waiting checks its list of children to see
+if the process that it is waiting on is valid, if not it releases the lock
+and returns invalid. Otherwise, with the lock held it finds the child process
+in the hash of all processes (because you need the all processes lock to 
+remove yourself from the all_processes hash we know that it is either in 
+the hash and still running or not in the hash and dead). If the process is
+still alive we set our field child_waiting_on_pid, which tells children 
+processes that are exiting that the parent is waiting on them. The waiting
+process releases the all_proccesses lock and then decrements this 
+processes waiting semaphore. This makes the semaphore negative and 
+blocks until the child that we are waiting on exits and increments the
+semaphore.
+When the waiting process wakes up it can now just check its list of 
+children and pull out the exit code of the child process which we can now
+guarantee is dead.
+
+In exit we acquire the all_process lock and then remove ourselves from the
+all process hash. Then if our parent isn't null we find our child process
+entry in our parent and set our exit code so that the parent can find it.
+This doesn't happen for the global process running on the main thread because
+its parent is 0 and is never in the all_process hash table.
+The parent is either exited and thus NULL or alive and can't exit because 
+we are holding the all process lock. After updating, if necessary, we check
+to see if our parent is waiting on us, if so we increment their waiting 
+semaphore. We then go ahead and destroy all of the data that we used while
+we exited, including closing all files that were open.
+  
+
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -87,6 +280,34 @@ First we push the arguments on the stack in order (i.e. we first
 >> allocated resources (locks, buffers, etc.) are freed?  In a few
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
+
+We abstracted it by putting all user address verification first and making
+useful functions that verify the data before dereferencing. If the user 
+addresses provided are invalid then we simply kill them immediately. This
+makes the actual system calls relatively error checking free (relative to 
+putting the address verification in the method of course). If we kill the
+process all of the resources that it used will be freed in process_exit so
+that is also dealt with. By verifying the data first the code stays pretty
+clean and doesn't obscure what the function call is supposed to do. 
+
+An example:
+//returns -1 on segfault
+static int set_args(void *esp, int num, uint32_t argument[]){
+	int i, ERR;
+	for (i = 0; i < num; i++){
+		argument[i] = get_user_int((uint32_t*)arg(esp,(i+1)), &ERR);
+		if (ERR < 0 ){
+			return ERR;
+		}
+	}
+	return 1;
+}
+
+This sets up the arg[] so that we are free to access all of the arguments
+passed to the system call. We use this for each of the system calls so that
+we don't repeat the argument parsing code. As can be seed in the example
+we can get the 
+
 
 ---- SYNCHRONIZATION ----
 
