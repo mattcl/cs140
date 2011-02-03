@@ -24,7 +24,6 @@
 static struct hash processes;			 /*A hash of all created processes*/
 static struct lock processes_hash_lock;  /*A lock on that hash table*/
 static struct lock pid_lock;			 /*A lock needed to increment it*/
-static bool debug = true;
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -43,7 +42,6 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
 
 static unsigned process_hash_func (HASH_ELEM *a, AUX);
 static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
-static void process_hash_entry_destroy (struct hash_elem *e, AUX);
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
 static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
@@ -946,9 +944,7 @@ static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
-static void process_hash_entry_destroy (struct hash_elem *e UNUSED, AUX){
-	//Auxilary data may need to be destroyed left it here just in case
-}
+
 
 #undef HASH_ELEM
 #undef AUX
