@@ -305,8 +305,9 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 
 This sets up the arg[] so that we are free to access all of the arguments
 passed to the system call. We use this for each of the system calls so that
-we don't repeat the argument parsing code. As can be seed in the example
-we can get the 
+we don't repeat the argument parsing code. As can be seen in the example
+we also can get 4 bytes at a time with get_user_int() which wraps the byte
+version which actually does the memory verification and returns the value.
 
 
 ---- SYNCHRONIZATION ----
@@ -316,6 +317,29 @@ we can get the
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
+In process exec we use the combination of locks and condition variables 
+in conjunction with their use in start process. The way we ensure that 
+process exec waits on the process to be created or fail being created is 
+as follows:
+In Process execute the creating process acquires the child_pid_tid lock, 
+which is required for the child process to begin loading itself. If the TID
+is INVALID we just release the lock and return an invalid TID, if not we 
+wait on the condition variable pid_cond. 
+In start process if our parent is not NULL we must acquire our parents 
+child_pid_tid_lock to start setting up. When we get the lock we set up 
+the process and if we faile we tell our parent that we failed by setting
+child_pid_created field to false and signal the pid_cond and release the
+lock;  On success we add ourselves to our parents child list which has
+both our pid and tid, set the child_pid_created to true, signal the pid_cond
+and release the lock. When the parent wakes up it checks whether the process
+created itself, if so it return the tid from process execute, if not it returns
+TID_ERROR. 
+In system_exec we can now easily return the pid of the process we just 
+created by using the tid and looking up the child in our list of children.
+Which we know we will find the process their even if it has already finished
+upon exiting the system_exec call. 
+
+
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
 >> calls wait(C) before C exits?  After C exits?  How do you ensure
@@ -323,16 +347,51 @@ we can get the
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
+When P calls wait(C) before C exits, as explained above, P will force C
+to wait to exit using the all processes lock. If C exits before the wait
+then it will already find that the child has exited by virtue of the 
+all processes lock ensuring that the child exited before we got to wait.
+For more detailed explanation see B5;
+
 ---- RATIONALE ----
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+Because the handout said that using the MMU to determine validity is faster
+than verifying directly using the page table. The 2*n time to read the memory
+after verifying isn't actually 2*n either because the memory read in the 
+validate methods are likely cached after verification and thus will run much
+faster on the second pass when we actually do useful work with the memory 
+addresses. Thus using the page fault as a catch point for user memory 
+accesses is the way to go because overall it is much faster than validating
+all of the addresses beforehand using the page tables and will likely take
+advantage of caching.
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+Advantages:
+You can only access fd's that are in the fd table for the process.
+The fact that each fd table is independent of other fd tables for other
+processes ensures that processes can't interfere with each others open 
+files. The fact that it is based on a hash table makes it faster than if
+it were based on a list.
+
+Disadvantages:
+The rare occasion when an invalid fd is passed in and hashes identically
+to a fd that is actually valid for this process. This likely won't happen
+but it leaves that vulnerability exploitable, somehow. Though because we 
+hash the bytes that a fd corresponds to this is super duper unlikely
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+We just made a seperate pid_t counter. And each process uses a unique
+pid. This allows for threads created by the kernel using only the 
+init_thread method (like the idle thread) to be characterized solely as
+kernel threads and not as processes. That really is the only advantage.
+
 
 			   SURVEY QUESTIONS
 			   ================
