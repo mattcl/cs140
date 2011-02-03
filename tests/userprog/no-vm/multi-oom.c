@@ -1,4 +1,4 @@
-* Recursively executes itself until the child fails to execute.
+/* Recursively executes itself until the child fails to execute.
    We expect that at least 30 copies can run.
 
    We count how many children your kernel was able to execute
