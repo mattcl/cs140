@@ -33,29 +33,27 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-
-//========= Begin Changes ======//
-
+/*Compares two locks in a list */
 bool lockCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED);
 
+/*Compares to condition variables in a list*/
 bool condCompare (const struct list_elem *a,
 			      const struct list_elem *b,
-
 			      void *aux UNUSED);
+
 /* Returns the maximum priority lock out of this list of locks */
 static inline struct lock *max_lock(struct list *locks){
 	return list_entry(list_max(locks, &lockCompare, NULL),
 					  struct lock,  elem);
 }
+
 /* Returns the maximum priority thread out of this list of threads */
 static inline struct thread *max_thread(struct list *threads){
 	return list_entry(list_max(threads, &thread_hash_compare, NULL),
 					  struct thread, elem);
 }
-//======== End Changes ========//
-
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -86,7 +84,7 @@ void sema_down (struct semaphore *sema){
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	while (sema->value == 0) {
+	while(sema->value == 0){
 		list_push_back (&sema->waiters, &thread_current ()->elem);
 		thread_block ();
 	}
@@ -106,10 +104,10 @@ bool sema_try_down (struct semaphore *sema){
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (sema->value > 0){
+	if(sema->value > 0){
 	  sema->value--;
 	  success = true;
-	} else {
+	}else{
 		success = false;
 	}
 
@@ -128,10 +126,10 @@ void sema_up (struct semaphore *sema){
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters)) {
+	if(!list_empty (&sema->waiters)){
 		struct list_elem *highest = remove_list_max(&sema->waiters, &thread_hash_compare);
 		ASSERT(highest != NULL);
-		// Pop off only the highest priority waiter
+		/* Pop off only the highest priority waiter*/
 		thread_unblock (list_entry (highest, struct thread, elem));
 	}
 	sema->value++;
@@ -152,7 +150,7 @@ void sema_self_test (void){
 	sema_init (&sema[0], 0);
 	sema_init (&sema[1], 0);
 	thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
-	for (i = 0; i < 10; i++){
+	for(i = 0; i < 10; i++){
 		sema_up (&sema[0]);
 		sema_down (&sema[1]);
 	}
@@ -160,11 +158,11 @@ void sema_self_test (void){
 }
 
 /* Thread function used by sema_self_test(). */
-static void sema_test_helper (void *sema_) {
+static void sema_test_helper (void *sema_){
 	struct semaphore *sema = sema_;
 	int i;
 
-	for (i = 0; i < 10; i++){
+	for(i = 0; i < 10; i++){
 		sema_down (&sema[0]);
 		sema_up (&sema[1]);
 	}
@@ -200,7 +198,7 @@ void lock_init (struct lock *lock){
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
-void lock_acquire (struct lock *lock) {
+void lock_acquire (struct lock *lock){
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
@@ -211,23 +209,23 @@ void lock_acquire (struct lock *lock) {
 
 	old_level = intr_disable ();
 	t->lock_waited_on = lock;
-	while (lock->holder != NULL) {
+	while(lock->holder != NULL){
 		list_push_back (&lock->waiters, &t->elem);
 
-		// Update temp because this will bubble all the way to the first
-		// thread that has a lock that t is dependent on and give it the
-		// highest priority
+		/* Update temp because this will bubble all the way to the first
+		   thread that has a lock that t is dependent on and give it the
+		   highest priority*/
 		update_temp_priority(t);
 		thread_block ();
 	}
 
 	t->lock_waited_on = NULL;
 
-	// These must be done atomically because otherwise in the pathological
-	// case we could re-enable interrupts then immediately get preempted
-	// In this case we won't be holding the lock and if there is a max
-	// priority thread waiting on this lock then we won't be able to
-	// update our temp priority
+	/* These must be done atomically because otherwise in the pathological
+	   case we could re-enable interrupts then immediately get preempted
+	   In this case we won't be holding the lock and if there is a max
+	   priority thread waiting on this lock then we won't be able to
+	   update our temp priority */
 	lock->holder = t;
 	list_push_back(&t->held_locks, &lock->elem);
 
@@ -241,7 +239,7 @@ void lock_acquire (struct lock *lock) {
 
    This function will not sleep, so it may be called within an
    interrupt handler. */
-bool lock_try_acquire (struct lock *lock) {
+bool lock_try_acquire (struct lock *lock){
 	bool success;
 	struct thread *t = thread_current ();
 
@@ -252,12 +250,12 @@ bool lock_try_acquire (struct lock *lock) {
 
 	old_level = intr_disable ();
 
-	if (lock->holder != NULL){
+	if(lock->holder != NULL){
 		success = false;
-	} else {
+	}else{
 		success = true;
 		lock->holder = t;
-		// not atomically because we are only updating thread specific data
+		/* not atomically because we are only updating thread specific data*/
 		list_push_back(&t->held_locks, &lock->elem);
 	}
 
@@ -267,56 +265,61 @@ bool lock_try_acquire (struct lock *lock) {
 }
 
 /* Releases *lock, which must be owned by the current thread.
-
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
 void lock_release (struct lock *lock){
 	lock_release_preempt(lock, true);
 }
-void lock_release_preempt (struct lock *lock, bool preempt) {
+
+/* Given a lock and a true or false value this function will
+   release the lock and if necessary preempt the thread that is
+   running. If this is called from an interrupt handler that should
+   not be preempted it will just release the lock but will not
+   signal the scheduler that the thread should be preempted*/
+void lock_release_preempt (struct lock *lock, bool preempt){
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 	ASSERT (!intr_context ());
 
-	// turn off interrupts to atomically remove from list
+	/* turn off interrupts to atomically remove from list*/
 	enum intr_level old_level = intr_disable ();
-	if (!list_empty (&lock->waiters)) {
+	if(!list_empty (&lock->waiters)){
 
-		//Remove the thread with highest priority O(n) in threads
-		// waiting on this lock
+		/* Remove the thread with highest priority O(n) in threads
+		   waiting on this lock*/
 		struct list_elem *highest =
 				remove_list_max(&lock->waiters, &thread_hash_compare);
 		ASSERT(highest != NULL);
 
-		//The thread that is still waiting with the highest priority
-		// update donate priority if not in mlfqs mode
+		/* The thread that is still waiting with the highest priority
+		   update donate priority if not in mlfqs mode*/
 		if(!list_empty(&lock->waiters) && !thread_mlfqs){
-			// Reset the lock priority to the next highest priority waiting on
-			// the lock So that the next acquisition will be raised if necessary
+			/* Reset the lock priority to the next highest priority waiting on
+			   the lock So that the next acquisition will be raised if necessary*/
 			lock->lock_priority = max_thread(&lock->waiters)->tmp_priority;
 		}
-		// Change here to be able to pop off only the highest priority waiter
+		/* Change here to be able to pop off only the highest priority waiter*/
 		thread_unblock (list_entry (highest, struct thread, elem));
 	}
 
-	//Needs to be with interrupts disabled because it is used
-	//by many other threads when they update their tmp priority
-	// if it is not null it will cause recursion to occur
+	/* Needs to be with interrupts disabled because it is used
+	   by many other threads when they update their tmp priority
+	   if it is not null it will cause recursion to occur*/
 	lock->holder = NULL;
 
-	// may be reset immediately after re enabling interrupts then when
-	// this thread gets resumed will cause the lock to be removed from
-	// its correct list, all bad
+	/* may be reset immediately after re enabling interrupts then when
+	   this thread gets resumed will cause the lock to be removed from
+	   its correct list, all bad*/
 	list_remove(&lock->elem);
 
-	// Revert back to whatever donated priority was acquired
-	// before acquiring this lock
+	/* Revert back to whatever donated priority was acquired
+	   before acquiring this lock*/
 	update_temp_priority(thread_current());
 
 	intr_set_level (old_level);
-	if(preempt) {
-		//schedule highest priority thread
+	if(preempt){
+		/*schedule highest priority thread*/
 		thread_preempt();
 	}
 }
@@ -335,7 +338,7 @@ struct semaphore_elem {
     struct semaphore semaphore;         /* This semaphore. */
 
     /* The thread that waits on this semaphore to become
-     * available. */
+       available. */
     struct thread *thread;
 };
 
@@ -397,14 +400,12 @@ void cond_signal (struct condition *cond, struct lock *lock){
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters)){
-		//------ Begin Changes -----//
-		// We are only going to unblock the thread with the
-		// highest priority.
+	if(!list_empty (&cond->waiters)){
+		/* We are only going to unblock the thread with the
+		   highest priority. */
 		struct list_elem *e = remove_list_max(&cond->waiters, &condCompare);
 		ASSERT(e != NULL);
 		sema_up (&list_entry (e, struct semaphore_elem, elem)->semaphore);
-		//------ End Changes-------//
 	}
 }
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -417,17 +418,15 @@ void cond_broadcast (struct condition *cond, struct lock *lock){
 	ASSERT (cond != NULL);
 	ASSERT (lock != NULL);
 
-	while (!list_empty (&cond->waiters)){
+	while(!list_empty (&cond->waiters)){
 		cond_signal (cond, lock);
 	}
 }
 
-/**
- * This function takes as parameters list_elem *a, which is a memeber of a
- * lock and list_elem *b which is a member of a lock and return true
- * if lock A has priority LESS than that of lock b. Could be more efficient
- * To get the max priority through a priority queue
- */
+/* This function takes as parameters list_elem *a, which is a memeber of a
+   lock and list_elem *b which is a member of a lock and return true
+   if lock A has priority LESS than that of lock b. Could be more efficient
+   To get the max priority through a priority queue */
 bool lockCompare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
@@ -437,13 +436,11 @@ bool lockCompare (const struct list_elem *a,
 		    (list_entry(b, struct lock, elem)->lock_priority));
 }
 
-/**
- * This function takes as parameters list_elem *a which is a member of a
- * semaphore_elem and *b which is similar and then goes to the thread that
- * is waiting on this semaphore (Because this is a conditional) and returns
- * if the first element's thread's priority is less than the second element's
- * thread's priority
- */
+/* This function takes as parameters list_elem *a which is a member of a
+   semaphore_elem and *b which is similar and then goes to the thread that
+   is waiting on this semaphore (Because this is a conditional) and returns
+   if the first element's thread's priority is less than the second element's
+   thread's priority */
 bool condCompare (const struct list_elem *a,
 			      const struct list_elem *b,
 			      void *aux UNUSED){
@@ -453,55 +450,54 @@ bool condCompare (const struct list_elem *a,
 		    (list_entry(b, struct semaphore_elem, elem)->thread->tmp_priority));
 }
 
-/*Must Be run with interrupts off because it will create race conditions
- * otherwise in the priority donation process.
- *
- * update_temp_priority takes as its value the starting thread
- * That needs its tmp_priority updated.
- * Because This value has effect on other threads which are holding
- * locks that this thread may be dependent on, it will also update
- * those threads tmp_priority values as well.
- *
- * This function is used by both thread.c and sync.c. It is completely
- * hidden from the client. It works by updating the tmp priority which
- * is the maximum value of the priorities of all of this threads held locks.
- *
- * The lock priority value, in turn, is the maximum priority of all threads
- * that are waiting on this lock.
- * This function will recursively update all threads which hold a lock
- * on which this thread is dependent giving the appropriate priority to
- * each one, if this threads tmp_priority is boosted
- *
- * The recursion needs to be done with interrupt's disabled because
- * We need to donate priority atomically or we will have odd race conditions
- *
- * Priority donation is disabled in mlfqs mode so this does nothing when mlfqs
- * is on.
- */
+/* Must Be run with interrupts off because it will create race conditions
+   otherwise in the priority donation process.
+   update_temp_priority takes as its value the starting thread
+   That needs its tmp_priority updated.
+   Because This value has effect on other threads which are holding
+   locks that this thread may be dependent on, it will also update
+   those threads tmp_priority values as well.
+
+   This function is used by both thread.c and sync.c. It is completely
+   hidden from the client. It works by updating the tmp priority which
+   is the maximum value of the priorities of all of this threads held locks.
+   The lock priority value, in turn, is the maximum priority of all threads
+   that are waiting on this lock.
+   This function will recursively update all threads which hold a lock
+   on which this thread is dependent giving the appropriate priority to
+   each one, if this threads tmp_priority is boosted
+
+   The recursion needs to be done with interrupt's disabled because
+   We need to donate priority atomically or we will have odd race conditions
+
+   Priority donation is disabled in mlfqs mode so this does nothing when mlfqs
+   is on. */
 void update_temp_priority(struct thread *t){
-	if (thread_mlfqs){
+	if(thread_mlfqs){
 		return;
 	}
 	ASSERT (intr_get_level () == INTR_OFF);
 
-	if(t == NULL)return;
+	if(t == NULL){
+		return;
+	}
 	if(list_empty(&t->held_locks)){
 		t->tmp_priority = t->priority;
-	} else {
-		// Set the priority of this thread to the highest priority
-		// of all the threads waiting on any of the locks that this
-		// thread currently holds
+	}else{
+		/* Set the priority of this thread to the highest priority
+		   of all the threads waiting on any of the locks that this
+		   thread currently holds*/
 
 		t->tmp_priority = max(max_lock(&t->held_locks)->lock_priority,
 							  t->priority);
 	}
 
-	// Update all the neccessary threads that this thread depends.
+	/* Update all the neccessary threads that this thread depends.*/
 	if(t->lock_waited_on != NULL){
-		// If the new tmp priority is now  higher than the current lock
-		// priority update the lock priority and then tell the thread
-		// that owns it to also update its  tmp priority
-		if (t->tmp_priority > t->lock_waited_on->lock_priority){
+		/* If the new tmp priority is now  higher than the current lock
+		   priority update the lock priority and then tell the thread
+		   that owns it to also update its  tmp priority*/
+		if(t->tmp_priority > t->lock_waited_on->lock_priority){
 			t->lock_waited_on->lock_priority = t->tmp_priority;
 			update_temp_priority(t->lock_waited_on->holder);
 		}

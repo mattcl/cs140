@@ -26,18 +26,18 @@
    kernel pool, but that's just fine for demonstration purposes. */
 
 /* A memory pool. */
-struct pool
-  {
-    struct lock lock;                   /* Mutual exclusion. */
-    struct bitmap *used_map;            /* Bitmap of free pages. */
-    uint8_t *base;                      /* Base of pool. */
-  };
+struct pool{
+	struct lock lock;                   /* Mutual exclusion. */
+	struct bitmap *used_map;            /* Bitmap of free pages. */
+	uint8_t *base;                      /* Base of pool. */
+};
 
 /* Two pools: one for kernel data, one for user pages. */
 static struct pool kernel_pool, user_pool;
 
 static void init_pool (struct pool *, void *base, size_t page_cnt,
-                       const char *name);
+		const char *name);
+
 static bool page_from_pool (const struct pool *, void *page);
 
 /* Initializes the page allocator.  At most USER_PAGE_LIMIT
@@ -49,7 +49,7 @@ void palloc_init (size_t user_page_limit){
 	size_t free_pages = (free_end - free_start) / PGSIZE;
 	size_t user_pages = free_pages / 2;
 	size_t kernel_pages;
-	if (user_pages > user_page_limit){
+	if(user_pages > user_page_limit){
 		user_pages = user_page_limit;
 	}
 	kernel_pages = free_pages - user_pages;
@@ -57,7 +57,7 @@ void palloc_init (size_t user_page_limit){
 	/* Give half of memory to kernel, half to user. */
 	init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
 	init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
-			 user_pages, "user pool");
+			user_pages, "user pool");
 }
 
 /* Obtains and returns a group of PAGE_CNT contiguous free pages.
@@ -71,7 +71,7 @@ void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
 	void *pages;
 	size_t page_idx;
 
-	if (page_cnt == 0){
+	if(page_cnt == 0){
 		return NULL;
 	}
 
@@ -79,18 +79,18 @@ void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
 	page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
 	lock_release (&pool->lock);
 
-	if (page_idx != BITMAP_ERROR){
+	if(page_idx != BITMAP_ERROR){
 		pages = pool->base + PGSIZE * page_idx;
 	}else{
 		pages = NULL;
 	}
 
-	if (pages != NULL){
-		if (flags & PAL_ZERO){
+	if(pages != NULL){
+		if(flags & PAL_ZERO){
 			memset (pages, 0, PGSIZE * page_cnt);
 		}
 	}else{
-		if (flags & PAL_ASSERT){
+		if(flags & PAL_ASSERT){
 			PANIC ("palloc_get: out of pages");
 		}
 	}
@@ -106,73 +106,66 @@ void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
    available, returns a null pointer, unless PAL_ASSERT is set in
    FLAGS, in which case the kernel panics. */
 void *palloc_get_page (enum palloc_flags flags){
-  return palloc_get_multiple (flags, 1);
+	return palloc_get_multiple (flags, 1);
 }
 
 /* Frees the PAGE_CNT pages starting at PAGES. */
-void
-palloc_free_multiple (void *pages, size_t page_cnt) 
-{
-  struct pool *pool;
-  size_t page_idx;
+void palloc_free_multiple (void *pages, size_t page_cnt){
+	struct pool *pool;
+	size_t page_idx;
 
-  ASSERT (pg_ofs (pages) == 0);
-  if (pages == NULL || page_cnt == 0)
-    return;
+	ASSERT (pg_ofs (pages) == 0);
+	if(pages == NULL || page_cnt == 0)
+		return;
 
-  if (page_from_pool (&kernel_pool, pages))
-    pool = &kernel_pool;
-  else if (page_from_pool (&user_pool, pages))
-    pool = &user_pool;
-  else
-    NOT_REACHED ();
-
-  page_idx = pg_no (pages) - pg_no (pool->base);
+	if(page_from_pool (&kernel_pool, pages)){
+		pool = &kernel_pool;
+	}else if(page_from_pool (&user_pool, pages)){
+		pool = &user_pool;
+	}else{
+		NOT_REACHED ();
+	}
+	page_idx = pg_no (pages) - pg_no (pool->base);
 
 #ifndef NDEBUG
-  memset (pages, 0xcc, PGSIZE * page_cnt);
+	memset (pages, 0xcc, PGSIZE * page_cnt);
 #endif
 
-  ASSERT (bitmap_all (pool->used_map, page_idx, page_cnt));
-  bitmap_set_multiple (pool->used_map, page_idx, page_cnt, false);
+	ASSERT (bitmap_all (pool->used_map, page_idx, page_cnt));
+	bitmap_set_multiple (pool->used_map, page_idx, page_cnt, false);
 }
 
 /* Frees the page at PAGE. */
-void
-palloc_free_page (void *page) 
-{
-  palloc_free_multiple (page, 1);
+void palloc_free_page (void *page){
+	palloc_free_multiple (page, 1);
 }
 
 /* Initializes pool P as starting at START and ending at END,
    naming it NAME for debugging purposes. */
-static void
-init_pool (struct pool *p, void *base, size_t page_cnt, const char *name) 
-{
-  /* We'll put the pool's used_map at its base.
+static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *name){
+	/* We'll put the pool's used_map at its base.
      Calculate the space needed for the bitmap
      and subtract it from the pool's size. */
-  size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
-  if (bm_pages > page_cnt)
-    PANIC ("Not enough memory in %s for bitmap.", name);
-  page_cnt -= bm_pages;
+	size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
+	if(bm_pages > page_cnt){
+		PANIC ("Not enough memory in %s for bitmap.", name);
+	}
+	page_cnt -= bm_pages;
 
-  printf ("%zu pages available in %s.\n", page_cnt, name);
+	printf ("%zu pages available in %s.\n", page_cnt, name);
 
-  /* Initialize the pool. */
-  lock_init (&p->lock);
-  p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
-  p->base = base + bm_pages * PGSIZE;
+	/* Initialize the pool. */
+	lock_init (&p->lock);
+	p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
+	p->base = base + bm_pages * PGSIZE;
 }
 
 /* Returns true if PAGE was allocated from POOL,
    false otherwise. */
-static bool
-page_from_pool (const struct pool *pool, void *page) 
-{
-  size_t page_no = pg_no (page);
-  size_t start_page = pg_no (pool->base);
-  size_t end_page = start_page + bitmap_size (pool->used_map);
+static bool page_from_pool (const struct pool *pool, void *page){
+	size_t page_no = pg_no (page);
+	size_t start_page = pg_no (pool->base);
+	size_t end_page = start_page + bitmap_size (pool->used_map);
 
-  return page_no >= start_page && page_no < end_page;
+	return page_no >= start_page && page_no < end_page;
 }

@@ -82,7 +82,7 @@ enum intr_level intr_set_level (enum intr_level level){
 }
 
 /* Enables interrupts and returns the previous interrupt status. */
-enum intr_level intr_enable (void) {
+enum intr_level intr_enable (void){
 	enum intr_level old_level = intr_get_level ();
 	ASSERT (!intr_context ());
 
@@ -96,7 +96,7 @@ enum intr_level intr_enable (void) {
 }
 
 /* Disables interrupts and returns the previous interrupt status. */
-enum intr_level intr_disable (void) {
+enum intr_level intr_disable (void){
 	enum intr_level old_level = intr_get_level ();
 
 	/* Disable interrupts by clearing the interrupt flag.
@@ -117,7 +117,7 @@ void intr_init (void){
 	pic_init ();
 
 	/* Initialize IDT. */
-	for (i = 0; i < INTR_CNT; i++){
+	for(i = 0; i < INTR_CNT; i++){
 		idt[i] = make_intr_gate (intr_stubs[i], 0);
 	}
 	/* Load IDT register.
@@ -127,7 +127,7 @@ void intr_init (void){
 	asm volatile ("lidt %0" : : "m" (idtr_operand));
 
 	/* Initialize intr_names. */
-	for (i = 0; i < INTR_CNT; i++){
+	for(i = 0; i < INTR_CNT; i++){
 		intr_names[i] = "unknown";
 	}
 	intr_names[0] = "#DE Divide Error";
@@ -159,7 +159,7 @@ static void register_handler (uint8_t vec_no, int dpl, enum intr_level level,
                               intr_handler_func *handler, const char *name){
 	ASSERT (intr_handlers[vec_no] == NULL);
 
-	if (level == INTR_ON){
+	if(level == INTR_ON){
 		idt[vec_no] = make_trap_gate (intr_stubs[vec_no], dpl);
 	}else{
 		idt[vec_no] = make_intr_gate (intr_stubs[vec_no], dpl);
@@ -223,7 +223,7 @@ void intr_yield_on_return (void){
    traps and exceptions, so we reprogram the PICs so that
    interrupts 0...15 are delivered to interrupt vectors 32...47
    (0x20...0x2f) instead. */
-static void pic_init (void) {
+static void pic_init (void){
 	/* Mask all interrupts on both PICs. */
 	outb (PIC0_DATA, 0xff);
 	outb (PIC1_DATA, 0xff);
@@ -255,7 +255,7 @@ static void pic_end_of_interrupt (int irq){
 	outb (0x20, 0x20);
 
 	/* Acknowledge slave PIC if this is a slave interrupt. */
-	if (irq >= 0x28){
+	if(irq >= 0x28){
 		outb (0xa0, 0x20);
 	}
 }
@@ -328,7 +328,7 @@ void intr_handler (struct intr_frame *frame){
 	and they need to be acknowledged on the PIC (see below).
 	An external interrupt handler cannot sleep. */
 	external = frame->vec_no >= 0x20 && frame->vec_no < 0x30;
-	if (external){
+	if(external){
 		ASSERT (intr_get_level () == INTR_OFF);
 		ASSERT (!intr_context ());
 
@@ -338,24 +338,24 @@ void intr_handler (struct intr_frame *frame){
 
 	/* Invoke the interrupt's handler. */
 	handler = intr_handlers[frame->vec_no];
-	if (handler != NULL){
+	if(handler != NULL){
 		handler (frame);
-	}else if (frame->vec_no == 0x27 || frame->vec_no == 0x2f){
+	}else if(frame->vec_no == 0x27 || frame->vec_no == 0x2f){
 		/* There is no handler, but this interrupt can trigger
 		 spuriously due to a hardware fault or hardware race
 		 condition.  Ignore it. */
-	} else {
+	}else{
 		unexpected_interrupt (frame);
 	}
 	/* Complete the processing of an external interrupt. */
-	if (external)    {
+	if(external)    {
 		ASSERT (intr_get_level () == INTR_OFF);
 		ASSERT (intr_context ());
 
 		in_external_intr = false;
 		pic_end_of_interrupt (frame->vec_no);
 
-		if (yield_on_return){
+		if(yield_on_return){
 			thread_yield ();
 		}
 	}
@@ -372,7 +372,7 @@ static void unexpected_interrupt (const struct intr_frame *f){
 	 unexpected interrupt the first time and fairly often after
 	 that, but one that occurs many times will not overwhelm the
 	 console. */
-	if ((n & (n - 1)) == 0){
+	if((n & (n - 1)) == 0){
 		printf ("Unexpected interrupt %#04x (%s)\n",
 		f->vec_no, intr_names[f->vec_no]);
 	}

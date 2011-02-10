@@ -3,8 +3,7 @@
 
 #ifndef __ASSEMBLER__
 /* switch_thread()'s stack frame. */
-struct switch_threads_frame 
-  {
+struct switch_threads_frame{
     uint32_t edi;               /*  0: Saved %edi. */
     uint32_t esi;               /*  4: Saved %esi. */
     uint32_t ebp;               /*  8: Saved %ebp. */
@@ -12,7 +11,7 @@ struct switch_threads_frame
     void (*eip) (void);         /* 16: Return address. */
     struct thread *cur;         /* 20: switch_threads()'s CUR argument. */
     struct thread *next;        /* 24: switch_threads()'s NEXT argument. */
-  };
+};
 
 /* Switches from CUR, which must be the running thread, to NEXT,
    which must also be running switch_threads(), returning CUR in

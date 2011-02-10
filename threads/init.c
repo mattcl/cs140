@@ -143,7 +143,7 @@ int main (void){
 
    The start and end of the BSS segment is recorded by the
    linker as _start_bss and _end_bss.  See kernel.lds. */
-static void bss_init (void) {
+static void bss_init (void){
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 }
@@ -159,14 +159,14 @@ static void paging_init (void){
 
 	pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
 	pt = NULL;
-	for (page = 0; page < init_ram_pages; page++){
+	for(page = 0; page < init_ram_pages; page++){
 		uintptr_t paddr = page * PGSIZE;
 		char *vaddr = ptov (paddr);
 		size_t pde_idx = pd_no (vaddr);
 		size_t pte_idx = pt_no (vaddr);
 		bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
 
-		if (pd[pde_idx] == 0){
+		if(pd[pde_idx] == 0){
 			pt = palloc_get_page (PAL_ASSERT | PAL_ZERO);
 			pd[pde_idx] = pde_create (pt);
 		}
@@ -184,7 +184,7 @@ static void paging_init (void){
 
 /* Breaks the kernel command line into words and returns them as
    an argv-like array. */
-static char ** read_command_line (void) {
+static char ** read_command_line (void){
 	static char *argv[LOADER_ARGS_LEN / 2 + 1];
 	char *p, *end;
 	int argc;
@@ -193,8 +193,8 @@ static char ** read_command_line (void) {
 	argc = *(uint32_t *) ptov (LOADER_ARG_CNT);
 	p = ptov (LOADER_ARGS);
 	end = p + LOADER_ARGS_LEN;
-	for (i = 0; i < argc; i++){
-		if (p >= end){
+	for(i = 0; i < argc; i++){
+		if(p >= end){
 			PANIC ("command line arguments overflow");
 		}
 		argv[i] = p;
@@ -204,10 +204,10 @@ static char ** read_command_line (void) {
 
 	/* Print kernel command line. */
 	printf ("Kernel command line:");
-	for (i = 0; i < argc; i++){
-		if (strchr (argv[i], ' ') == NULL){
+	for(i = 0; i < argc; i++){
+		if(strchr (argv[i], ' ') == NULL){
 			printf (" %s", argv[i]);
-		} else{
+		}else{
 			printf (" '%s'", argv[i]);
 		}
 	}
@@ -219,35 +219,35 @@ static char ** read_command_line (void) {
 /* Parses options in ARGV[]
    and returns the first non-option argument. */
 static char **parse_options (char **argv){
-	for (; *argv != NULL && **argv == '-'; argv++){
+	for(; *argv != NULL && **argv == '-'; argv++){
 		char *save_ptr;
 		char *name = strtok_r (*argv, "=", &save_ptr);
 		char *value = strtok_r (NULL, "", &save_ptr);
       
-		if (!strcmp (name, "-h"))
+		if(!strcmp (name, "-h"))
 			usage ();
-		else if (!strcmp (name, "-q"))
+		else if(!strcmp (name, "-q"))
 			shutdown_configure (SHUTDOWN_POWER_OFF);
-		else if (!strcmp (name, "-r"))
+		else if(!strcmp (name, "-r"))
 			shutdown_configure (SHUTDOWN_REBOOT);
 #ifdef FILESYS
-		else if (!strcmp (name, "-f"))
+		else if(!strcmp (name, "-f"))
 			format_filesys = true;
-		else if (!strcmp (name, "-filesys"))
+		else if(!strcmp (name, "-filesys"))
 			filesys_bdev_name = value;
-		else if (!strcmp (name, "-scratch"))
+		else if(!strcmp (name, "-scratch"))
 			scratch_bdev_name = value;
 #ifdef VM
-		else if (!strcmp (name, "-swap"))
+		else if(!strcmp (name, "-swap"))
 			swap_bdev_name = value;
 #endif
 #endif
-		else if (!strcmp (name, "-rs"))
+		else if(!strcmp (name, "-rs"))
 			random_init (atoi (value));
-		else if (!strcmp (name, "-mlfqs"))
+		else if(!strcmp (name, "-mlfqs"))
 			thread_mlfqs = true;
 #ifdef USERPROG
-		else if (!strcmp (name, "-ul"))
+		else if(!strcmp (name, "-ul"))
 			user_page_limit = atoi (value);
 #endif
 		else
@@ -268,7 +268,7 @@ static char **parse_options (char **argv){
 }
 
 /* Runs the task specified in ARGV[1]. */
-static void run_task (char **argv) {
+static void run_task (char **argv){
 	const char *task = argv[1];
 
 	printf ("Executing '%s':\n", task);
@@ -303,22 +303,22 @@ static void run_actions (char **argv){
 						{NULL, 0, NULL},
 	};
 
-	while (*argv != NULL){
+	while(*argv != NULL){
 		const struct action *a;
 		int i;
 
 		/* Find action name. */
-		for (a = actions; ; a++){
-			if (a->name == NULL){
+		for(a = actions; ; a++){
+			if(a->name == NULL){
 				PANIC ("unknown action `%s' (use -h for help)", *argv);
-			} else if (!strcmp (*argv, a->name)){
+			}else if(!strcmp (*argv, a->name)){
 				break;
 			}
 		}
 
 		/* Check for required arguments. */
-		for (i = 1; i < a->argc; i++){
-			if (argv[i] == NULL){
+		for(i = 1; i < a->argc; i++){
+			if(argv[i] == NULL){
 			  PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
 			}
 		}
@@ -388,20 +388,20 @@ static void locate_block_devices (void){
 static void locate_block_device (enum block_type role, const char *name){
 	struct block *block = NULL;
 
-	if (name != NULL) {
+	if(name != NULL){
 		block = block_get_by_name (name);
-		if (block == NULL){
+		if(block == NULL){
 			PANIC ("No such block device \"%s\"", name);
 		}
-	} else {
-		for (block = block_first (); block != NULL; block = block_next (block)){
-			if (block_type (block) == role){
+	}else{
+		for(block = block_first (); block != NULL; block = block_next (block)){
+			if(block_type (block) == role){
 				break;
 			}
 		}
 	}
 
-	if (block != NULL) {
+	if(block != NULL){
 		printf ("%s: using %s\n", block_type_name (role), block_name (block));
 		block_set_role (role, block);
 	}

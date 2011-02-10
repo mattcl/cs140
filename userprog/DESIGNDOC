@@ -147,8 +147,8 @@ the maximum number of arguments that can be stored in 256 characters. After we
 push all of the arguments onto the stack. we then word align the data. Push a
 empty 4 bytes of data which corresponds to argv[argc] then iterate through our
 char*[] in reverse order (I.E. start at arg count and decrement). After that we
-set the argv to point to the last argument, argv[0]. We then push the 4 bytes of
-count and then a null return address.
+set the argv to point to the last argument, argv[0]. We then push the 4 bytes 
+of count and then a null return address.
 
 
 ---- RATIONALE ----

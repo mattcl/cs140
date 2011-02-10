@@ -7,7 +7,7 @@
 #include "lib/fixed-point.h"
 
 /* States in a thread's life cycle. */
-enum thread_status   {
+enum thread_status{
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
@@ -96,16 +96,14 @@ struct thread {
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
 
-  // process needs to be here because only the thread is
-  // reachable inside the syscall interrupt handler so we
-  // need a handle to the processes open files and other
-  // data
+  /* process needs to be here because only the thread is
+     reachable inside the syscall interrupt handler so we
+     need a handle to the processes open files and other data*/
   struct process *process; /* Process data */
 
 #endif
   
-  // ------------ BEGIN CHANGES -------------//
-    /* Owned by thread.c. */
+  /* Owned by thread.c. */
   int64_t wake_time;           /* time used by thread sleep */
   
   /* Shared between thread.c and synch.c. */
@@ -116,7 +114,6 @@ struct thread {
   int nice ;                   /* Nice value */
   fixed_point recent_cpu;      /* The recent amount of cpu this thread
 	 	 	 	 	 	 	 	 	has used.*/
-  // ------------- END CHANGES --------------//
   
 	/* Owned by thread.c. */
   unsigned magic;              /* Detects stack overflow. */
@@ -158,7 +155,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-// ------------ BEGIN CHANGES -------------- //
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
 void recalculate_priorities (void);
@@ -169,7 +165,5 @@ bool thread_hash_compare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux);
 void thread_preempt(void);
-
-// ------------- END CHANGES --------------- //
 
 #endif /* threads/thread.h */

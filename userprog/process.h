@@ -8,7 +8,7 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
-// define a limit on the argument length
+/* define a limit on the argument length */
 #define MAX_ARG_LENGTH 256
 
 typedef int32_t pid_t;
@@ -24,16 +24,13 @@ struct process {
 	/* The element in the processes hash*/
 	struct hash_elem elem;
 
-	/* The Id of the process that created it*/
-	//pid_t parent_id;
-
 	struct list children_list;
 
 	/*The thread which this process is running on*/
 	struct thread *owning_thread;
 
-	// only this process can access open_files
-	// so no locks are included
+	/* only this process can access open_files
+	 so no locks are included */
 
 	/*A hash of open file descriptors */
 	struct hash open_files;
@@ -42,24 +39,24 @@ struct process {
 	int fd_count;
 
 	/* The exit code of this process.
-	 * MUST BE SET BEFORE thread_exit IS CALLED*/
+	   MUST BE SET BEFORE thread_exit IS CALLED*/
 	int exit_code;
 
-	/*Program name malloced*/
+	/* Program name malloced */
 	char *program_name;
 	struct file *executable_file;
 
 	/* The particular pid this thread is waiting on
-	 * If this pid exits it will increment the waiting
-	 * semaphore. Only used for process wait/exit*/
+	   If this pid exits it will increment the waiting
+	   semaphore. Only used for process wait/exit*/
 	pid_t child_waiting_on_pid;
 
-	/*A semaphore that allows us to wait for child pid to exit
-	 * only used in wait/exit*/
+	/* A semaphore that allows us to wait for child pid to exit
+	   only used in wait/exit*/
 	struct semaphore waiting_semaphore;
 
 	/* Whether the child pid was successfully created or not
-	 * only used for only used in processExecute/start_process*/
+	   only used for only used in processExecute/start_process*/
 	bool child_pid_created;
 
 	/* The condition of whether a process created with exec finished
@@ -68,8 +65,8 @@ struct process {
 	struct condition pid_cond;
 
 	/* The child process can't complete its creation until
-	 * it acquires this lock given that it exists I.E. that the parent
-	 * exists still. USED wherever any of the last 4 objects are used*/
+	   it acquires this lock given that it exists I.E. that the parent
+	   exists still. USED wherever any of the last 4 objects are used*/
 	struct lock child_pid_tid_lock;
 
 };
@@ -86,8 +83,8 @@ struct child_list_entry{
 };
 
 /* An entry into the open file hash of a process
- * It allows us to accurately and quickly tell if the process
- * currently owns a fd. And get its underlying file*/
+   It allows us to accurately and quickly tell if the process
+   currently owns a fd. And get its underlying file*/
 struct fd_hash_entry {
 	int fd;				    /* hash key and File Descriptor*/
 	struct file *open_file; /* Open file associated with this FD */
@@ -96,7 +93,7 @@ struct fd_hash_entry {
 
 void process_init(void);
 
-//methods for dealing with pid's and tid's
+/* methods for dealing with pid's and tid's */
 tid_t child_pid_to_tid (pid_t c_pid);
 pid_t child_tid_to_pid (tid_t c_tid);
 
