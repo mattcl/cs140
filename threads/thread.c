@@ -685,6 +685,7 @@ static void schedule (void){
 	if(cur != next){
 		prev = switch_threads (cur, next);
 	}
+
 	thread_schedule_tail (prev);
 }
 
@@ -726,6 +727,7 @@ void thread_check_sleeping(int64_t current_tick){
 				thread_unblock(t);
 				continue;
 			}
+
 			e = list_next(e);
 		}
 	}
@@ -778,6 +780,7 @@ void thread_preempt(void){
 	}else if(mlfqs_get_highest_priority() > cur->priority){
 		thread_yield();
 	}
+
 	intr_set_level (old_level);
 }
 
