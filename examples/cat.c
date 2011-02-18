@@ -20,8 +20,8 @@ main (int argc, char *argv[])
           success = false;
           continue;
         }
-      for (;;) 
-        {
+      for (;;){
+    	  printf("In moon loop\n");
           char buffer[1024];
           int bytes_read = read (fd, buffer, sizeof buffer);
           if (bytes_read == 0)

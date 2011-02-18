@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "lib/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -106,6 +107,8 @@ static void mlfqs_insert(struct thread *t);
 static void mlfqs_switch_queue(struct thread *t, int new_priority);
 static struct thread *mlfqs_get_next_thread_to_run(void);
 
+static void release_locks(void);
+
 // ---------------- END CHANGES ------------------- //
 
 /* Initializes the threading system by transforming the code
@@ -137,6 +140,7 @@ void thread_init (void){
 		mlfqs_init();
 		load_avg = 0;
 	}
+
 	// ---------- END CHANGES ---------- //
 
 	/* Set up a thread structure for the running thread.
@@ -151,6 +155,8 @@ void thread_init (void){
 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // Gives the main thread as 1
+
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -252,6 +258,18 @@ tid_t thread_create (const char *name, int priority,
 	 member cannot be observed. */
 	old_level = intr_disable ();
 
+#ifdef USERPROG
+	/* Initialize the user process */
+	struct process *p = calloc (1, sizeof(struct process));
+	if (p == NULL){
+		return TID_ERROR;
+	}
+
+	if( initialize_process (p, t) == false){
+		free(p);
+		return TID_ERROR;
+	}
+#endif
 	/* Stack frame for kernel_thread(). */
 	kf = alloc_frame (t, sizeof *kf);
 	kf->eip = NULL;
@@ -348,7 +366,9 @@ tid_t thread_tid (void){
    returns to the caller. */
 void thread_exit (void) {
 	ASSERT (!intr_context ());
-
+	intr_disable();
+	release_locks();
+	
 #ifdef USERPROG
 	process_exit ();
 #endif
@@ -356,11 +376,22 @@ void thread_exit (void) {
 	/* 	 Remove thread from all threads list, set our status to dying,
 		 and schedule another process.  That process will destroy us
 		 when it calls thread_schedule_tail(). */
-	intr_disable ();
 	list_remove (&thread_current()->allelem);
+	
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();
+}
+
+/* For all of the held locks, release without preempting */
+static void release_locks() {
+	ASSERT(!intr_context());
+	struct thread *t = thread_current();
+	while(!list_empty(&t->held_locks)) {
+		struct list_elem *e = list_pop_front(&t->held_locks);
+		struct lock *lock = list_entry(e, struct lock, elem);
+		lock_release_preempt(lock, false);
+	}
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
@@ -594,7 +625,7 @@ static struct thread *next_thread_to_run (void){
 		} else {
 			//Select the item off the queue with the highest priority
 			struct list_elem *e =
-					remove_list_max(&ready_list, &threadCompare);
+					remove_list_max(&ready_list, &thread_hash_compare);
 			ASSERT(e != NULL);
 			struct thread *t =  list_entry(e, struct thread,elem);
 			ASSERT(is_thread(t));
@@ -764,7 +795,7 @@ void thread_preempt(void){
 	if (!thread_mlfqs) {
 		if(!list_empty(&ready_list)){
 			struct thread *tHigh = list_entry(
-					list_max(&ready_list, &threadCompare, NULL),
+					list_max(&ready_list, &thread_hash_compare, NULL),
 					struct thread, elem);
 			if (tHigh->tmp_priority > cur->tmp_priority){
 				thread_yield();
@@ -854,7 +885,7 @@ void recalculate_recent_cpu (struct thread *t, void *none UNUSED){
  * thread and list_elem *b which is a member of a thread and return true
  * if thread A has priority LESS than that of thread b
  */
-bool threadCompare (const struct list_elem *a,
+bool thread_hash_compare (const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED){
 	ASSERT(a != NULL);
@@ -867,7 +898,6 @@ bool threadCompare (const struct list_elem *a,
 				(list_entry(b, struct thread, elem)->priority));
 	}
 }
-
 
 /**
  * Initializes the mlfqs system
@@ -941,5 +971,25 @@ static struct thread *mlfqs_get_next_thread_to_run(void) {
 		}
 	}
 	return idle_thread;
+}
+
+/*
+ * Because accessing the all threads list needs to be done with
+ * interrupts off, we must disable inteTid's %u\nrrupts inside of this
+ * function. Returns NULL or a pointer to the thread
+ */
+struct thread *thread_find(tid_t tid){
+	//printf("TID requested %u\n", tid);
+	ASSERT (intr_get_level () == INTR_OFF);
+	struct list_elem *head;
+	head = list_head(&all_list);
+	while ((head= list_next(head)) != list_end(&all_list)){
+		//printf("Tid's %u\n", (list_entry(next, struct thread, allelem)->tid));
+		if (list_entry(head, struct thread,  allelem)->tid == tid){
+			return list_entry(head, struct thread, allelem);
+		}
+	}
+	return NULL;
+
 }
 // ---------------- END CHANGES ---------------- //

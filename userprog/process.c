@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <list.h>
+#include <hash.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -17,9 +19,69 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
+
+static struct hash processes;			 /*A hash of all created processes*/
+static struct lock processes_hash_lock;  /*A lock on that hash table*/
+static struct lock pid_lock;			 /*A lock needed to increment it*/
+static bool debug = true;
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+static struct process *parent_process_from_child (struct process* child_process);
+
+// Shortcuts for lots of typing and possible errors
+#define HASH_ELEM const struct hash_elem
+#define AUX void *aux UNUSED
+
+//HASH table functions
+static unsigned file_hash_func (HASH_ELEM *e, AUX);
+static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
+static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
+
+static unsigned process_hash_func (HASH_ELEM *a, AUX);
+static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
+static void process_hash_entry_destroy (struct hash_elem *e, AUX);
+
+typedef bool is_equal (struct list_elem *cle, void *c_tid);
+static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
+	return ((list_entry(cle,struct child_list_entry,elem))->child_tid==*(tid_t*)c_tid);
+}
+static bool is_equal_func_pid (struct list_elem *cle, void *c_pid){
+	return ((list_entry(cle,struct child_list_entry,elem))->child_pid==*(pid_t*)c_pid);
+}
+
+static struct list_elem *child_list_entry_gen(
+		struct process *process, void *c_tid, is_equal *func);
+
+static struct child_list_entry *child_list_entry_pid(pid_t c_pid);
+static struct child_list_entry *child_list_entry_tid(tid_t c_tid);
+
+void process_init(void){
+	hash_init(&processes, &process_hash_func, &process_hash_compare, NULL);
+	lock_init(&processes_hash_lock);
+	lock_init(&pid_lock);
+
+	lock_init(&filesys_lock);
+
+	//CREATE the GLOBAL process
+	struct process *global = calloc(1, sizeof(struct process));
+	if (global == NULL){
+		// We can't allocate the global process, this is bad
+		PANIC("We can't Allocate the global process");
+	}
+	global->pid = 0;
+
+	thread_current()->process = global;
+
+	// Initializes this process with the parent process ID
+	// of 0
+	if (!initialize_process(global, thread_current())){
+		PANIC("ERROR initialzing the global process");
+	}
+
+}
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -36,19 +98,110 @@ tid_t process_execute (const char *file_name) {
 		return TID_ERROR;
 	}
 	strlcpy (fn_copy, file_name, PGSIZE);
-	/*probably want to copy the rest of the argument here.  We also
-	  need to make sure the stack pointer is correct. */
+
+	struct process *cur_process = thread_current()->process;
+
+	// make sure that the new process signals us that it has set up
+	lock_acquire(&cur_process->child_pid_tid_lock);
+	//printf("Waiting on thread create to return\n");
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	if (tid == TID_ERROR){
 		palloc_free_page (fn_copy);
+		lock_release(&cur_process->child_pid_tid_lock);
+		return tid;
 	}
+
+	//wait until the child process is set up or fails
+	// the pid_t will be in child_waiting_on, but we can get
+	// it through our child list
+	cond_wait(&cur_process->pid_cond, &cur_process->child_pid_tid_lock);
+
+	//printf("Returned from waiting on child\n");
+
+	lock_release(&cur_process->child_pid_tid_lock);
+
+	//Check to see if it set up correcly
+	if (cur_process->child_waiting_on_pid == PID_ERROR){
+		return TID_ERROR;
+	}
+
+	//If it set up correctly the tid will be in the list
+	// of children for this thread
 	return tid;
+}
+
+static pid_t allocate_pid(void){
+	static pid_t next_pid = 1;
+	pid_t pid;
+	lock_acquire (&pid_lock);
+	pid = next_pid++;
+	lock_release (&pid_lock);
+
+	return pid;
+}
+
+/* called by thread create and process_init
+ * Must be run with interrupts off
+ * Initializes the process and sets the process pointer
+ * In the thread that is being created with a parent_id
+ * Equal to the pid of creator thread
+ */
+bool initialize_process (struct process *p, struct thread *our_thread){
+	p->pid = allocate_pid();
+	p->parent_id = thread_current()->process->pid;
+	p->fd_count = 2;
+	bool success = hash_init(&p->open_files, &file_hash_func, &file_hash_compare, NULL);
+	if (!success){
+		return false;
+	}
+
+	sema_init(&p->waiting_semaphore, 0);
+
+	list_init(&p->children_list);
+
+	lock_init(&p->child_pid_tid_lock);
+	cond_init(&p->pid_cond);
+
+	p->child_waiting_on_pid = 0;
+	our_thread->process = p;
+	p->exit_code = 0;
+
+	lock_acquire(&processes_hash_lock);
+	struct hash_elem *process = hash_insert(&processes, &p->elem);
+	lock_release(&processes_hash_lock);
+
+	// returns something if it wasn't inserted of NULL if it
+	// was inserted. Go Figure. If process == NULL all is good
+	// otherwise bad times;
+	if (process != NULL){
+		hash_destroy(&p->open_files, NULL);
+		return false;
+	}
+	return true;
 }
 
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_) {
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+
+	// Get parent process. We know that it is waiting on a
+	// signal if it called exec
+	lock_acquire(&processes_hash_lock);
+	struct process *parent = parent_process_from_child(cur_process);
+	lock_release(&processes_hash_lock);
+
+	// Parent hasn't exited yet so we can grab their lock
+	// so that they wait until set up is done
+	if (parent != NULL){
+		//printf("Parent not null in start \n");
+		lock_acquire(&parent->child_pid_tid_lock);
+	}  else {
+		//printf("Parent was null in start\n");
+	}
+
 	char *file_name = file_name_;
 	struct intr_frame if_;
 	bool success;
@@ -62,10 +215,44 @@ static void start_process (void *file_name_) {
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
+
 	if (!success) {
+		//BAD TIMES
+		if (parent != NULL){
+			//communicate error with parent
+			parent->child_waiting_on_pid= PID_ERROR;
+			//printf("Signalling parent failure\n");
+			cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+			lock_release(&parent->child_pid_tid_lock);
+		}
+		// Calls process Exit to clean up process and set error
+		// code for the parent to retrieve
+		cur_process->exit_code = PID_ERROR;
 		thread_exit ();
 	}
-	printf("Finished loading\n");
+	////printf("Finished loading\n");
+
+	if (parent != NULL){
+		struct child_list_entry *cle = calloc(1, sizeof(struct child_list_entry));
+		if(cle != NULL){
+			cle->child_pid = cur_process->pid;
+			cle->child_tid = cur->tid;
+			list_push_front(&parent->children_list, &cle->elem);
+			parent->child_waiting_on_pid = cur_process->pid;
+		} else {
+			//Failed to allocate a handle on the child
+			parent->child_waiting_on_pid = PID_ERROR;
+		}
+		//printf("Signalling parent success\n");
+		cond_signal(&parent->pid_cond, &parent->child_pid_tid_lock);
+		lock_release(&parent->child_pid_tid_lock);
+
+		if (cle == NULL){
+			cur_process->exit_code = PID_ERROR;
+			thread_exit();
+		}
+	}
+
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -85,16 +272,51 @@ static void start_process (void *file_name_) {
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait (tid_t child_tid UNUSED){
-	while(1){
-		;
+int process_wait (tid_t child_tid){
+	struct child_list_entry *child_entry = child_list_entry_tid(child_tid);
+	if (child_entry == NULL){
+		// not one of our children
+		return PID_ERROR;
 	}
-	return -1;
+
+	//printf("PROCESS WAIT\n");
+
+	struct process *cur = thread_current()->process;
+
+	//Doing this with interrupts disabled because
+	// the child thread could begin thread exit in between
+	// if it wasn't. Disable interrupts itself, and then
+	// bring us back to hear and then we would be dereferencing
+	// freed memory
+	enum intr_level old_level = intr_disable();
+
+	// Needs interrupts off
+	struct thread* childthread = thread_find(child_tid);
+
+	if(childthread != NULL) {
+		cur->child_waiting_on_pid = childthread->process->pid;
+		//printf("Waiting on %u process %d from process %d\n", child_tid, child_entry->child_pid, cur->pid);
+		sema_down(&cur->waiting_semaphore);
+		//printf("Return from waiting %u process %d\n", child_tid, child_entry->child_pid);
+	}
+	intr_set_level (old_level);
+
+	//retrieve exit code now, should be in the updated
+	// child_entry
+	lock_acquire(&cur->child_pid_tid_lock);
+	int exit_code = child_entry->exit_code;
+	lock_release(&cur->child_pid_tid_lock);
+	return exit_code;
 }
 
-/* Free the current process's resources. */
+
+/* Free the current process's resources.
+ * And signals the parent that it has finished,
+ * if the parent still exists and is waiting*/
 void process_exit (void){
 	struct thread *cur = thread_current ();
+	struct process *cur_process = cur->process;
+	//printf("Exiting process %u\n", cur->process->pid);
 	uint32_t *pd;
 
 	/* Destroy the current process's page directory and switch back
@@ -112,6 +334,60 @@ void process_exit (void){
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
+
+	//We are no longer viable processes and are being removed from the
+	// list of processes. The lock here also ensures that our parent
+	// has either exited or hasn't exited while we update information
+	lock_acquire(&processes_hash_lock);
+	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
+
+	struct process *parent = parent_process_from_child(cur_process);
+
+	if (parent != NULL){
+		//printf("Parent not null\n");
+
+		//Get our list entry
+		struct list_elem *our_entry =
+				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+		if (our_entry != NULL){
+			lock_acquire(&parent->child_pid_tid_lock);
+			struct child_list_entry *entry = list_entry(our_entry,
+					struct child_list_entry, elem);
+			entry->exit_code = cur_process->exit_code;
+			lock_release(&parent->child_pid_tid_lock);
+		}
+
+		if (parent->child_waiting_on_pid == cur->process->pid){
+			//printf("Waking parent\n");
+			sema_up(&parent->waiting_semaphore);
+		} else {
+			//Debuging for deadlock
+			//printf("not waking parent\n");
+		}
+	}
+
+	lock_release(&processes_hash_lock);
+
+	if( deleted != &cur_process->elem){
+		// We pulled out a different proccess with the same pid... uh oh
+		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
+	}
+
+	// Free all open files
+	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
+
+	// We have already been removed from the list of processes and
+	// thus can't be found by our children. The locking here isn't
+	// necessary but doesn't hurt correctness
+	lock_acquire(&cur_process->child_pid_tid_lock);
+	while (!list_empty (&cur_process->children_list)){
+	       struct list_elem *e = list_pop_front (&cur_process->children_list);
+	       free (list_entry(e, struct child_list_entry, elem));
+	}
+	lock_release(&cur_process->child_pid_tid_lock);
+
+	free(cur_process);
+
 }
 
 /* Sets up the CPU for running user code in the current
@@ -195,7 +471,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
-static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr);
+static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -231,7 +507,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	process_activate ();
 
 	/* Open executable file. */
-	//file = filesys_open (file_name);
+	lock_acquire(&filesys_lock);
 	file = filesys_open (f_name);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
@@ -317,11 +593,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp) {
 	/* Start address. */
 	*eip = (void (*) (void)) ehdr.e_entry;
 
-	success = setup_main_args(esp, f_name, token, save_ptr);
+	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
+	lock_release(&filesys_lock);
 	return success;
 }
 
@@ -335,8 +612,8 @@ static inline void adjust_stack_ptr(void **esp, size_t length){
 }
 
 
-static bool setup_main_args(void **esp, char *f_name, char *token, char *save_ptr){
-	printf("Setup stack\n");
+static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr){
+	//printf("Setup stack\n");
 	void *strPtrs[128];
 	int count = 0;
 	int i = 0;
@@ -350,7 +627,7 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 	strlcpy(*esp, f_name, fn_len);
 
 	strPtrs[0] = *esp;
-	printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
+	//printf("ESP %p %s %s\n", *esp, *(char**)esp, f_name);
 
 	// pushes arguments onto stack
 	for(; token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
@@ -361,40 +638,40 @@ static bool setup_main_args(void **esp, char *f_name, char *token, char *save_pt
 
 		//put stuff into the stack
 		strlcpy(*esp, token, arg_len);
-		printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
+		//printf("ESP %p %s %s\n", *esp, *(char**)esp, token);
 		strPtrs[++count] = *esp;
 
 	}
 
 	// word align
 	adjust_stack_ptr(esp, ((unsigned int)*esp) % 4);
-	printf("ESP %p\n", *esp);
+	//printf("ESP %p\n", *esp);
 
 	// sets argv[argc] = NULL
 	push_4_byte_data(esp , NULL);
-	printf("ESP %p, %d\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d\n", *esp, **(int**)esp);
 
 	// set argv elements
 	for(i = count; i >= 0; i--) {
 		push_4_byte_data(esp, strPtrs[i]);
-		printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
+		//printf("ESP %p %p %s %p %s (argv[%d])\n", *esp, **(char***)esp, **(char***)esp, strPtrs[i], (char*)strPtrs[i], i);
 	}
 
 	// set argv
 	char *beginning = *esp;
 	push_4_byte_data(esp, beginning);
-	printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
+	//printf("ESP %p, %p (argv)\n", *esp, **(char***)esp);
 
-	// set argc
-	push_4_byte_data(esp, (void*)count);
+	// set argc (Count was an index but needs to be the number of args including filename)
+	push_4_byte_data(esp, (void*)(count+1));
 
-	printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d (argc)\n", *esp, **(int**)esp);
 
 	//push return address
 	push_4_byte_data(esp , NULL);
-	printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
+	//printf("ESP %p, %d (return address)\n", *esp, **(int**)esp);
 
-	printf("Returning from setting up stack %p\n", *esp);
+	//printf("Returning from setting up stack %p\n", *esp);
 	return true;
 
 }
@@ -541,3 +818,110 @@ static bool install_page (void *upage, void *kpage, bool writable) {
 	return (pagedir_get_page (t->pagedir, upage) == NULL
 			&& pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+
+/*
+ * Returns a process * or NULL
+ * MUST BE CALLED WITH THE procces_hash_lock HELD!!!
+ */
+static struct process *parent_process_from_child (struct process* our_process){
+	struct process key;
+	key.pid = our_process->parent_id;
+	struct hash_elem *parent_process = hash_find(&processes, &key.elem);
+	if (parent_process != NULL){
+		return hash_entry(parent_process, struct process, elem);
+	} else {
+		return NULL;
+	}
+}
+
+static struct list_elem *child_list_entry_gen(
+		struct process *process, void *c_tid, is_equal *func){
+	lock_acquire(&process->child_pid_tid_lock);
+	struct list_elem *h;
+	h = list_head(&process->children_list);
+	while ((h = list_next(h)) != list_end(&process->children_list)){
+		if(func(h, c_tid)){
+			lock_release(&process->child_pid_tid_lock);
+			return h;
+		}
+	}
+	lock_release(&process->child_pid_tid_lock);
+	return NULL;
+}
+
+static struct child_list_entry *child_list_entry_tid (tid_t c_tid){
+	struct process *cur_process = thread_current()->process;
+	struct list_elem *temp = child_list_entry_gen(cur_process, &c_tid, &is_equal_func_tid);
+	if ( temp != NULL){
+		return list_entry( temp, struct child_list_entry,elem);
+	}
+	return NULL;
+}
+
+static struct child_list_entry *child_list_entry_pid(pid_t c_pid){
+	struct process *cur_process = thread_current()->process;
+	struct list_elem *temp = child_list_entry_gen(cur_process, &c_pid, &is_equal_func_pid);
+	if ( temp != NULL){
+		return list_entry( temp, struct child_list_entry,elem);
+	}
+	return NULL;
+}
+
+/* Takes a tid and returns the corresponding pid
+ * if it was a child, PID_ERROR otherwise*/
+pid_t child_tid_to_pid (tid_t c_tid){
+	struct child_list_entry *child_entry = child_list_entry_tid(c_tid);
+	if (child_entry != NULL){
+		return child_entry->child_pid;
+	}
+	return PID_ERROR;
+}
+
+/* Takes a pid and returns the corresponding tid
+ * if it was a child, TID_ERROR otherwise*/
+tid_t child_pid_to_tid (pid_t c_pid){
+	struct child_list_entry *child_entry = child_list_entry_pid(c_pid);
+	if (child_entry != NULL){
+		return child_entry->child_tid;
+	}
+	return PID_ERROR;
+}
+
+static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	return (hash_entry(a, struct fd_hash_entry, elem)->fd <
+			hash_entry(b, struct fd_hash_entry, elem)->fd);
+}
+
+static unsigned file_hash_func (HASH_ELEM *e, AUX){
+	return hash_int(hash_entry(e, struct fd_hash_entry, elem)->fd);
+}
+
+static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
+	//File close needs to be called here
+	lock_acquire(&filesys_lock);
+	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
+	lock_release(&filesys_lock);
+	free(hash_entry(e, struct fd_hash_entry, elem));
+}
+
+static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	return (hash_entry(a, struct process, elem)->pid <
+			hash_entry(b, struct process, elem)->pid);
+}
+
+static unsigned process_hash_func (HASH_ELEM *a, AUX){
+	pid_t pid = hash_entry(a, struct process, elem)->pid;
+	return hash_bytes(&pid, (sizeof(pid_t)));
+}
+
+static void process_hash_entry_destroy (struct hash_elem *e UNUSED, AUX){
+	//Auxilary data may need to be destroyed left it here just in case
+}
+
+#undef HASH_ELEM
+#undef AUX
+

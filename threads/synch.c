@@ -51,7 +51,7 @@ static inline struct lock *max_lock(struct list *locks){
 }
 /* Returns the maximum priority thread out of this list of threads */
 static inline struct thread *max_thread(struct list *threads){
-	return list_entry(list_max(threads, &threadCompare, NULL),
+	return list_entry(list_max(threads, &thread_hash_compare, NULL),
 					  struct thread, elem);
 }
 //======== End Changes ========//
@@ -129,7 +129,7 @@ void sema_up (struct semaphore *sema){
 
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)) {
-		struct list_elem *highest = remove_list_max(&sema->waiters, &threadCompare);
+		struct list_elem *highest = remove_list_max(&sema->waiters, &thread_hash_compare);
 		ASSERT(highest != NULL);
 		// Pop off only the highest priority waiter
 		thread_unblock (list_entry (highest, struct thread, elem));
@@ -272,6 +272,9 @@ bool lock_try_acquire (struct lock *lock) {
    make sense to try to release a lock within an interrupt
    handler. */
 void lock_release (struct lock *lock){
+	lock_release_preempt(lock, true);
+}
+void lock_release_preempt (struct lock *lock, bool preempt) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 	ASSERT (!intr_context ());
@@ -283,7 +286,7 @@ void lock_release (struct lock *lock){
 		//Remove the thread with highest priority O(n) in threads
 		// waiting on this lock
 		struct list_elem *highest =
-				remove_list_max(&lock->waiters, &threadCompare);
+				remove_list_max(&lock->waiters, &thread_hash_compare);
 		ASSERT(highest != NULL);
 
 		//The thread that is still waiting with the highest priority
@@ -312,9 +315,10 @@ void lock_release (struct lock *lock){
 	update_temp_priority(thread_current());
 
 	intr_set_level (old_level);
-
-	//schedule highest priority thread
-	thread_preempt();
+	if(preempt) {
+		//schedule highest priority thread
+		thread_preempt();
+	}
 }
 
 /* Returns true if the current thread holds LOCK, false

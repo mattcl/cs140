@@ -9,6 +9,9 @@
 #include <debug.h>
 #include "fixed-point.h"
 
+#define INT_FIELD_SIZE 17
+#define FRAC_FIELD_SIZE 14
+
 #define MAX_INT_CONV_VAL 262143 
 
 /* the conversion value "f" = 2^14

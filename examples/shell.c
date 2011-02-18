@@ -32,6 +32,7 @@ main (void)
         }
       else
         {
+    	  printf("Execing command %s\n", command);
           pid_t pid = exec (command);
           if (pid != PID_ERROR)
             printf ("\"%s\": exit code %d\n", command, wait (pid));
@@ -63,7 +64,10 @@ read_line (char line[], size_t size)
           *pos = '\0';
           putchar ('\n');
           return;
-
+        case '\n':
+        	*pos = '\0';
+        	putchar('\n');
+        	return;
         case '\b':
           backspace (&pos, line);
           break;
