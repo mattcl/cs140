@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 struct frame_table {
-	struct bitmap used_frames;		/*   The bitmap that tracks used/free
+	struct bitmap *used_frames;		/*   The bitmap that tracks used/free
 		 	 	 	 	 	 	 	 	 frames*/
 	struct lock frame_map_lock;		/*	 Lock to the frame bitmap  */
 	struct hash frame_hash;			/*   */
