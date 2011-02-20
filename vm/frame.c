@@ -23,7 +23,7 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
 /* Initializes the frame table. Setting the bitmap and the
    hash table that represents each frame */
 void frame_init(void){
-	printf("Palloc num pages %lu\n", palloc_number_user_pages());
+	//printf("Palloc num pages %lu\n", palloc_number_user_pages());
 	f_table.used_frames = bitmap_create(palloc_number_user_pages());
 	lock_init(&f_table.frame_map_lock);
 	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
@@ -60,7 +60,7 @@ void  *frame_get_page (enum palloc_flags flags){
 	f_hash_entry->current_page_dir = thread_current()->pagedir;
 	f_hash_entry->page = kpage;
 
-	printf("Index, %lu", frame_idx);
+	//printf("Index, %lu", frame_idx);
 
 	lock_acquire (&f_table.frame_map_lock);
 	bitmap_set(f_table.used_frames, frame_idx, true);
