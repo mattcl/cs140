@@ -39,10 +39,11 @@ void  *frame_get_page (enum palloc_flags flags){
 	}
 
 	lock_acquire (&f_table.frame_map_lock);
-	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, bitmap_size(f_table.used_frames), false);
+	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	lock_release (&f_table.frame_map_lock);
 	printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
+		printf("evict\n");
 		return evict_page();
 	}
 
