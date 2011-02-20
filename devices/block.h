@@ -17,14 +17,13 @@ typedef uint32_t block_sector_t;
 /* Format specifier for printf(), e.g.:
    printf ("sector=%"PRDSNu"\n", sector); */
 #define PRDSNu PRIu32
-
+
 /* Higher-level interface for file systems, etc. */
 
 struct block;
 
 /* Type of a block device. */
-enum block_type
-  {
+enum block_type{
     /* Block device types that play a role in Pintos. */
     BLOCK_KERNEL,                /* Pintos OS kernel. */
     BLOCK_FILESYS,               /* File system. */
@@ -37,7 +36,7 @@ enum block_type
     BLOCK_RAW = BLOCK_ROLE_CNT,  /* "Raw" device with unidentified contents. */
     BLOCK_FOREIGN,               /* Owned by non-Pintos operating system. */
     BLOCK_CNT                    /* Number of Pintos block types. */
-  };
+};
 
 const char *block_type_name (enum block_type);
 
@@ -58,14 +57,13 @@ enum block_type block_type (struct block *);
 
 /* Statistics. */
 void block_print_stats (void);
-
+
 /* Lower-level interface to block device drivers. */
 
-struct block_operations
-  {
+struct block_operations{
     void (*read) (void *aux, block_sector_t, void *buffer);
     void (*write) (void *aux, block_sector_t, const void *buffer);
-  };
+};
 
 struct block *block_register (const char *name, enum block_type,
                               const char *extra_info, block_sector_t size,

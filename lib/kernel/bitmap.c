@@ -8,27 +8,6 @@
 #include "filesys/file.h"
 #endif
 
-/* Element type.
-
-   This must be an unsigned integer type at least as wide as int.
-
-   Each bit represents one bit in the bitmap.
-   If bit 0 in an element represents bit K in the bitmap,
-   then bit 1 in the element represents bit K+1 in the bitmap,
-   and so on. */
-typedef unsigned long elem_type;
-
-/* Number of bits in an element. */
-#define ELEM_BITS (sizeof (elem_type) * CHAR_BIT)
-
-/* From the outside, a bitmap is an array of bits.  From the
-   inside, it's an array of elem_type (defined above) that
-   simulates an array of bits. */
-struct bitmap{
-	size_t bit_cnt;     /* Number of bits. */
-	elem_type *bits;    /* Elements that represent bits. */
-};
-
 /* Returns the index of the element that contains the bit
    numbered BIT_IDX. */
 static inline size_t elem_idx (size_t bit_idx){
