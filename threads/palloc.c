@@ -154,6 +154,7 @@ static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *
 
 	printf ("%zu pages available in %s.\n", page_cnt, name);
 
+
 	/* Initialize the pool. */
 	lock_init (&p->lock);
 	p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
