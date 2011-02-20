@@ -6,8 +6,12 @@
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
+#include "vm/frame.h"
 
 #define PTE_MEDIUM 0x00000200
+
+
+
 
 static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
@@ -41,7 +45,7 @@ void pagedir_destroy (uint32_t *pd){
 
 			for(pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++){
 				if(*pte & PTE_P){
-					palloc_free_page (pte_get_page (*pte));
+					frame_clear_page(pte_get_page (*pte));
 				}
 			}
 			palloc_free_page (pt);
