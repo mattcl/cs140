@@ -5,6 +5,7 @@
 #include <bitmap.h>
 #include <hash.h>
 #include "../threads/palloc.h"
+#include "../threads/malloc.h"
 #include "../threads/synch.h"
 #include <stdint.h>
 
@@ -32,7 +33,7 @@ void frame_init(void){
    palloc. the flags must contain user. If the frame recieved used to hold
    data it will be erased before being returned*/
 void  *frame_get_page (enum palloc_flags flags){
-	if(flags&PAL_USER == 0){
+	if((flags&PAL_USER) == 0){
 		PANIC("Can not allocate a page for kernel from the user pool");
 	}
 	lock_acquire (&f_table.frame_map_lock);
@@ -81,8 +82,8 @@ static unsigned frame_hash_func (HASH_ELEM *e, AUX){
 static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	return (hash_entry(e, struct frame_hash_entry, elem)->position_in_bitmap <
-			hash_entry(e, struct frame_hash_entry, elem)->position_in_bitmap);
+	return (hash_entry(a, struct frame_hash_entry, elem)->position_in_bitmap <
+			hash_entry(b, struct frame_hash_entry, elem)->position_in_bitmap);
 }
 
 
