@@ -596,6 +596,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 				}
 				if(!load_segment (file, file_page, (void *) mem_page,
 						read_bytes, zero_bytes, writable)){
+					printf("Failed to load segment\n");
 					goto done;
 				}
 
@@ -608,6 +609,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
+		printf("failed to setup stack\n");
 		goto done;
 	}
 	
