@@ -47,6 +47,8 @@ void  *frame_get_page (enum palloc_flags flags){
 
 	uint8_t *kpage = palloc_get_page (flags);
 
+	printf("%p\n", kpage);
+
 	frame_idx = palloc_get_user_page_index(kpage);
 
 	struct frame_hash_entry *f_hash_entry = calloc(1, sizeof(struct frame_hash_entry));
@@ -60,7 +62,7 @@ void  *frame_get_page (enum palloc_flags flags){
 	f_hash_entry->current_page_dir = thread_current()->pagedir;
 	f_hash_entry->page = kpage;
 
-	//printf("Index, %lu", frame_idx);
+	printf("Index, %lu\n", frame_idx);
 
 	lock_acquire (&f_table.frame_map_lock);
 	bitmap_set(f_table.used_frames, frame_idx, true);
@@ -74,6 +76,8 @@ void  *frame_get_page (enum palloc_flags flags){
 	if(frame_entry != NULL){
 		PANIC("Weird Error occured");
 	}
+
+	printf("%p\n", f_hash_entry->page);
 
 	return f_hash_entry->page;
 }
