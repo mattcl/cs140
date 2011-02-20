@@ -172,14 +172,14 @@ static bool page_from_pool (const struct pool *pool, void *page){
 }
 
 size_t palloc_number_user_pages(void){
-	return bitmap_size(user_pool);
+	return bitmap_size(&user_pool);
 }
 
 size_t palloc_number_kernel_pages(void){
-	return bitmap_size(kernel_pool);
+	return bitmap_size(&kernel_pool);
 }
 
-uint32_t palloc_get_user_page_index(void *kvaddr){
-	return ((uint8_t*)kvaddr - user_pool->base)/PGSIZE;
+size_t palloc_get_user_page_index(void *kvaddr){
+	return ((uint8_t*)kvaddr - user_pool.base)/PGSIZE;
 }
 

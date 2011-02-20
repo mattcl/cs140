@@ -22,6 +22,6 @@ void palloc_free_multiple (void *, size_t page_cnt);
    for the user*/
 size_t number_user_pages(void);
 size_t number_kernel_pages(void);
-uint32_t palloc_get_user_page_index(void *kvaddr);
+size_t palloc_get_user_page_index(void *kvaddr);
 
 #endif /* threads/palloc.h */
