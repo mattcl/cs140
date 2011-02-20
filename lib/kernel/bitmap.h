@@ -6,6 +6,7 @@
 #include <inttypes.h>
 
 /* Bitmap abstract data type. */
+struct bitmap;
 
 /* Creation and destruction. */
 struct bitmap *bitmap_create (size_t bit_cnt);
