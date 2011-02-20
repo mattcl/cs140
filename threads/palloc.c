@@ -47,7 +47,7 @@ void palloc_init (size_t user_page_limit){
 	uint8_t *free_start = ptov (1024 * 1024);
 	uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
 	size_t free_pages = (free_end - free_start) / PGSIZE;
-	size_t user_pages = free_pages / 2;
+	size_t user_pages = free_pages / MEMORY_DIVISION;
 	size_t kernel_pages;
 	if(user_pages > user_page_limit){
 		user_pages = user_page_limit;
@@ -56,7 +56,7 @@ void palloc_init (size_t user_page_limit){
 
 	/* Give half of memory to kernel, half to user. */
 	init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
-	init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
+	init_pool (&user_pool, free_start + (kernel_pages * PGSIZE),
 			user_pages, "user pool");
 }
 
@@ -146,6 +146,7 @@ static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *
 	/* We'll put the pool's used_map at its base.
      Calculate the space needed for the bitmap
      and subtract it from the pool's size. */
+
 	size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
 	if(bm_pages > page_cnt){
 		PANIC ("Not enough memory in %s for bitmap.", name);
@@ -169,3 +170,16 @@ static bool page_from_pool (const struct pool *pool, void *page){
 
 	return page_no >= start_page && page_no < end_page;
 }
+
+size_t palloc_number_user_pages(void){
+	return bitmap_size(user_pool);
+}
+
+size_t palloc_number_kernel_pages(void){
+	return bitmap_size(kernel_pool);
+}
+
+uint32_t palloc_get_user_page_index(void *kvaddr){
+	return ((uint8_t*)kvaddr - user_pool->base)/PGSIZE;
+}
+
