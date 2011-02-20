@@ -1,7 +1,7 @@
 #include "frame.h"
 #include <debug.h>
 #include "page.h"
-#include "thread.h"
+#include "threads/thread.h"
 
 static struct frame_table f_table;
 
@@ -17,9 +17,9 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
 /* Initializes the frame table. Setting the bitmap and the
    hash table that represents each frame */
 void frame_init(void){
-	f_table->used_frames = bitmap_create(palloc_number_user_pages());
-	lock_init(&f_table->frame_map_lock);
-	hash_init(&f_table->frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
+	f_table.used_frames = bitmap_create(palloc_number_user_pages());
+	lock_init(&f_table.frame_map_lock);
+	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
 }
 
 /* Gets a page which is in a frame, evicts if there are no available frames
@@ -30,9 +30,9 @@ void  *frame_get_page (enum palloc_flags flags){
 	if(flags&PAL_USER == 0){
 		PANIC("Can not allocate a page for kernel from the user pool");
 	}
-	lock_acquire (&f_table->frame_map_lock);
-	size_t frame_idx = bitmap_scan (&f_table->used_frames, 0, bitmap_size(&f_table->used_frames), false);
-	lock_release (&f_table->frame_map_lock);
+	lock_acquire (&f_table.frame_map_lock);
+	size_t frame_idx = bitmap_scan (&f_table.used_frames, 0, bitmap_size(&f_table.used_frames), false);
+	lock_release (&f_table.frame_map_lock);
 
 	if(frame_idx == BITMAP_ERROR){
 		return evict_page();
@@ -53,11 +53,11 @@ void  *frame_get_page (enum palloc_flags flags){
 	f_hash_entry->current_page_dir = thread_current()->pagedir;
 	f_hash_entry->page = kpage;
 
-	lock_acquire (&f_table->frame_map_lock);
-	bitmap_set(f_table->used_frames, frame_idx, true);
+	lock_acquire (&f_table.frame_map_lock);
+	bitmap_set(f_table.used_frames, frame_idx, true);
 
-	struct hash_elem *frame_entry = hash_insert(&f_table->frame_hash, &f_hash_entry->elem);
-	lock_release (&f_table->frame_map_lock);
+	struct hash_elem *frame_entry = hash_insert(&f_table.frame_hash, &f_hash_entry->elem);
+	lock_release (&f_table.frame_map_lock);
 
 	/* returns something if it wasn't inserted of NULL if it
 	   was inserted. Go Figure. If process == NULL all is good
