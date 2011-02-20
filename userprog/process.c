@@ -176,7 +176,7 @@ tid_t process_execute (const char *file_name){
 	   of children for this thread */
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
-	printf("Execute\n");
+	printf("Execute 2\n");
 	return tid;
 }
 
@@ -402,7 +402,7 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
-	printf("Exit 2\n");
+	printf("Process Exit 2\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
