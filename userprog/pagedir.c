@@ -10,9 +10,6 @@
 
 #define PTE_MEDIUM 0x00000200
 
-
-
-
 static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
 
@@ -243,49 +240,49 @@ static void invalidate_pagedir (uint32_t *pd){
 
 /* Sets the storage medium. */
 void pagedir_set_storage_medium (uint32_t *pd, void *vpage, medium_t
-				medium){
-  //get the page table out of the page directory
-  uint32_t *pte = lookup_page (pd, vpage, false);
-  
-  if(pte != NULL){
-    ASSERT( (*pte & PTE_P) == 0);
-    if(medium == SWAP){
-      *pte |= PTE_MEDIUM; 
-	} else {
-      *pte &= ~(uint32_t) PTE_MEDIUM; 
-    }
-  }
+		medium){
+	/* get the page table out of the page directory */
+	uint32_t *pte = lookup_page (pd, vpage, false);
+
+	if(pte != NULL){
+		ASSERT( (*pte & PTE_P) == 0);
+		if(medium == SWAP){
+			*pte |= PTE_MEDIUM;
+		} else {
+			*pte &= ~(uint32_t) PTE_MEDIUM;
+		}
+	}
 }
 
 medium_t pagedir_get_storage_medium (uint32_t *pd, void *vpage){
-  //get the page table out of the page directory
-  uint32_t *pte = lookup_page (pd, vpage, false);
-  
-  //sentinal value
-  if(pte == NULL) return -1;
-  ASSERT((*pte & PTE_P) == 0);
-  
-  if((*pte & (uint32_t)PTE_MEDIUM) == SWAP){
-    return SWAP;
-  } else {
-    return DISK; 
-  }
+	/*get the page table out of the page directory*/
+	uint32_t *pte = lookup_page (pd, vpage, false);
+
+	/* sentinal value*/
+	if(pte == NULL) return -1;
+	ASSERT((*pte & PTE_P) == 0);
+
+	if((*pte & (uint32_t)PTE_MEDIUM) == SWAP){
+		return SWAP;
+	} else {
+		return DISK;
+	}
 }
 
 void pagedir_set_storage_location (uint32_t *pd, void *vpage, uint32_t location){
-  uint32_t *pte = lookup_page(pd, vpage, false);
+	uint32_t *pte = lookup_page(pd, vpage, false);
 
-  ASSERT ((location & ~(uint32_t) PTE_ADDR) == 0);
+	ASSERT ((location & ~(uint32_t) PTE_ADDR) == 0);
 
-  if(pte != NULL){
-    *pte |= (location);
-  }
+	if(pte != NULL){
+		*pte |= (location);
+	}
 }
 
 uint32_t pagedir_get_storage_location(uint32_t *pd, void *vpage){
-  uint32_t *pte = lookup_page(pd, vpage, false);
+	uint32_t *pte = lookup_page(pd, vpage, false);
 
-  if(pte == NULL) return 0;
-  ASSERT((*pte & PTE_P) == 0); 
-  return *pte & PTE_ADDR;
+	if(pte == NULL) return 0;
+	ASSERT((*pte & PTE_P) == 0);
+	return *pte & PTE_ADDR;
 }

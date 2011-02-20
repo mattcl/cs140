@@ -88,7 +88,6 @@ void  *frame_get_page (enum palloc_flags flags){
    currently in a frame */
 bool frame_clear_page (void *kernel_page_addr){
 	/*Error checking needs implementation*/
-
 	size_t frame_idx = palloc_get_user_page_index(kernel_page_addr);
 	struct frame_hash_entry key;
 	key.position_in_bitmap = frame_idx;
@@ -97,7 +96,6 @@ bool frame_clear_page (void *kernel_page_addr){
 	if(frame_hash_elem != NULL){
 		hash_delete(&f_table.frame_hash, frame_hash_elem);
 		bitmap_set(f_table.used_frames, frame_idx, false);
-		//hash_entry(frame_hash_elem, struct frame_hash_entry, elem);
 	}else{
 		//Invalid page to be releasing so.....
 		PANIC("INVALID PAGE REMOVED FROM FRAME");

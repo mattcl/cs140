@@ -26,9 +26,4 @@ medium_t  pagedir_get_storage_medium (uint32_t *pd, void *upage);
 void pagedir_set_storage_location (uint32_t *pd, void *upage, uint32_t location);
 uint32_t pagedir_get_storage_location (uint32_t *pd, void* upage);
 
-
-
-
-
-
 #endif /* userprog/pagedir.h */
