@@ -134,7 +134,6 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
-	printf("Execute 1\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -176,7 +175,7 @@ tid_t process_execute (const char *file_name){
 	   of children for this thread */
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
-	printf("Execute 2\n");
+
 	return tid;
 }
 
@@ -323,7 +322,6 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
-	printf("Process Exit 1\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -402,7 +400,6 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
-	printf("Process Exit 2\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
@@ -769,7 +766,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* Get a page of memory. */
-		uint8_t *kpage = frame_get_page(PAL_USER);
+		uint8_t *kpage = palloc_get_page (PAL_USER);
 		if(kpage == NULL){
 			return false;
 		}
@@ -801,7 +798,7 @@ static bool setup_stack (void **esp){
 	uint8_t *kpage;
 	bool success = false;
 
-	kpage = frame_get_page(PAL_USER | PAL_ZERO);
+	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
 
 	if(kpage != NULL){
 		success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
