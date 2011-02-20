@@ -1,11 +1,11 @@
 #include "frame.h"
 #include <debug.h>
 #include "page.h"
-#include "threads/thread.h"
+#include "../threads/thread.h"
 #include <bitmap.h>
 #include <hash.h>
-#include "threads/palloc.h"
-#include "threads/synch.h"
+#include "../threads/palloc.h"
+#include "../threads/synch.h"
 #include <stdint.h>
 
 static struct frame_table f_table;
