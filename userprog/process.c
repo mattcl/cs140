@@ -134,6 +134,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
+	printf("Execute 1\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -175,7 +176,7 @@ tid_t process_execute (const char *file_name){
 	   of children for this thread */
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
-
+	printf("Execute\n");
 	return tid;
 }
 
@@ -322,6 +323,7 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
+	printf("Process Exit 1\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -400,6 +402,7 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
+	printf("Exit 2\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
