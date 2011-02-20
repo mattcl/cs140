@@ -21,12 +21,10 @@ void pagedir_set_accessed (uint32_t *pd, const void *upage, bool accessed);
 void pagedir_activate (uint32_t *pd); 
 
 /* functions for supplimentary page table */
-void pagedir_set_storage_medium (uint32_t *pd, void *upage, medium_t
-medium);
-medium_t  pagedir_get_storage_medium (unint32_t *pd, void *upage);
-void pagedir_set_storage_location (unint32_t *pd, void *upage, uint32_t
-location);
-unint32_t pagedir_get_storage_location (unint32_t *pd, void* upage);
+void pagedir_set_storage_medium (uint32_t *pd, void *upage, medium_t medium);
+medium_t  pagedir_get_storage_medium (uint32_t *pd, void *upage);
+void pagedir_set_storage_location (uint32_t *pd, void *upage, uint32_t location);
+uint32_t pagedir_get_storage_location (uint32_t *pd, void* upage);
 
 
 

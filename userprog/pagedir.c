@@ -244,11 +244,11 @@ void pagedir_set_storage_medium (uint32_t *pd, void *vpage, medium_t
   uint32_t *pte = lookup_page (pd, vpage, false);
   
   if(pte != NULL){
-    ASSERT(*pte & PTE_P == 0);
+    ASSERT( (*pte & PTE_P) == 0);
     if(medium == SWAP){
       *pte |= PTE_MEDIUM; 
 	} else {
-      *pte &= ~(unisgned int) PTE_MEDIUM; 
+      *pte &= ~(uint32_t) PTE_MEDIUM; 
     }
   }
 }
@@ -259,9 +259,9 @@ medium_t pagedir_get_storage_medium (uint32_t *pd, void *vpage){
   
   //sentinal value
   if(pte == NULL) return -1;
-  ASSERT(*pte & PTE_P == 0);
+  ASSERT((*pte & PTE_P) == 0);
   
-  if(pte & PTE_MEDIUM == SWAP){
+  if((*pte & (uint32_t)PTE_MEDIUM) == SWAP){
     return SWAP;
   } else {
     return DISK; 
@@ -271,10 +271,10 @@ medium_t pagedir_get_storage_medium (uint32_t *pd, void *vpage){
 void pagedir_set_storage_location (uint32_t *pd, void *vpage, uint32_t location){
   uint32_t *pte = lookup_page(pd, vpage, false);
 
-  ASSERT (location & ~(uint32_t) PTE_ADDR == 0);
+  ASSERT ((location & ~(uint32_t) PTE_ADDR) == 0);
 
   if(pte != NULL){
-    *pte |= (location)
+    *pte |= (location);
   }
 }
 
@@ -282,6 +282,6 @@ uint32_t pagedir_get_storage_location(uint32_t *pd, void *vpage){
   uint32_t *pte = lookup_page(pd, vpage, false);
 
   if(pte == NULL) return 0;
-  ASSERT(*pte & PTE_P == 0); 
+  ASSERT((*pte & PTE_P) == 0); 
   return *pte & PTE_ADDR;
 }
