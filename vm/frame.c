@@ -37,10 +37,11 @@ void  *frame_get_page (enum palloc_flags flags){
 	if((flags&PAL_USER) == 0){
 		PANIC("Can not allocate a page for kernel from the user pool");
 	}
+
 	lock_acquire (&f_table.frame_map_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, bitmap_size(f_table.used_frames), false);
 	lock_release (&f_table.frame_map_lock);
-
+	printf("Frame idx = %ul", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
 		return evict_page();
 	}
