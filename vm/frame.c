@@ -48,7 +48,7 @@ void  *frame_get_page (enum palloc_flags flags){
 
 	frame_idx = palloc_get_user_page_index(kpage);
 
-	struct frame_hash_entry *f_hash_entry = calloc(sizeof(struct frame_hash_entry));
+	struct frame_hash_entry *f_hash_entry = calloc(1, sizeof(struct frame_hash_entry));
 
 	if(f_hash_entry == NULL){
 		PANIC("Out of KERNEL MEMORY!!!");
