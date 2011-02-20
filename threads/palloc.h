@@ -20,8 +20,8 @@ void palloc_free_multiple (void *, size_t page_cnt);
 
 /* Used for the frame allocator to know how many frames are available
    for the user*/
-size_t number_user_pages(void);
-size_t number_kernel_pages(void);
+size_t palloc_number_user_pages(void);
+size_t palloc_number_kernel_pages(void);
 size_t palloc_get_user_page_index(void *kvaddr);
 
 #endif /* threads/palloc.h */
