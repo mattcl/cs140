@@ -770,22 +770,19 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* Get a page of memory. */
 		uint8_t *kpage = frame_get_page(PAL_USER);
 		if(kpage == NULL){
-			printf("kpage was null\n");
 			return false;
 		}
 
 		/* Load this page. */
 		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
-			printf("file read failed\n");
-			palloc_free_page (kpage);
+			frame_clear_page (kpage);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
 		/* Add the page to the process's address space. */
 		if(!install_page (upage, kpage, writable)){
-			printf("Couldn't install page\n");
-			palloc_free_page (kpage);
+			frame_clear_page(kpage);
 			return false;
 		}
 
@@ -810,7 +807,7 @@ static bool setup_stack (void **esp){
 		if(success){
 			*esp = PHYS_BASE;
 		}else{
-			palloc_free_page (kpage);
+			frame_clear_page (kpage);
 		}
 	}
 	return success;

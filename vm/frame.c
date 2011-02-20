@@ -41,7 +41,7 @@ void  *frame_get_page (enum palloc_flags flags){
 	lock_acquire (&f_table.frame_map_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	lock_release (&f_table.frame_map_lock);
-	printf("Frame idx = %ul\n", frame_idx);
+	//printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
 		printf("evict\n");
 		return evict_page();
@@ -49,7 +49,7 @@ void  *frame_get_page (enum palloc_flags flags){
 
 	uint8_t *kpage = palloc_get_page (flags);
 
-	printf("%p\n", kpage);
+	//printf("%p\n", kpage);
 
 	frame_idx = palloc_get_user_page_index(kpage);
 
@@ -64,7 +64,7 @@ void  *frame_get_page (enum palloc_flags flags){
 	f_hash_entry->current_page_dir = thread_current()->pagedir;
 	f_hash_entry->page = kpage;
 
-	printf("Index, %lu\n", frame_idx);
+	//printf("Index, %lu\n", frame_idx);
 
 	lock_acquire (&f_table.frame_map_lock);
 	bitmap_set(f_table.used_frames, frame_idx, true);
@@ -79,9 +79,15 @@ void  *frame_get_page (enum palloc_flags flags){
 		PANIC("Weird Error occured");
 	}
 
-	printf("%p\n", f_hash_entry->page);
+	//printf("%p\n", f_hash_entry->page);
 
 	return f_hash_entry->page;
+}
+
+/* Clears the frame that the page_addr is currently in, or does nothing if the page_addr is not
+   currently in a frame */
+bool frame_clear_page (void *kernel_page_addr){
+	palloc_free_page (kernel_page_addr);
 }
 
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
