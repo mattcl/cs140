@@ -66,7 +66,8 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
 
 	/* Force a page fault when we are lookin this virtual address up
-	   clear page preserves all the other bits in the PTE*/
+	   clear page preserves all the other bits in the PTE sets the
+	   present bit to 0*/
 	pagedir_clear_page(cur->pagedir, uaddr);
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
@@ -152,7 +153,8 @@ bool swap_read_in (void *faulting_addr){
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
 
-	/* Set the page in our pagetable to point to our new frame */
+	/* Set the page in our pagetable to point to our new frame
+	   this will set the present bit back to 1*/
 	bool success =
 			pagedir_set_page (cur->pagedir, faulting_addr, free_page, true);
 
