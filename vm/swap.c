@@ -93,7 +93,7 @@ bool swap_read_in (void *faulting_addr){
 		/* This only happens when we have inconsistency and we are trying to read
 		   back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
-		PANIC("KUNIT!!!!");
+		PANIC("See comment");
 	}
 	uint32_t swap_slot  = hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
 
