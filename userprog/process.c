@@ -106,6 +106,12 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		return false;
 	}
 
+	success = hash_init(&p->swap_table, &swap_slot_hash_func, &swap_slot_compare, NULL);
+
+	if(!success){
+		return false;
+	}
+
 	sema_init(&p->waiting_semaphore, 0);
 	list_init(&p->children_list);
 	lock_init(&p->child_pid_tid_lock);
@@ -950,14 +956,6 @@ static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
-}
-
-static unsigned swap_block_hash_func (HASH_ELEM *a, AUX){
-
-}
-
-static bool swap_block_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
-
 }
 
 #undef HASH_ELEM

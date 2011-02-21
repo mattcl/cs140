@@ -5,19 +5,20 @@
 #include <hash.h>
 #include <stdint.h>
 
-struct swap_hash_table_entry{
+struct swap_entry{
 	uint32_t vaddr; 		/* Key into the hash table*/
 	uint32_t swap_slot; 	/* The swap slot that this vaddr's page
 							   resides*/
 	struct hash_elem elem;  /* The hash elem */
 };
 
-unsigned swap_block_hash_func (const struct hash_elem *a, AUX);
-bool swap_block_compare (const struct hash_elem *a, const struct hash_elem *b, AUX);
+unsigned swap_slot_hash_func (const struct hash_elem *a, AUX);
+bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b, AUX);
 
-void swap_init(void);
+void swap_init (void);
 
-void swap_allocate(void * kvaddr);
+bool swap_allocate (void * kvaddr);
 
+bool swap_read_in (void *faulting_addr);
 
 #endif /* SWAP_H_ */
