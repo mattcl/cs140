@@ -170,8 +170,15 @@ static void page_fault (struct intr_frame *f){
 				medium_t type = pagedir_get_medium(pagedir, fault_addr);
 				if(type == PTE_AVL_MEMORY){
 					kill(f);
+				}else if(type == PTE_AVL_SWAP){
+				  
 				}else if(type == PTE_AVL_EXEC){
+				  
+				}else if(type == PTE_AVL_MMAP){
 
+				}else{
+				  PANIC("unrecognized medium in page
+				  fault, check exception.c");
 				}
 			}
 		}else{
