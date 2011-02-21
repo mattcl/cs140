@@ -1,13 +1,13 @@
 
 
-//takes the user virtual address for the page that we are mapping
-// sets up the page table entry to have the vaddr of the page that
-// is needed from the executable
+/*takes the user virtual address for the page that we are mapping
+  sets up the page table entry to have the vaddr of the page that
+  is needed from the executable
 
-// So we are going to put the top 20 bits of the uaddr into where the 
-// physical address should be in the PTE
+  So we are going to put the top 20 bits of the uaddr into where the 
+  physical address should be in the PTE
 
-// where uaddr is the uaddr of the page, incremented in the loop
+  where uaddr is the uaddr of the page, incremented in the loop */
 setup_page (uaddr, EXEC){
 
 // get the pte for this uaddr

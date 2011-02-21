@@ -35,17 +35,19 @@
 
    31                                 12 11                  PTE_P 
    +----------------------------------+---+---------------------+
-   |         Offset                   |010|      Flags     | 0  |
+   |         Virtual Address          |010|      Flags     | 0  |
    +----------------------------------+---+---------------------+
 
    Disk MMap
    ---------
-   We use the 20 bits to store the virtual address of the mmapped
-   file that page faulted.
+   We use the 20 bits to store the id of the mmapped
+   file that page faulted.  We use that as a key into a hash
+   that the current process holds, and combine the starting virtual
+   address of that file to get an offset into the mmaped file  
 
    31                                 12 11                  PTE_P 
    +----------------------------------+---+---------------------+
-   |         Virtual Address          |100|      Flags     | 0  |
+   |         mmapid_t                 |100|      Flags     | 0  |
    +----------------------------------+---+---------------------+
 */
 
@@ -69,6 +71,4 @@ bool swap_block_compare (const struct hash_elem *a, const struct hash_elem *b, A
 void swap_init(void);
 
 void swap_allocate(void * kvaddr);
-
-
 
