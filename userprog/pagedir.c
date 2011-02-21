@@ -208,10 +208,6 @@ bool pagedir_is_present (uint32_t *pd, void *uaddr){
 	return pte != NULL && (*pte & PTE_P) != 0;
 }
 
-/* not done */
-void pagedir_set_present (uint32_t *pd, void *uaddr, bool present){
-	uint32_t *pte = lookup_page(pd, uaddr,a);
-}
 
 /* Loads page directory PD into the CPU's page directory base
    register. */
@@ -318,7 +314,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 		/* These functions asssume these 3 bits are zeroed */
 		ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		if(medium == PTE_AVL_MEMORY){
-			*pte ;
+			*pte &= ~(uint32_t)PTE_AVL;
 		}else if(medium == PTE_AVL_SWAP){
 			*pte |= PTE_AVL_SWAP;
 		}else if(medium == PTE_AVL_EXEC){
@@ -356,8 +352,11 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
+	/* The last 12 bits should be zero */
+	ASSERT(aux_data < PGSIZE);
+
 	if(pte != NULL){
-		*pte |= (aux_data);
+		*pte |= aux_data;
 	}
 	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
@@ -365,11 +364,10 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
-	if(pte == NULL){
-		return 0;
+	if(pte != NULL){
+		return *pte & PTE_ADDR;
 	}
-
-	return *pte & PTE_ADDR;
+	PANIC("pagedir_get_aux called on a page table entry that is not initialized");
 }
 
 /* Adds a mapping from user virtual address uaddr to kernel
