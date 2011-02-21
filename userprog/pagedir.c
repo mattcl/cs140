@@ -8,7 +8,10 @@
 #include "threads/palloc.h"
 #include "vm/frame.h"
 
-#define PTE_MEDIUM 0x00000200
+/* masks to isolate bit corresponding to constants in pagedir.h */
+#define PTE_SWAP 0x00000200
+#define PTE_EXECUTABLE 0x00000400
+#define PTE_MMAP 0x00000800
 
 static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
@@ -296,32 +299,43 @@ void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
 	/* get the page table out of the page directory */
 	uint32_t *pte = lookup_page (pd, vpage, false);
 
+
 	if(pte != NULL){
-		
+	  /* These functions asssume these 3 bits are zeroed */
+	  ASSERT(*pte && PTE_AVL == MEMORY);		
+	  
 		if(medium == SWAP){
-			*pte |= PTE_MEDIUM;
+			*pte |= PTE_SWAP;
 		}else if(medium == DISK_EXECUTABLE){
-			*pte &= ~(uint32_t) PTE_MEDIUM;
-		}else if(medium == DISK_MAP){
-		
+			*pte |= PTE_EXECUTABLE;
+		}else if(medium == DISK_MMAP){
+		        *pte |= PTE_MMAP
 		}else{
 		  PANIC("pagedir_set_medium called with unexpected medium");
 		}
 	}
+
+	PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 }
 
 medium_t pagedir_get_medium (uint32_t *pd, void *vpage){
 	/*get the page table out of the page directory*/
 	uint32_t *pte = lookup_page (pd, vpage, false);
+	
 
-	/* sentinal value*/
-	if(pte == NULL) return -1;
-
-	if((*pte & (uint32_t)PTE_MEDIUM) == SWAP){
-		return SWAP;
-	} else {
-		return DISK;
+	if(pte != NULL){
+	    if((*pte & (uint32_t)PTE_AVL) == SWAP){
+	        return SWAP;
+	    }else if(*pte & (uint32_t)PTE_AVL == DISK_EXECUTABLE){
+		return DISK_EXECUTABLE;
+	    }else if(*pte & (uint32_t)PTE_AVL == DISK_MMAP){
+	        return DISK_MMAP;
+	    }else{
+	      PANIC("pagedir_get_medium called with unexpected medium");
+	    }
 	}
+
+	PANIC("pagedir_get_medium called on a page table entry that is not initialized");
 }
 
 void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
@@ -330,6 +344,7 @@ void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
 	if(pte != NULL){
 		*pte |= (location);
 	}
+	PANIC("pagedir_set_aux")
 }
 
 uint32_t pagedir_get_aux (uint32_t *pd, void *vpage){
