@@ -154,13 +154,18 @@ static void page_fault (struct intr_frame *f){
 	    /* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
 	
-	    if((uint32_t)address < PHYS_BASE && (uint32_t)address > (uint32_t)f->esp){
+	    if((uint32_t)fault_addr < PHYS_BASE &&
+	    		(uint32_t)fault_addr > (uint32_t)f->esp){
 	      ;//frame get page, install into frame directory
 	      
-	    } else{
-	      kill(f);
+	    }else{
+	    	/* Check the medium bits and IF any of them are set we do the corresponding reading
+	    	   of the medium ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP), and
+	    	   it is not present so this process is accessing invalid memory and must be killed*/
+
 	    }
 	  }else{
+		/* Write to read only memory, must kill this process */
 	    kill(f);
 	  }
 	}else{
