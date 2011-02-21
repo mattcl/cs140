@@ -239,8 +239,7 @@ static void invalidate_pagedir (uint32_t *pd){
 }
 
 /* Sets the storage medium. */
-void pagedir_set_storage_medium (uint32_t *pd, void *vpage, medium_t
-		medium){
+void pagedir_set_storage_medium (uint32_t *pd, void *vpage, medium_t medium){
 	/* get the page table out of the page directory */
 	uint32_t *pte = lookup_page (pd, vpage, false);
 

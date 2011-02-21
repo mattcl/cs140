@@ -21,6 +21,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
 
 static struct hash processes;			 /*A hash of all created processes*/
 static struct lock processes_hash_lock;  /*A lock on that hash table*/
@@ -546,7 +547,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 
 	cur_process->executable_file = file;
-	/* We arrive here whether the load is successful or not. */
 	file_deny_write(cur_process->executable_file);
 
 	/* Read program headers. */
@@ -620,6 +620,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
 	done:
+	/* We arrive here whether the load is successful or not. */
 	lock_release(&filesys_lock);
 	return success;
 }
@@ -949,6 +950,14 @@ static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
+}
+
+static unsigned swap_block_hash_func (HASH_ELEM *a, AUX){
+
+}
+
+static bool swap_block_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
+
 }
 
 #undef HASH_ELEM

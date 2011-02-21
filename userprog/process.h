@@ -69,6 +69,16 @@ struct process {
 	   exists still. USED wherever any of the last 4 objects are used*/
 	struct lock child_pid_tid_lock;
 
+
+	/* Swap hash. This structure allows us to put pages at virtual
+	   addresses onto the swap device and retrieve them. The swap
+	   table is per process to allow us to use the virtual address
+	   for the process as an index into the table. Only the code in
+	   swap.c will put objects into this table. And we will only
+	   remove things when we read the page back into memory from
+	   swap.*/
+	struct hash swap_table;
+
 };
 
 /* An entry into the list of children that a particular process
