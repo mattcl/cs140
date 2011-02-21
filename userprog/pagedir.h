@@ -21,12 +21,15 @@ void pagedir_set_dirty (uint32_t *pd, const void *upage, bool dirty);
 bool pagedir_is_accessed (uint32_t *pd, const void *upage);
 void pagedir_set_accessed (uint32_t *pd, const void *upage, bool accessed);
 void pagedir_activate (uint32_t *pd); 
+void pagedir_set_present(uint32_t *pd, void *upage, bool present);
+bool pagedir_is_present(uint32_t *pd, const void *upage);
+ 
 
 /* functions for supplimentary page table functionality */
 void pagedir_set_medium (uint32_t *pd, void *upage, medium_t medium);
-medium_t  pagedir_get_medium (uint32_t *pd, void *upage);
+medium_t  pagedir_get_medium (uint32_t *pd, const void *upage);
 void pagedir_set_aux (uint32_t *pd, void *upage, uint32_t location);
-uint32_t pagedir_get_aux (uint32_t *pd, void* upage);
+uint32_t pagedir_get_aux (uint32_t *pd, const void* upage);
 
 bool pagedir_install_page (void *upage, void *kpage, bool writable);
 

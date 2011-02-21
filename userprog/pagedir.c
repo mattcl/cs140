@@ -200,6 +200,14 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 	}
 }
 
+void pagedir_set_present (uint32_t *pd, void *addr, vool present){
+    uint32_t *pte = lookup_page (pd, uaddr, false);
+    ASSERT(pte != NULL);
+    if(pte != NULL){
+      
+    }
+}
+
 /* Loads page directory PD into the CPU's page directory base
    register. */
 void pagedir_activate (uint32_t *pd){
@@ -339,13 +347,13 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	PANIC("pagedir_get_medium called on a page table entry that is not initialized");
 }
 
-void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t location){
+void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
 	if(pte != NULL){
 		*pte |= (location);
 	}
-	PANIC("pagedir_set_aux");
+	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
 
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
