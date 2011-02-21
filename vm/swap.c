@@ -119,6 +119,7 @@ bool swap_read_in (void *faulting_addr){
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
 		PANIC("See comment");
+		/*return false*/
 	}
 
 	uint32_t swap_slot =
@@ -148,6 +149,7 @@ bool swap_read_in (void *faulting_addr){
 
 	if(deleted == NULL){
 		PANIC("Element found but then not able to be deleted????");
+		/*return false;*/
 	}
 
 	/* Free the malloced swap entry */
@@ -160,6 +162,7 @@ bool swap_read_in (void *faulting_addr){
 
 	if(!success){
 		PANIC("MEMORY ALLOCATION FAILURE");
+		/*return false*/
 	}
 
 	/* indicate that this is in memorry */

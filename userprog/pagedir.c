@@ -225,7 +225,7 @@ void pagedir_activate (uint32_t *pd){
 }
 
 /* Returns the currently active page directory. */
-static uint32_t *active_pd (void){
+uint32_t *active_pd (void){
 	/* Copy CR3, the page directory base register (PDBR), into
        `pd'.
        See [IA32-v2a] "MOV--Move to/from Control Registers" and

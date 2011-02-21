@@ -485,6 +485,8 @@ struct Elf32_Phdr{
 
 static bool setup_stack (void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+        uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
@@ -558,7 +560,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	/* An array that contains the max number of headers
 	   will only actually store the number of executable
 	   headers in it */
-	struct exec_segment_info segs [ehdr.e_phnum];
+	struct exec_page_info exec_pages [ehdr.e_phnum];
 
 	for(i = 0, load_i = 0; i < ehdr.e_phnum; i++){
 		struct Elf32_Phdr phdr;
@@ -587,28 +589,28 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
-				segs[load_i].file_page = phdr.p_offset & ~PGMASK;
-				segs[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
-				segs[load_i].writable = (phdr.p_flags & PF_W) != 0;
+				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
+				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
+				exec_pages[load_i].writable = (phdr.p_flags & PF_W) != 0;
 
 				if(phdr.p_filesz > 0){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
-					segs[load_i].read_bytes = page_offset + phdr.p_filesz;
-					segs[load_i].zero_bytes =
+					exec_pages[load_i].read_bytes = page_offset + phdr.p_filesz;
+					exec_pages[load_i].zero_bytes =
 							(ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-							- segs[load_i].read_bytes);
+							- exec_pages[load_i].read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
-					segs[load_i].read_bytes = 0;
-					segs[load_i].zero_bytes =
+					exec_pages[load_i].read_bytes = 0;
+					exec_pages[load_i].zero_bytes =
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
 				pagedir_setup_demand_page(t->pagedir,
-									segs[load_i].mem_page, PTE_AVL_EXEC,
-									segs[load_i].mem_page, segs[load_i].writable);
+									exec_pages[load_i].mem_page, PTE_AVL_EXEC,
+									exec_pages[load_i].mem_page, exec_pages[load_i].writable);
 
 				load_i ++;
 			}else{
@@ -619,9 +621,12 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 
 	/* Save all of our infor so that we can handle page_faults */
-	cur_process->exec_info = calloc (load_i, sizeof(struct exec_segment_info));
-	memcpy (cur_process->exec_info, segs, load_i*sizeof(struct exec_segment_info));
-
+	cur_process->exec_info = calloc (load_i, sizeof(struct exec_page_info));
+	if(cur_process->exec_info == NULL){
+		PANIC("KERNEL OUT OF MEMORY!!!!");
+	}
+	memcpy (cur_process->exec_info, exec_pages, load_i*sizeof(struct exec_page_info));
+	cur_process->num_exec_pages = load_i;
 	/* Set up stack. */
 	if(!setup_stack (esp)){
 		printf("failed to setup stack\n");
@@ -751,6 +756,35 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 	return true;
 }
 
+bool process_exec_read_in(uint32_t *faulting_addr){
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+	uint32_t vaddr = faulting_addr & ~PGMASK;
+	struct exec_page_info *info = NULL;
+	int i;
+	for(i=0; i < cur_process->num_exec_pages; i++){
+		if(cur_process->exec_info[i]->mem_page == vaddr){
+			info = cur_process->exec_info[i];
+			break;
+		}
+	}
+	if(info == NULL){
+		/* We have inconsistency, we are loading a page from
+		   the process executable but we don't have the info
+		   for it that should have been set in process load
+		   EXEC bit shouldn't be set unless the corresponding
+		   data can be found in the exec_info array*/
+		PANIC("INCONSISTENCY IN EXCEPTION.C");
+		/*return false;*/
+	}
+
+	bool success = load_segment(cur_process->executable_file,
+			info->file_page, info->mem_page, info->read_bytes,
+			(PGSIZE-info->read_bytes), info->writable);
+
+	return success;
+}
+
 /* Loads a segment starting at offset OFS in FILE at address
    UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
    memory are initialized, as follows:
@@ -765,12 +799,14 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
              uint32_t read_bytes, uint32_t zero_bytes, bool writable){
 
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
+
+	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 	while(read_bytes > 0 || zero_bytes > 0){
@@ -783,12 +819,14 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* Get a page of memory. */
 		uint8_t *kpage = frame_get_page(PAL_USER);
 		if(kpage == NULL){
+			lock_release(&filesys_lock);
 			return false;
 		}
 
 		/* Load this page. */
 		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 			frame_clear_page (kpage);
+			lock_release(&filesys_lock);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -798,6 +836,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		   I.E. the present bit is on*/
 		if(!pagedir_install_page (upage, kpage, writable)){
 			frame_clear_page(kpage);
+			lock_release(&filesys_lock);
 			return false;
 		}
 
@@ -806,6 +845,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
 	}
+	lock_release(&filesys_lock);
 	return true;
 }
 

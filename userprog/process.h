@@ -94,7 +94,8 @@ struct process {
 	   segments of the executable. Similaraly if the data segment is all 4 GB
 	   large then we only need 17 MB to find all of the different segments of
 	   the executable*/
-	struct exec_segment_info *exec_info;
+	struct exec_page_info *exec_info;
+	uint32_t num_exec_pages;
 };
 
 /* An entry into the list of children that a particular process
@@ -119,7 +120,7 @@ struct fd_hash_entry {
 
 /* Implicitly calculate the number of zero bytes by subtracting
    it from PGSIZE. this structure is 17 bytes large*/
-struct exec_segment_info{
+struct exec_page_info{
 	uint32_t mem_page;
 	uint32_t file_page;
 	uint32_t read_bytes;
@@ -140,8 +141,6 @@ void process_activate (void);
 bool initialize_process (struct process *p, struct thread *our_thread);
 
 /* Called by exception.c */
-bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-                   uint32_t read_bytes, uint32_t zero_bytes, bool writable);
-
+bool process_exec_read_in(uint32_t *faulting_addr);
 
 #endif /* userprog/process.h */

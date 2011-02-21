@@ -122,7 +122,7 @@ static void page_fault (struct intr_frame *f){
 	bool write;        /* True: access was write, false: access was read. */
 	bool user;         /* True: access by user, false: access by kernel. */
 	void *fault_addr;  /* Fault address. */
-	void *pagedir; 	   /* The page directory used to obtain the fault */
+	void *pagedir = active_pd(); 	   /* The page directory used to obtain the fault */
 
 	/* Obtain faulting address, the virtual address that was
        accessed to cause the fault.  It may point to code or to
@@ -133,13 +133,9 @@ static void page_fault (struct intr_frame *f){
        (#PF)". */
 	asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-	/* obtain the page dir that was used */
-	asm ("movl %%cr3, %0" : "=r" (pagedir));
-
 	/* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
 	intr_enable ();
-
 
 	/* Count page faults. */
 	page_fault_cnt++;
@@ -164,21 +160,26 @@ static void page_fault (struct intr_frame *f){
 				;//frame get page, install into frame directory
 
 			}else{
-				/* Check the medium bits and IF any of them are set we do the corresponding reading
-	    	   	   of the medium ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP), and
-	    	   	   it is not present so this process is accessing invalid memory and must be killed*/
+				/* Check the medium bits and IF any of them are set
+				   we read in the data from the appropriate location
+				   ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP),
+				   and it is not present so this process is accessing
+				   invalid memory and must be killed*/
 				medium_t type = pagedir_get_medium(pagedir, fault_addr);
 				if(type == PTE_AVL_MEMORY){
 					kill(f);
 				}else if(type == PTE_AVL_SWAP){
-				  
+					if(!swap_read_in(fault_addr)){
+						PANIC("COULDN't read in from swap!!!!");
+					}
 				}else if(type == PTE_AVL_EXEC){
-				  
+					if(!process_exec_read_in(fault_addr)){
+						PANIC("COULDN'T load the executable segment, KILLL");
+					}
 				}else if(type == PTE_AVL_MMAP){
 
 				}else{
-				  PANIC("unrecognized medium in page
-				  fault, check exception.c");
+					PANIC("unrecognized medium in page fault, check exception.c");
 				}
 			}
 		}else{

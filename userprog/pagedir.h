@@ -22,7 +22,8 @@ bool pagedir_is_accessed (uint32_t *pd, const void *upage);
 void pagedir_set_accessed (uint32_t *pd, const void *upage, bool accessed);
 void pagedir_activate (uint32_t *pd); 
 bool pagedir_is_present(uint32_t *pd, const void *upage);
- 
+
+uint32_t *active_pd (void);
 
 /* functions for supplimentary page table functionality */
 void pagedir_set_medium (uint32_t *pd, void *upage, medium_t medium);
