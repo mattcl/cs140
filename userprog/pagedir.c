@@ -238,28 +238,84 @@ static void invalidate_pagedir (uint32_t *pd){
 	}
 }
 
-/* Sets the storage medium. */
-void pagedir_set_storage_medium (uint32_t *pd, void *vpage, medium_t medium){
+/* Currently these are notes for how we will use the page table
+   to contain the information we need for the supplementary page
+   table.
+
+   Memory
+   ------
+   We do not have to handle this case since we will not get a page fault.
+   Because the OS zeros PTE_AVL we can assert that these are not zero 
+   whenever we do anything with this area.
+
+   31                                 12 11                  PTE_P 
+   +----------------------------------+---+---------------------+
+   |         Physical Address         |000|      Flags     | 1  |
+   +----------------------------------+---+---------------------+
+
+   Swap
+   ___
+   We use the 20 bits alloted to store a virtual address.  The 
+   virtual adress will then be a key into a swap table-a hash that 
+   is stored per process.  The values in that hash will be a 32 bit
+   integer that says what swap slot the page is stored in.
+
+   31                                 12 11                  PTE_P 
+   +----------------------------------+---+---------------------+
+   |         Virtual Address          |001|      Flags     | 0  |
+   +----------------------------------+---+---------------------+
+
+   Disk Executable
+   --------------
+   We use the 20 bits to store the offset into the executable that 
+   the process is running.  Because each process has a pointer to
+   its executable we can ask the current process for it's executable.
+   Note that because we know we will be reading page size chunks out
+   of the file we only need 20 bits.
+
+   31                                 12 11                  PTE_P 
+   +----------------------------------+---+---------------------+
+   |         Virtual Address          |010|      Flags     | 0  |
+   +----------------------------------+---+---------------------+
+
+   Disk MMap
+   ---------
+   We use the 20 bits to store the id of the mmapped
+   file that page faulted.  We use that as a key into a hash
+   that the current process holds, and combine the starting virtual
+   address of that file to get an offset into the mmaped file  
+
+   31                                 12 11                  PTE_P 
+   +----------------------------------+---+---------------------+
+   |         mmapid_t                 |100|      Flags     | 0  |
+   +----------------------------------+---+---------------------+
+*/
+
+/* Sets the medium as mentioned above. */
+void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
 	/* get the page table out of the page directory */
 	uint32_t *pte = lookup_page (pd, vpage, false);
 
 	if(pte != NULL){
-		ASSERT( (*pte & PTE_P) == 0);
+		
 		if(medium == SWAP){
 			*pte |= PTE_MEDIUM;
-		} else {
+		}else if(medium == DISK_EXECUTABLE){
 			*pte &= ~(uint32_t) PTE_MEDIUM;
+		}else if(medium == DISK_MAP){
+		
+		}else{
+		  PANIC("pagedir_set_medium called with unexpected medium");
 		}
 	}
 }
 
-medium_t pagedir_get_storage_medium (uint32_t *pd, void *vpage){
+medium_t pagedir_get_medium (uint32_t *pd, void *vpage){
 	/*get the page table out of the page directory*/
 	uint32_t *pte = lookup_page (pd, vpage, false);
 
 	/* sentinal value*/
 	if(pte == NULL) return -1;
-	ASSERT((*pte & PTE_P) == 0);
 
 	if((*pte & (uint32_t)PTE_MEDIUM) == SWAP){
 		return SWAP;
@@ -268,20 +324,18 @@ medium_t pagedir_get_storage_medium (uint32_t *pd, void *vpage){
 	}
 }
 
-void pagedir_set_storage_location (uint32_t *pd, void *vpage, uint32_t location){
+void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
 	uint32_t *pte = lookup_page(pd, vpage, false);
-
-	ASSERT ((location & ~(uint32_t) PTE_ADDR) == 0);
 
 	if(pte != NULL){
 		*pte |= (location);
 	}
 }
 
-uint32_t pagedir_get_storage_location(uint32_t *pd, void *vpage){
+uint32_t pagedir_get_aux (uint32_t *pd, void *vpage){
 	uint32_t *pte = lookup_page(pd, vpage, false);
 
 	if(pte == NULL) return 0;
-	ASSERT((*pte & PTE_P) == 0);
+
 	return *pte & PTE_ADDR;
 }
