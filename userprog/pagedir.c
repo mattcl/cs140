@@ -365,7 +365,9 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
-	if(pte == NULL) return 0;
+	if(pte == NULL){
+		return 0;
+	}
 
 	return *pte & PTE_ADDR;
 }
