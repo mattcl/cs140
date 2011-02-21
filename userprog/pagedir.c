@@ -365,7 +365,7 @@ uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
    with palloc_get_page().
    Returns true on success, false if uaddr is already mapped or
    if memory allocation fails. */
-bool install_page (void *uaddr, void *kaddr, bool writable){
+bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 	struct thread *t = thread_current ();
 
 	/* Verify that there's not already a page at that virtual

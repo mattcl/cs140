@@ -106,6 +106,8 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
+
+	pagedir_install_page(faulting_addr, free_page, true);
 }
 
 /* Function that hashes the individual elements in the swap hash table

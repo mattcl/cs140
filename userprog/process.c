@@ -785,7 +785,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
 		/* Add the page to the process's address space. */
-		if(!install_page (upage, kpage, writable)){
+		if(!pagedir_install_page (upage, kpage, writable)){
 			frame_clear_page(kpage);
 			return false;
 		}
@@ -807,7 +807,7 @@ static bool setup_stack (void **esp){
 	kpage = frame_get_page(PAL_USER | PAL_ZERO);
 
 	if(kpage != NULL){
-		success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+		success = pagedir_install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
 		if(success){
 			*esp = PHYS_BASE;
 		}else{
