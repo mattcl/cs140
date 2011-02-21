@@ -6,7 +6,7 @@
 
 #define PTE_AVL_MEMORY 0 /* 000 */ 
 #define PTE_AVL_SWAP 1 /* 001 */
-#define PTE_AVL_DISK_EXCECUTABLE (1 << 1) /* 010 */
+#define PTE_AVL_DISK_EXCEC (1 << 1) /* 010 */
 #define PTE_AVL_DISK_MMAP (1 << 2) /* 100 */ 
 
 typedef uint8_t medium_t; /* used to represent one of the constants above */
@@ -32,5 +32,8 @@ void pagedir_set_aux (uint32_t *pd, void *upage, uint32_t location);
 uint32_t pagedir_get_aux (uint32_t *pd, const void* upage);
 
 bool pagedir_install_page (void *upage, void *kpage, bool writable);
+
+bool pagedir_setup_demand_page(void *uaddr, medium_t medium ,
+										    uint32_t data, bool writable);
 
 #endif /* userprog/pagedir.h */

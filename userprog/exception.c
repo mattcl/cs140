@@ -1,9 +1,10 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include "gdt.h"
-#include "../threads/interrupt.h"
-#include "../threads/thread.h"
-#include "../threads/vaddr.h" /* PHYS_BASE */
+#include "threads/interrupt.h"
+#include "threads/thread.h"
+#include "threads/vaddr.h" /* PHYS_BASE */
+#include "userprog/pagedir.h"
 #include "exception.h"
 #include "process.h"
 #include "syscall.h"
@@ -121,6 +122,7 @@ static void page_fault (struct intr_frame *f){
 	bool write;        /* True: access was write, false: access was read. */
 	bool user;         /* True: access by user, false: access by kernel. */
 	void *fault_addr;  /* Fault address. */
+	void *pagedir; 	   /* The page directory used to obtain the fault */
 
 	/* Obtain faulting address, the virtual address that was
        accessed to cause the fault.  It may point to code or to
@@ -130,6 +132,9 @@ static void page_fault (struct intr_frame *f){
        [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
        (#PF)". */
 	asm ("movl %%cr2, %0" : "=r" (fault_addr));
+
+	/* obtain the page dir that was used */
+	asm ("movl %%cr3, %0" : "=r" (pagedir));
 
 	/* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
@@ -143,33 +148,36 @@ static void page_fault (struct intr_frame *f){
 	not_present = (f->error_code & PF_P) == 0;
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
-	
+
 
 	if(user){
-	  /* This section implements virtual memory from the fault
+		/* This section implements virtual memory from the fault
 	     handlers prospective. */
-	  
-	  
-	  if(not_present){
-	    /* We got a page fault for a not-present error.  We need to
-	       either 1. Grow the stack (possibly evict a page), or kill them */
-	
-	    if((uint32_t)fault_addr < PHYS_BASE &&
-	    		(uint32_t)fault_addr > (uint32_t)f->esp){
-	      ;//frame get page, install into frame directory
-	      
-	    }else{
-	    	/* Check the medium bits and IF any of them are set we do the corresponding reading
-	    	   of the medium ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP), and
-	    	   it is not present so this process is accessing invalid memory and must be killed*/
 
-	    }
-	  }else{
-		/* Write to read only memory, must kill this process */
-	    kill(f);
-	  }
+
+		if(not_present){
+			/* We got a page fault for a not-present error.  We need to
+	       either 1. Grow the stack (possibly evict a page), or kill them */
+
+			if((uint32_t)fault_addr < PHYS_BASE &&
+					(uint32_t)fault_addr > (uint32_t)f->esp){
+				;//frame get page, install into frame directory
+
+			}else{
+				/* Check the medium bits and IF any of them are set we do the corresponding reading
+	    	   	   of the medium ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP), and
+	    	   	   it is not present so this process is accessing invalid memory and must be killed*/
+				medium_t type = pagedir_get_medium(pagedir, fault_addr);
+				if(type == PTE_AVL_MEMORY){
+					kill(f);
+				}
+			}
+		}else{
+			/* Write to read only memory, must kill this process */
+			kill(f);
+		}
 	}else{
-	  /* Used to check user memory.  When they give us a pointer we
+		/* Used to check user memory.  When they give us a pointer we
 	     deref it and then check for a -1 in eax. */
 		f->eip = (void*)f->eax;
 		f->eax = 0xffffffff;
