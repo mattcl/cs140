@@ -595,17 +595,20 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
 					segs[load_i].read_bytes = page_offset + phdr.p_filesz;
-					segs[load_i].zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
+					segs[load_i].zero_bytes =
+							(ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
 							- segs[load_i].read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
 					segs[load_i].read_bytes = 0;
-					segs[load_i].zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
+					segs[load_i].zero_bytes =
+							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
-				pagedir_setup_demand_page(segs[load_i].mem_page, PTE_AVL_DISK_EXEC,
-										  segs[load_i].mem_page, segs[load_i].writable);
+				pagedir_setup_demand_page(t->pagedir,
+									segs[load_i].mem_page, PTE_AVL_EXEC,
+									segs[load_i].mem_page, segs[load_i].writable);
 
 				load_i ++;
 			}else{

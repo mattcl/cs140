@@ -204,10 +204,9 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
    bit is set or false if the PTE has yet to be allocated or if the
    page is missing */
 bool pagedir_is_present (uint32_t *pd, void *uaddr){
-    uint32_t *pte = lookup_page (pd, uaddr, false);
-    return pte != NULL && (*pte & PTE_P) != 0;
+	uint32_t *pte = lookup_page (pd, uaddr, false);
+	return pte != NULL && (*pte & PTE_P) != 0;
 }
-
 
 
 /* Loads page directory PD into the CPU's page directory base
@@ -303,7 +302,7 @@ static void invalidate_pagedir (uint32_t *pd){
    +----------------------------------+---+---------------------+
    |         mmapid_t                 |100|      Flags     | 0  |
    +----------------------------------+---+---------------------+
-*/
+ */
 
 /* Sets the medium as mentioned above. */
 void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
@@ -312,18 +311,26 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 
 
 	if(pte != NULL){
+<<<<<<< HEAD:userprog/pagedir.c
 	  /* These functions asssume these 3 bits are zeroed */
 	  ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);		
 	    if(medium == PTE_AVL_MEMORY){
 	                x*pte &= ~(uint32_t)PTE_AVL;
 	    }else if(medium == PTE_AVL_SWAP){
+=======
+		/* These functions asssume these 3 bits are zeroed */
+		ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
+		if(medium == PTE_AVL_MEMORY){
+			*pte ;
+		}else if(medium == PTE_AVL_SWAP){
+>>>>>>> e83d22322c07141b619a3ebb2444f2a274a61d7e:userprog/pagedir.c
 			*pte |= PTE_AVL_SWAP;
-		}else if(medium == PTE_AVL_DISK_EXEC){
-			*pte |= PTE_AVL_DISK_EXECUTABLE;
-		}else if(medium == PTE_AVL_DISK_MMAP){
-		        *pte |= PTE_AVL_MMAP;
+		}else if(medium == PTE_AVL_EXEC){
+			*pte |= PTE_AVL_EXEC;
+		}else if(medium == PTE_AVL_MMAP){
+			*pte |= PTE_AVL_MMAP;
 		}else{
-		  PANIC("pagedir_set_medium called with unexpected medium");
+			PANIC("pagedir_set_medium called with unexpected medium");
 		}
 	}
 
@@ -333,18 +340,18 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	/*get the page table out of the page directory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
-	
+
 
 	if(pte != NULL){
-	    if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
-	        return PTE_AVL_SWAP;
-	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXEC){
-		return DISK_EXCECUTABLE;
-	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_MMAP){
-	        return PTE_AVL_DISK_MMAP;
-	    }else{
-	      PANIC("pagedir_get_medium called with unexpected medium");
-	    }
+		if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
+			return PTE_AVL_SWAP;
+		}else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_EXEC){
+			return PTE_AVL_EXEC;
+		}else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_MMAP){
+			return PTE_AVL_MMAP;
+		}else{
+			PANIC("pagedir_get_medium called with unexpected medium");
+		}
 	}
 
 	PANIC("pagedir_get_medium called on a page table entry that is not initialized");
@@ -357,7 +364,11 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	ASSERT(aux_data < PGSIZE);
 	
 	if(pte != NULL){
+<<<<<<< HEAD:userprog/pagedir.c
 		*pte |= aux_data;
+=======
+		*pte |= (aux_data);
+>>>>>>> e83d22322c07141b619a3ebb2444f2a274a61d7e:userprog/pagedir.c
 	}
 	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
@@ -393,9 +404,25 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
    to be loaded when a page fault occurs. This will map the most significant
    top 20 bits to be something that will be useful for the page fault handler.
    The data for the top 20 bits will be passed in as a uint32_t and have the
-   lower 12 bits masked off. */
-bool pagedir_setup_demand_page(void *uaddr, medium_t medium ,
-										    uint32_t data, bool writable){
+   lower 12 bits masked off. Also sets the appropriate bits for medium type*/
+bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
+		uint32_t data, bool writable){
 
+	/* Ensure the PTE exists because the following functions won't create it.*/
+	int32_t *pte = lookup_page(pd, uaddr, true);
+
+	if(pte == NULL){
+		return false;
+	}
+	/* Set the aux data*/
+	pagedir_set_aux(pd, uaddr, data);
+
+	/* Set the appropriate medium */
+	pagedir_set_medium(pd, uaddr, medium);
+
+	/*Clear the present bit and clear the TLB*/
+	pagedir_clear_page(pd, uaddr);
+
+	return true;
 }
 
