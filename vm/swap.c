@@ -1,5 +1,5 @@
 #include "swap.h"
-#include "frame"
+#include "frame.h"
 #include <bitmap.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
@@ -62,18 +62,31 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	/* Force a page fault when we are lookin this virtual address up */
 	pagedir_set_present(cur->pagedir, uaddr, false);
 
+	/* indicate that this is on swap */
+	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
+
 	struct swap_entry *new_entry = calloc(sizeof(struct swap_entry));
+
 	if(new_entry == NULL){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
 
-	new_entry -> vaddr = uaddr;
+	new_entry->vaddr = uaddr;
 
 	lock_qcquire(&swap_slots_lock);
 
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
+
 	if(swap_slot == BITMAP_ERROR){
 		PANIC("SWAP IS FULL BABY");
+	}
+
+	new_entry->swap_slot = swap_slot;
+
+	struct hash_elem *returned  = hash_insert(&cur_process->swap_table, new_entry->elem);
+
+	if(returned != NULL){
+		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
 	lock_release(&swap_slots_lock);
@@ -131,8 +144,17 @@ bool swap_read_in (void *faulting_addr){
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
 
+	bool success = pagedir_install_page(faulting_addr, free_page, true);
+
+	if(!success){
+		return success;
+	}
+
+	/* indicate that this is on swap */
+	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_MEMORY);
+
 	/*Install the page read in from swap*/
-	return 	pagedir_install_page(faulting_addr, free_page, true);
+	return
 }
 
 /* Function that hashes the individual elements in the swap hash table
