@@ -13,9 +13,11 @@ struct swap_hash_table_entry{
 };
 
 unsigned swap_block_hash_func (const struct hash_elem *a, AUX);
-bool swap_block_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
-
+bool swap_block_compare (const struct hash_elem *a, const struct hash_elem *b, AUX);
 
 void swap_init(void);
+
+void swap_allocate(void * kvaddr);
+
 
 #endif /* SWAP_H_ */
