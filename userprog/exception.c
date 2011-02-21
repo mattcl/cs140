@@ -3,6 +3,7 @@
 #include "gdt.h"
 #include "../threads/interrupt.h"
 #include "../threads/thread.h"
+#include "../threads/vaddr.h" /* PHYS_BASE */
 #include "exception.h"
 #include "process.h"
 #include "syscall.h"
@@ -134,6 +135,7 @@ static void page_fault (struct intr_frame *f){
      be assured of reading CR2 before it changed). */
 	intr_enable ();
 
+
 	/* Count page faults. */
 	page_fault_cnt++;
 
@@ -144,11 +146,26 @@ static void page_fault (struct intr_frame *f){
 	
 
 	if(user){
-		/* To implement virtual memory, delete the rest of the function
-	       body, and replace it with code that brings in the page to
-	       which fault_addr refers. */
-		kill(f);
+	  /* This section implements virtual memory from the fault
+	     handlers prospective. */
+	  
+	  
+	  if(not_present){
+	    /* We got a page fault for a not-present error.  We need to
+	       either 1. Grow the stack (possibly evict a page), or kill them */
+	
+	    if((uint32_t)address < PHYS_BASE && (uint32_t)address > (uint32_t)f->esp){
+	      ;//frame get page, install into frame directory
+	      
+	    } else{
+	      kill(f);
+	    }
+	  }else{
+	    kill(f);
+	  }
 	}else{
+	  /* Used to check user memory.  When they give us a pointer we
+	     deref it and then check for a -1 in eax. */
 		f->eip = (void*)f->eax;
 		f->eax = 0xffffffff;
 	}
