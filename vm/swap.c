@@ -51,7 +51,10 @@ void swap_init (void){
    to an available swap slot, if there is no swap slot currently available
    it panics the kernel, kvaddr is assumed to point to a valid frame, sets
    the bits in the page table entry for the uaddr that referenced this frame
-   so that it can find this  swap slot*/
+   so that it can find this  swap slot
+   You should only allocate a swap slot for this particular frame and virtual
+   address if the PTE says that this page has been modified since it was
+   created, or if it is a stack segment that has been accessed*/
 bool swap_allocate (void * kvaddr, void *uaddr){
 	struct thread cur = thread_current();
 	struct process cur_process = cur->process;
@@ -59,13 +62,14 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	/*Set the auxilary data so that it can index into the swap table*/
 	pagedir_set_aux(cur->pagedir, uaddr, uaddr);
 
-	/* Force a page fault when we are lookin this virtual address up */
-	pagedir_set_present(cur->pagedir, uaddr, false);
-
 	/* indicate that this is on swap */
 	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
 
-	struct swap_entry *new_entry = calloc(sizeof(struct swap_entry));
+	/* Force a page fault when we are lookin this virtual address up
+	   clear page preserves all the other bits in the PTE*/
+	pagedir_clear_page(cur->pagedir, uaddr);
+
+	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 
 	if(new_entry == NULL){
 		PANIC("KERNEL OUT OF MEMORRY");
@@ -73,7 +77,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 
 	new_entry->vaddr = uaddr;
 
-	lock_qcquire(&swap_slots_lock);
+	lock_acquire(&swap_slots_lock);
 
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 
@@ -83,7 +87,8 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 
 	new_entry->swap_slot = swap_slot;
 
-	struct hash_elem *returned  = hash_insert(&cur_process->swap_table, new_entry->elem);
+	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
+															new_entry->elem);
 
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
@@ -95,7 +100,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 /* Takes the faulting addr and then reads the data back into main memory
    setting the pagedir to point to the new location, obtained using frame.h's
    frame_get_page function which might evict something else of the data that
-   just got swapped back in */
+   just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
 	struct thread cur = thread_current();
 	struct process cur_process = cur->process;
@@ -106,7 +111,8 @@ bool swap_read_in (void *faulting_addr){
 	   addresses data */
 	struct swap_entry key;
 	key.vaddr = vaddr;
-	struct hash_elem *slot_result = hash_find(&cur_process->swap_table, &key.elem);
+	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
+																	&key.elem);
 	if(slot_result == NULL){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
@@ -114,7 +120,8 @@ bool swap_read_in (void *faulting_addr){
 		PANIC("See comment");
 	}
 
-	uint32_t swap_slot=hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
+	uint32_t swap_slot =
+				hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
 
 	/* May evict a page to swap */
 	uint32_t* free_page = frame_get_page(PAL_USER);
@@ -135,26 +142,30 @@ bool swap_read_in (void *faulting_addr){
 	lock_release(&swap_slots_lock);
 
 	/* Remove this swap slot from the processes swap table */
-	struct hash_elem *deleted = hash_delete(&cur_process->swap_table, slot_result);
+	struct hash_elem *deleted = hash_delete(&cur_process->swap_table,
+																slot_result);
 
 	if(deleted == NULL){
-		PANIC("Element found in hash table but then not able to be deleted????");
+		PANIC("Element found but then not able to be deleted????");
 	}
 
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
 
-	bool success = pagedir_install_page(faulting_addr, free_page, true);
+	/* Set the page in our pagetable to point to our new frame */
+	bool success =
+			pagedir_set_page (cur->pagedir, faulting_addr, free_page, true);
 
 	if(!success){
-		return success;
+		PANIC("MEMORY ALLOCATION FAILURE");
 	}
 
-	/* indicate that this is on swap */
+	/* indicate that this is in memorry */
 	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_MEMORY);
 
-	/*Install the page read in from swap*/
-	return
+	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
+
+	return true;
 }
 
 /* Function that hashes the individual elements in the swap hash table
@@ -162,7 +173,8 @@ bool swap_read_in (void *faulting_addr){
    addresses are unique in each process we know that this will not
    produce collisions*/
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
-	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->vaddr, sizeof (int));
+	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->vaddr,
+															  sizeof (int));
 }
 
 /* Function to compare the individual swap hash table elements

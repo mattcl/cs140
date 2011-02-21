@@ -485,9 +485,6 @@ struct Elf32_Phdr{
 
 static bool setup_stack (void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-                          uint32_t read_bytes, uint32_t zero_bytes,
-                          bool writable);
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
@@ -502,7 +499,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct file *file = NULL;
 	off_t file_ofs;
 	bool success = false;
-	int i;
+	int i, load_i;
 
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
@@ -557,7 +554,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* Read program headers. */
 	file_ofs = ehdr.e_phoff;
-	for(i = 0; i < ehdr.e_phnum; i++){
+
+	/* An array that contains the max number of headers
+	   will only actually store the number of executable
+	   headers in it */
+	struct exec_segment_info segs [ehdr.e_phnum];
+
+	for(i = 0, load_i = 0; i < ehdr.e_phnum; i++){
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
@@ -583,35 +586,38 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
-				bool writable = (phdr.p_flags & PF_W) != 0;
-				uint32_t file_page = phdr.p_offset & ~PGMASK;
-				uint32_t mem_page = phdr.p_vaddr & ~PGMASK;
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
-				uint32_t read_bytes, zero_bytes;
+				segs[load_i].file_page = phdr.p_offset & ~PGMASK;
+				segs[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
+				segs[load_i].writable = (phdr.p_flags & PF_W) != 0;
+
 				if(phdr.p_filesz > 0){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
-					read_bytes = page_offset + phdr.p_filesz;
-					zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-							- read_bytes);
+					segs[load_i].read_bytes = page_offset + phdr.p_filesz;
+					segs[load_i].zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
+							- segs[load_i].read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
-					read_bytes = 0;
-					zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
-				}
-				if(!load_segment (file, file_page, (void *) mem_page,
-						read_bytes, zero_bytes, writable)){
-					printf("Failed to load segment\n");
-					goto done;
+					segs[load_i].read_bytes = 0;
+					segs[load_i].zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
+				pagedir_setup_demand_page(segs[load_i].mem_page, PTE_AVL_DISK_EXEC,
+										  segs[load_i].mem_page, segs[load_i].writable);
+
+				load_i ++;
 			}else{
 				goto done;
 			}
 			break;
 		}
 	}
+
+	/* Save all of our infor so that we can handle page_faults */
+	cur_process->exec_info = calloc (load_i, sizeof(struct exec_segment_info));
+	memcpy (cur_process->exec_info, segs, load_i*sizeof(struct exec_segment_info));
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
@@ -756,7 +762,7 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
              uint32_t read_bytes, uint32_t zero_bytes, bool writable){
 
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -784,7 +790,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-		/* Add the page to the process's address space. */
+		/* Add the page to the process's address space. But only if that
+		   virtual address doesn't already have something mapped to it,
+		   I.E. the present bit is on*/
 		if(!pagedir_install_page (upage, kpage, writable)){
 			frame_clear_page(kpage);
 			return false;

@@ -200,6 +200,15 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 	}
 }
 
+/* Returns whether the present bit is set, and returns true if the
+   bit is set or false if the PTE has yet to be allocated or if the
+   page is missing */
+bool pagedir_is_present (uint32_t *pd, void *uaddr){
+    uint32_t *pte = lookup_page (pd, uaddr, false);
+    return pte != NULL && (*pte & PTE_P) != 0;
+}
+
+
 
 /* Loads page directory PD into the CPU's page directory base
    register. */
@@ -306,10 +315,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	  /* These functions asssume these 3 bits are zeroed */
 	  ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);		
 	    if(medium == PTE_AVL_MEMORY){
-	        *pte 
+	                x*pte &= ~(uint32_t)PTE_AVL;
 	    }else if(medium == PTE_AVL_SWAP){
 			*pte |= PTE_AVL_SWAP;
-		}else if(medium == PTE_AVL_DISK_EXCECUTABLE){
+		}else if(medium == PTE_AVL_DISK_EXEC){
 			*pte |= PTE_AVL_DISK_EXECUTABLE;
 		}else if(medium == PTE_AVL_DISK_MMAP){
 		        *pte |= PTE_AVL_MMAP;
@@ -329,7 +338,7 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	if(pte != NULL){
 	    if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
 	        return PTE_AVL_SWAP;
-	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXCECUTABLE){
+	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXEC){
 		return DISK_EXCECUTABLE;
 	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_MMAP){
 	        return PTE_AVL_DISK_MMAP;
@@ -355,19 +364,18 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
-
+	
 	if(pte != NULL){
-	    return *pte & 
+	    return *pte & PTE_ADDR;
 	}
 
-	return *pte & PTE_ADDR;
+	PANIC("pagedir_get_aux called on a page table entry that is not initialized");
 }
 
 /* Adds a mapping from user virtual address uaddr to kernel
    virtual address kaddr to the page table.
    If WRITABLE is true, the user process may modify the page;
    otherwise, it is read-only.
-   uaddr must not already be mapped.
    kaddr should probably be a page obtained from the user pool
    with palloc_get_page().
    Returns true on success, false if uaddr is already mapped or
@@ -375,9 +383,19 @@ uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 	struct thread *t = thread_current ();
 
-	/* Verify that there's not already a page at that virtual
+	/* Verify that there's not already a page present at that virtual
        address, then map our page there. */
-	return (pagedir_get_page (t->pagedir, uaddr) == NULL
+	return (pagedir_is_present (t->pagedir, uaddr) == NULL
 			&& pagedir_set_page (t->pagedir, uaddr, kaddr, writable));
+}
+
+/* Sets up a PTE that is not present but that has the neccessary information
+   to be loaded when a page fault occurs. This will map the most significant
+   top 20 bits to be something that will be useful for the page fault handler.
+   The data for the top 20 bits will be passed in as a uint32_t and have the
+   lower 12 bits masked off. */
+bool pagedir_setup_demand_page(void *uaddr, medium_t medium ,
+										    uint32_t data, bool writable){
+
 }
 
