@@ -1,0 +1,73 @@
+
+
+//takes the user virtual address for the page that we are mapping
+// sets up the page table entry to have the vaddr of the page that
+// is needed from the executable
+
+// So we are going to put the top 20 bits of the uaddr into where the 
+// physical address should be in the PTE
+
+// where uaddr is the uaddr of the page, incremented in the loop
+setup_page (uaddr, EXEC){
+
+// get the pte for this uaddr
+pte = lookup_page(uaddr, create == true);
+
+// Set the top 20 bits of uaddr to the physical address area of PTE
+page_dir_set_avl_bits(EXEC, uaddr)
+
+}
+
+
+
+On page fault for exec
+// not present and bit EXEC bit is set
+
+then
+
+take the vaddr from the upper 20 bits and then subtract the start of 
+the start of the executable segment to generate the offset into the
+executable file that we need to read into memory
+
+get a free frame and then move the data from the executable file into
+the free frame!
+
+Done diao
+
+Need to stort the first vaddr of the executable segment
+
+
+setup page is called for every segment that should be read into memory
+from the executable file
+
+
+Memory mapped files strategy
+
+Verify that the file they want to read in is valid for the entire
+contiguous region of the file will fit into the region of memory that
+the user gave to us. If it does then for every page of the file we need
+to run
+
+// possible problem verifying that it all fits into memory
+
+// where uaddr is the uaddr of the page, incremented in the loop
+setup_page(uaddr, MMAPED)
+
+pte = lookup_page(uaddr, create == true)
+
+page_dir_set_avl_bits(MMAPED, uaddr);
+
+}
+
+on page fault we just need to use the vaddr in the 20 bits 
+to find the appropriate file in the MMAP hash table O(n) then
+use the start address in the mmap entry to find the correct offset
+into the file that we are looking for and then we will read the data
+from disk into a free frame
+
+
+page_dir_set_avl_bits (uaddr, type)
+
+needs to set the top 20 bits to be the same as uaddr
+sets the present bit to 0
+sets the appropriate type bit, either EXEC or MMAPPED
