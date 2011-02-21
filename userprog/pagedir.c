@@ -321,7 +321,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	        *pte ;
 	    }else if(medium == PTE_AVL_SWAP){
 			*pte |= PTE_AVL_SWAP;
-		}else if(medium == PTE_AVL_DISK_EXCEC){
+		}else if(medium == PTE_AVL_DISK_EXEC){
 			*pte |= PTE_AVL_DISK_EXECUTABLE;
 		}else if(medium == PTE_AVL_DISK_MMAP){
 		        *pte |= PTE_AVL_MMAP;
@@ -341,7 +341,7 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	if(pte != NULL){
 	    if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
 	        return PTE_AVL_SWAP;
-	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXCEC){
+	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXEC){
 		return DISK_EXCECUTABLE;
 	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_MMAP){
 	        return PTE_AVL_DISK_MMAP;

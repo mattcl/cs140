@@ -604,7 +604,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 					segs[load_i].zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
-				pagedir_setup_demand_page(segs[load_i].mem_page, PTE_AVL_DISK_EXCEC,
+				pagedir_setup_demand_page(segs[load_i].mem_page, PTE_AVL_DISK_EXEC,
 										  segs[load_i].mem_page, segs[load_i].writable);
 
 				load_i ++;

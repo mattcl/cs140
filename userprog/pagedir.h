@@ -6,7 +6,7 @@
 
 #define PTE_AVL_MEMORY 0 /* 000 */ 
 #define PTE_AVL_SWAP 1 /* 001 */
-#define PTE_AVL_DISK_EXCEC (1 << 1) /* 010 */
+#define PTE_AVL_DISK_EXEC (1 << 1) /* 010 */
 #define PTE_AVL_DISK_MMAP (1 << 2) /* 100 */ 
 
 typedef uint8_t medium_t; /* used to represent one of the constants above */
