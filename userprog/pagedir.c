@@ -6,6 +6,7 @@
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
+#include "threads/thread.h"
 #include "vm/frame.h"
 
 /* masks to isolate bit corresponding to constants in pagedir.h */
@@ -90,29 +91,29 @@ static uint32_t *lookup_page (uint32_t *pd, const void *vaddr, bool create){
 }
 
 /* Adds a mapping in page directory PD from user virtual page
-   UPAGE to the physical frame identified by kernel virtual
-   address KPAGE.
-   UPAGE must not already be mapped.
-   KPAGE should probably be a page obtained from the user pool
+   uaddr to the physical frame identified by kernel virtual
+   address kaddr.
+   uaddr must not already be mapped.
+   kaddr should probably be a page obtained from the user pool
    with palloc_get_page().
    If WRITABLE is true, the new page is read/write;
    otherwise it is read-only.
    Returns true if successful, false if memory allocation
    failed. */
-bool pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable){
+bool pagedir_set_page (uint32_t *pd, void *uaddr, void *kaddr, bool writable){
 	uint32_t *pte;
 
-	ASSERT (pg_ofs (upage) == 0);
-	ASSERT (pg_ofs (kpage) == 0);
-	ASSERT (is_user_vaddr (upage));
-	ASSERT (vtop (kpage) >> PTSHIFT < init_ram_pages);
+	ASSERT (pg_ofs (uaddr) == 0);
+	ASSERT (pg_ofs (kaddr) == 0);
+	ASSERT (is_user_vaddr (uaddr));
+	ASSERT (vtop (kaddr) >> PTSHIFT < init_ram_pages);
 	ASSERT (pd != init_page_dir);
 
-	pte = lookup_page (pd, upage, true);
+	pte = lookup_page (pd, uaddr, true);
 
 	if(pte != NULL){
 		ASSERT ((*pte & PTE_P) == 0);
-		*pte = pte_create_user (kpage, writable);
+		*pte = pte_create_user (kaddr, writable);
 		return true;
 	}else{
 		return false;
@@ -136,36 +137,36 @@ void *pagedir_get_page (uint32_t *pd, const void *uaddr){
 	}
 }
 
-/* Marks user virtual page UPAGE "not present" in page
+/* Marks user virtual page uaddr "not present" in page
    directory PD.  Later accesses to the page will fault.  Other
    bits in the page table entry are preserved.
-   UPAGE need not be mapped. */
-void pagedir_clear_page (uint32_t *pd, void *upage){
+   uaddr need not be mapped. */
+void pagedir_clear_page (uint32_t *pd, void *uaddr){
 	uint32_t *pte;
 
-	ASSERT (pg_ofs (upage) == 0);
-	ASSERT (is_user_vaddr (upage));
+	ASSERT (pg_ofs (uaddr) == 0);
+	ASSERT (is_user_vaddr (uaddr));
 
-	pte = lookup_page (pd, upage, false);
+	pte = lookup_page (pd, uaddr, false);
 	if(pte != NULL && (*pte & PTE_P) != 0){
 		*pte &= ~PTE_P;
 		invalidate_pagedir (pd);
 	}
 }
 
-/* Returns true if the PTE for virtual page VPAGE in PD is dirty,
+/* Returns true if the PTE for virtual page uaddr in PD is dirty,
    that is, if the page has been modified since the PTE was
    installed.
-   Returns false if PD contains no PTE for VPAGE. */
-bool pagedir_is_dirty (uint32_t *pd, const void *vpage){
-	uint32_t *pte = lookup_page (pd, vpage, false);
+   Returns false if PD contains no PTE for uaddr. */
+bool pagedir_is_dirty (uint32_t *pd, const void *uaddr){
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_D) != 0;
 }
 
-/* Set the dirty bit to DIRTY in the PTE for virtual page VPAGE
+/* Set the dirty bit to DIRTY in the PTE for virtual page uaddr
    in PD. */
-void pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty){
-	uint32_t *pte = lookup_page (pd, vpage, false);
+void pagedir_set_dirty (uint32_t *pd, const void *uaddr, bool dirty){
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 	if(pte != NULL){
 		if(dirty){
 			*pte |= PTE_D;
@@ -176,19 +177,19 @@ void pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty){
 	}
 }
 
-/* Returns true if the PTE for virtual page VPAGE in PD has been
+/* Returns true if the PTE for virtual page uaddr in PD has been
    accessed recently, that is, between the time the PTE was
    installed and the last time it was cleared.  Returns false if
-   PD contains no PTE for VPAGE. */
-bool pagedir_is_accessed (uint32_t *pd, const void *vpage){
-	uint32_t *pte = lookup_page (pd, vpage, false);
+   PD contains no PTE for uaddr. */
+bool pagedir_is_accessed (uint32_t *pd, const void *uaddr){
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_A) != 0;
 }
 
 /* Sets the accessed bit to ACCESSED in the PTE for virtual page
-   VPAGE in PD. */
-void pagedir_set_accessed (uint32_t *pd, const void *vpage, bool accessed){
-	uint32_t *pte = lookup_page (pd, vpage, false);
+   uaddr in PD. */
+void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 	if(pte != NULL){
 		if(accessed){
 			*pte |= PTE_A;
@@ -295,9 +296,9 @@ static void invalidate_pagedir (uint32_t *pd){
 */
 
 /* Sets the medium as mentioned above. */
-void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
+void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	/* get the page table out of the page directory */
-	uint32_t *pte = lookup_page (pd, vpage, false);
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 
 	if(pte != NULL){
@@ -306,7 +307,7 @@ void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
 	  
 		if(medium == SWAP){
 			*pte |= PTE_SWAP;
-		}else if(medium == DISK_EXECUTABLE){
+		}else if(medium == DISK_EXCECUTABLE){
 			*pte |= PTE_EXECUTABLE;
 		}else if(medium == DISK_MMAP){
 		        *pte |= PTE_MMAP;
@@ -318,16 +319,16 @@ void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
 	PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 }
 
-medium_t pagedir_get_medium (uint32_t *pd, void *vpage){
+medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	/*get the page table out of the page directory*/
-	uint32_t *pte = lookup_page (pd, vpage, false);
+	uint32_t *pte = lookup_page (pd, uaddr, false);
 	
 
 	if(pte != NULL){
 	    if((*pte & (uint32_t)PTE_AVL) == SWAP){
 	        return SWAP;
-	    }else if(*pte & (uint32_t)PTE_AVL == DISK_EXECUTABLE){
-		return DISK_EXECUTABLE;
+	    }else if(*pte & (uint32_t)PTE_AVL == DISK_EXCECUTABLE){
+		return DISK_EXCECUTABLE;
 	    }else if(*pte & (uint32_t)PTE_AVL == DISK_MMAP){
 	        return DISK_MMAP;
 	    }else{
@@ -338,8 +339,8 @@ medium_t pagedir_get_medium (uint32_t *pd, void *vpage){
 	PANIC("pagedir_get_medium called on a page table entry that is not initialized");
 }
 
-void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
-	uint32_t *pte = lookup_page(pd, vpage, false);
+void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t location){
+	uint32_t *pte = lookup_page(pd, uaddr, false);
 
 	if(pte != NULL){
 		*pte |= (location);
@@ -347,29 +348,29 @@ void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
 	PANIC("pagedir_set_aux");
 }
 
-uint32_t pagedir_get_aux (uint32_t *pd, void *vpage){
-	uint32_t *pte = lookup_page(pd, vpage, false);
+uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
+	uint32_t *pte = lookup_page(pd, uaddr, false);
 
 	if(pte == NULL) return 0;
 
 	return *pte & PTE_ADDR;
 }
 
-/* Adds a mapping from user virtual address UPAGE to kernel
-   virtual address KPAGE to the page table.
+/* Adds a mapping from user virtual address uaddr to kernel
+   virtual address kaddr to the page table.
    If WRITABLE is true, the user process may modify the page;
    otherwise, it is read-only.
-   UPAGE must not already be mapped.
-   KPAGE should probably be a page obtained from the user pool
+   uaddr must not already be mapped.
+   kaddr should probably be a page obtained from the user pool
    with palloc_get_page().
-   Returns true on success, false if UPAGE is already mapped or
+   Returns true on success, false if uaddr is already mapped or
    if memory allocation fails. */
-bool install_page (void *upage, void *kpage, bool writable){
+bool install_page (void *uaddr, void *kaddr, bool writable){
 	struct thread *t = thread_current ();
 
 	/* Verify that there's not already a page at that virtual
        address, then map our page there. */
-	return (pagedir_get_page (t->pagedir, upage) == NULL
-			&& pagedir_set_page (t->pagedir, upage, kpage, writable));
+	return (pagedir_get_page (t->pagedir, uaddr) == NULL
+			&& pagedir_set_page (t->pagedir, uaddr, kaddr, writable));
 }
 
