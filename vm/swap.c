@@ -49,10 +49,34 @@ void swap_init (void){
 
 /* Takes the data from the page pointed to by kvaddr and moves that content
    to an available swap slot, if there is no swap slot currently available
-   it returns false to indicate that there was a failure, whether this should
-   panic the kernel is up to the caller*/
-bool swap_allocate (void * kvaddr){
+   it panics the kernel, kvaddr is assumed to point to a valid frame, sets
+   the bits in the page table entry for the uaddr that referenced this frame
+   so that it can find this  swap slot*/
+bool swap_allocate (void * kvaddr, void *uaddr){
+	struct thread cur = thread_current();
+	struct process cur_process = cur->process;
 
+	/*Set the auxilary data so that it can index into the swap table*/
+	pagedir_set_aux(cur->pagedir, uaddr, uaddr);
+
+	/* Force a page fault when we are lookin this virtual address up */
+	pagedir_set_present(cur->pagedir, uaddr, false);
+
+	struct swap_entry *new_entry = calloc(sizeof(struct swap_entry));
+	if(new_entry == NULL){
+		PANIC("KERNEL OUT OF MEMORRY");
+	}
+
+	new_entry -> vaddr = uaddr;
+
+	lock_qcquire(&swap_slots_lock);
+
+	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
+	if(swap_slot == BITMAP_ERROR){
+		PANIC("SWAP IS FULL BABY");
+	}
+
+	lock_release(&swap_slots_lock);
 }
 
 /* Takes the faulting addr and then reads the data back into main memory
@@ -107,7 +131,8 @@ bool swap_read_in (void *faulting_addr){
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
 
-	pagedir_install_page(faulting_addr, free_page, true);
+	/*Install the page read in from swap*/
+	return 	pagedir_install_page(faulting_addr, free_page, true);
 }
 
 /* Function that hashes the individual elements in the swap hash table
