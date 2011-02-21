@@ -309,7 +309,7 @@ void pagedir_set_medium (uint32_t *pd, void *vpage, medium_t medium){
 		}else if(medium == DISK_EXECUTABLE){
 			*pte |= PTE_EXECUTABLE;
 		}else if(medium == DISK_MMAP){
-		        *pte |= PTE_MMAP
+		        *pte |= PTE_MMAP;
 		}else{
 		  PANIC("pagedir_set_medium called with unexpected medium");
 		}
@@ -344,7 +344,7 @@ void pagedir_set_aux (uint32_t *pd, void *vpage, uint32_t location){
 	if(pte != NULL){
 		*pte |= (location);
 	}
-	PANIC("pagedir_set_aux")
+	PANIC("pagedir_set_aux");
 }
 
 uint32_t pagedir_get_aux (uint32_t *pd, void *vpage){
