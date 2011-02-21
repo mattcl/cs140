@@ -200,18 +200,6 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 	}
 }
 
-void pagedir_is_present (uint32_t *pd, void *uaddr){
-    uint32_t *pte = lookup_page (pd, uaddr, false);
-    
-    ASSERT(pte != NULL);
-    /* we catch the error in debug mode, but in production kernel
-       we don't want to crash here */
-    return pte != NULL && (*pte & PTE_P) != 0;
-}
-
-void pagedir_set_present (uint32_t *pd, void *uaddr, bool present){
-  uint32_t *pte = lookup_page(pd, uaddr, 
-}
 
 /* Loads page directory PD into the CPU's page directory base
    register. */
@@ -355,9 +343,12 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
-
+	
+	/* The last 12 bits should be zero */
+	ASSERT(aux_data < PGSIZE);
+	
 	if(pte != NULL){
-		*pte |= (location);
+		*pte |= aux_data;
 	}
 	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
@@ -365,7 +356,9 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
-	if(pte == NULL) return 0;
+	if(pte != NULL){
+	    return *pte & 
+	}
 
 	return *pte & PTE_ADDR;
 }
