@@ -311,19 +311,11 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 
 
 	if(pte != NULL){
-<<<<<<< HEAD:userprog/pagedir.c
-	  /* These functions asssume these 3 bits are zeroed */
-	  ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);		
-	    if(medium == PTE_AVL_MEMORY){
-	                x*pte &= ~(uint32_t)PTE_AVL;
-	    }else if(medium == PTE_AVL_SWAP){
-=======
 		/* These functions asssume these 3 bits are zeroed */
 		ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		if(medium == PTE_AVL_MEMORY){
-			*pte ;
+			*pte &= ~(uint32_t)PTE_AVL;
 		}else if(medium == PTE_AVL_SWAP){
->>>>>>> e83d22322c07141b619a3ebb2444f2a274a61d7e:userprog/pagedir.c
 			*pte |= PTE_AVL_SWAP;
 		}else if(medium == PTE_AVL_EXEC){
 			*pte |= PTE_AVL_EXEC;
@@ -359,27 +351,22 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
-	
+
 	/* The last 12 bits should be zero */
 	ASSERT(aux_data < PGSIZE);
-	
+
 	if(pte != NULL){
-<<<<<<< HEAD:userprog/pagedir.c
 		*pte |= aux_data;
-=======
-		*pte |= (aux_data);
->>>>>>> e83d22322c07141b619a3ebb2444f2a274a61d7e:userprog/pagedir.c
 	}
 	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
 
 uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
-	
-	if(pte != NULL){
-	    return *pte & PTE_ADDR;
-	}
 
+	if(pte != NULL){
+		return *pte & PTE_ADDR;
+	}
 	PANIC("pagedir_get_aux called on a page table entry that is not initialized");
 }
 
