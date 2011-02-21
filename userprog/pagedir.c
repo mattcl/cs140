@@ -200,12 +200,17 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 	}
 }
 
-void pagedir_set_present (uint32_t *pd, void *addr, vool present){
+void pagedir_is_present (uint32_t *pd, void *uaddr){
     uint32_t *pte = lookup_page (pd, uaddr, false);
+    
     ASSERT(pte != NULL);
-    if(pte != NULL){
-      
-    }
+    /* we catch the error in debug mode, but in production kernel
+       we don't want to crash here */
+    return pte != NULL && (*pte & PTE_P) != 0;
+}
+
+void pagedir_set_present (uint32_t *pd, void *uaddr, bool present){
+  uint32_t *pte = lookup_page(pd, uaddr, 
 }
 
 /* Loads page directory PD into the CPU's page directory base
@@ -311,14 +316,15 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 
 	if(pte != NULL){
 	  /* These functions asssume these 3 bits are zeroed */
-	  ASSERT(*pte && PTE_AVL == MEMORY);		
-	  
-		if(medium == SWAP){
-			*pte |= PTE_SWAP;
-		}else if(medium == DISK_EXCECUTABLE){
-			*pte |= PTE_EXECUTABLE;
-		}else if(medium == DISK_MMAP){
-		        *pte |= PTE_MMAP;
+	  ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);		
+	    if(medium == PTE_AVL_MEMORY){
+	        *pte 
+	    }else if(medium == PTE_AVL_SWAP){
+			*pte |= PTE_AVL_SWAP;
+		}else if(medium == PTE_AVL_DISK_EXCECUTABLE){
+			*pte |= PTE_AVL_DISK_EXECUTABLE;
+		}else if(medium == PTE_AVL_DISK_MMAP){
+		        *pte |= PTE_AVL_MMAP;
 		}else{
 		  PANIC("pagedir_set_medium called with unexpected medium");
 		}
@@ -333,12 +339,12 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 	
 
 	if(pte != NULL){
-	    if((*pte & (uint32_t)PTE_AVL) == SWAP){
-	        return SWAP;
-	    }else if(*pte & (uint32_t)PTE_AVL == DISK_EXCECUTABLE){
+	    if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
+	        return PTE_AVL_SWAP;
+	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_EXCECUTABLE){
 		return DISK_EXCECUTABLE;
-	    }else if(*pte & (uint32_t)PTE_AVL == DISK_MMAP){
-	        return DISK_MMAP;
+	    }else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_DISK_MMAP){
+	        return PTE_AVL_DISK_MMAP;
 	    }else{
 	      PANIC("pagedir_get_medium called with unexpected medium");
 	    }

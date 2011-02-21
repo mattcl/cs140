@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MEMORY 0 /* 000 */ 
-#define SWAP 1 /* 001 */
-#define DISK_EXCECUTABLE 2 /* 010 */
-#define DISK_MMAP 4 /* 100 */ 
+#define PTE_AVL_MEMORY 0 /* 000 */ 
+#define PTE_AVL_SWAP 1 /* 001 */
+#define PTE_AVL_DISK_EXCECUTABLE (1 << 1) /* 010 */
+#define PTE_AVL_DISK_MMAP (1 << 2) /* 100 */ 
 
 typedef uint8_t medium_t; /* used to represent one of the constants above */
 
