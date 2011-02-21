@@ -28,4 +28,6 @@ medium_t  pagedir_get_medium (uint32_t *pd, void *upage);
 void pagedir_set_aux (uint32_t *pd, void *upage, uint32_t location);
 uint32_t pagedir_get_aux (uint32_t *pd, void* upage);
 
+bool install_page (void *upage, void *kpage, bool writable);
+
 #endif /* userprog/pagedir.h */

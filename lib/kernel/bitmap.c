@@ -41,8 +41,8 @@ static inline elem_type last_mask (const struct bitmap *b){
 
 /* Initializes B to be a bitmap of BIT_CNT bits
    and sets all of its bits to false.
-   Returns true if success, false if memory allocation
-   failed. */
+   Returns the address of the bitmap if it is
+   successful, on failure it reutrns NULL*/
 struct bitmap *bitmap_create (size_t bit_cnt){
 	struct bitmap *b = malloc (sizeof *b);
 	if(b != NULL){
