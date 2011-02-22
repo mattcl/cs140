@@ -14,15 +14,17 @@ test_main (void)
   int handle;
   int byte_cnt;
   char *buffer;
-
+  printf("before handle\n");
   CHECK ((handle = open ("sample.txt")) > 1, "open \"sample.txt\"");
-
+  printf("AFter handle\n");
   buffer = get_boundary_area () - sizeof sample / 2;
   byte_cnt = read (handle, buffer, sizeof sample - 1);
-  if (byte_cnt != sizeof sample - 1)
+  if (byte_cnt != sizeof sample - 1){
+	printf("fail\n");
     fail ("read() returned %d instead of %zu", byte_cnt, sizeof sample - 1);
-  else if (strcmp (sample, buffer)) 
+  }else if (strcmp (sample, buffer))
     {
+	  printf("fail2\n");
       msg ("expected text:\n%s", sample);
       msg ("text actually read:\n%s", buffer);
       fail ("expected text differs from actual");
