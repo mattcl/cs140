@@ -173,16 +173,16 @@ static void page_fault (struct intr_frame *f){
 				   and it is not present so this process is accessing
 				   invalid memory and must be killed*/
 				medium_t type = pagedir_get_medium(pagedir, fault_addr);
-				printf("faulting address %p\n", fault_addr);
+				//printf("faulting address %p\n", fault_addr);
 				if(type == PTE_AVL_MEMORY){
 					kill(f);
 				}else if(type == PTE_AVL_SWAP){
-					printf("read in from swap\n");
+					//printf("read in from swap\n");
 					if(!swap_read_in(fault_addr)){
 						PANIC("COULDN't read in from swap!!!!");
 					}
 				}else if(type == PTE_AVL_EXEC){
-					printf("read in from exec\n");
+					//printf("read in from exec\n");
 					if(!process_exec_read_in(fault_addr)){
 						PANIC("COULDN'T load the executable segment, KILLL");
 					}
