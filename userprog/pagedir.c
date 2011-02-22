@@ -323,9 +323,9 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 		}else{
 			PANIC("pagedir_set_medium called with unexpected medium");
 		}
+	}else{
+		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 	}
-
-	PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 }
 
 /* Gets the type of medium that this uaddr came from
@@ -346,9 +346,11 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 		}else{
 			PANIC("pagedir_get_medium called with unexpected medium");
 		}
+	}else{
+		PANIC("pagedir_get_medium called on a page table entry that is not initialized");
 	}
 
-	PANIC("pagedir_get_medium called on a page table entry that is not initialized");
+
 }
 
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
@@ -374,8 +376,9 @@ uint32_t pagedir_get_aux (uint32_t *pd, const void *uaddr){
 
 	if(pte != NULL){
 		return *pte & PTE_ADDR;
+	}else{
+		PANIC("pagedir_get_aux called on a page table entry that is not initialized");
 	}
-	PANIC("pagedir_get_aux called on a page table entry that is not initialized");
 }
 
 /* Adds a mapping from user virtual address uaddr to kernel
