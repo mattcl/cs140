@@ -173,6 +173,7 @@ static void page_fault (struct intr_frame *f){
 				   and it is not present so this process is accessing
 				   invalid memory and must be killed*/
 				medium_t type = pagedir_get_medium(pagedir, fault_addr);
+				printf("faulting address %p\n", fault_addr);
 				if(type == PTE_AVL_MEMORY){
 					kill(f);
 				}else if(type == PTE_AVL_SWAP){
