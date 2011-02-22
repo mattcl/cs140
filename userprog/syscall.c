@@ -480,7 +480,7 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	return true;
 }
 
-static bool buffer_is_valid_writable (const void * buffer, unsigned int size){
+static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || put_user(uaddr, 1) < 0){
 		return false;
