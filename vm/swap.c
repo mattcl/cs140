@@ -144,7 +144,7 @@ bool swap_read_in (void *faulting_addr){
 	lock_acquire(&swap_slots_lock);
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-	page_ptr = free_page;
+	page_ptr = (uint8_t*)free_page;
 
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT; i++, start_sector++,
