@@ -566,14 +566,17 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	   the existing structure uses a goto and we can't
 	   modify the esp...*/
 	struct exec_page_info *exec_pages = calloc(ehdr.e_phnum, sizeof(struct exec_page_info));
-	load_i = 0;
 
 	printf("base %p size %u %u\n", exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
 
-	printf("%p\n", exec_pages);
+	printf("%p\n", exec_pages[0]);
+
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
+
+	load_i = 0;
+	uint8_t base_ptr = (uint8_t)exec_pages;
 
 	for(i = 0; i < ehdr.e_phnum; i++){
 		printf("around the loop\n");
@@ -609,6 +612,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
+				struct exec_page_info *entry = (struct exec_page_info *)base_ptr;
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
 				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
