@@ -832,7 +832,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 
 	uint32_t zero_bytes;
 
-	if(entry == full_pages + 1){
+	if(entry == full_pages){
 		zero_bytes = info->zero_bytes % PGSIZE;
 	}else if(entry <= full_pages){
 		zero_bytes = 0;
