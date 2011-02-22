@@ -70,6 +70,7 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 }
 
 static void syscall_handler (struct intr_frame *f){
+	thread_current()->syscall_esp = f->esp;
 	int error = 0;
 
 	/* verify esp */

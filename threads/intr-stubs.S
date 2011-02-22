@@ -22,7 +22,7 @@ intr_entry:
 	pushl %es
 	pushl %fs
 	pushl %gs
-	pushal
+	pushal       /*Pushes all other registers*/
         
 	/* Set up kernel environment. */
 	cld			/* String instructions go upward. */
@@ -109,15 +109,15 @@ intr_stubs:
 /* Emits a stub for interrupt vector NUMBER.
    TYPE is `zero', for the case where we push a 0 error code,
    or `REAL', if the CPU pushes an error code for us. */
-#define STUB(NUMBER, TYPE)                      \
+#define STUB(NUMBER, TYPE)                  \
 	.text;                                  \
-.func intr##NUMBER##_stub;			\
-intr##NUMBER##_stub:                            \
+.func intr##NUMBER##_stub;			        \
+intr##NUMBER##_stub:                        \
 	TYPE;                                   \
 	push $0x##NUMBER;                       \
-        jmp intr_entry;                         \
-.endfunc;					\
-                                                \
+        jmp intr_entry;                     \
+.endfunc;					                \
+                                            \
 	.data;                                  \
 	.long intr##NUMBER##_stub;
 
