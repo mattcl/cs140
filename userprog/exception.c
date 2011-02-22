@@ -162,7 +162,7 @@ static void page_fault (struct intr_frame *f){
 		if(fault_addr < PHYS_BASE && fault_addr > f->esp){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 			/* Get new frame and install it at the faulting addr*/
-			uint32_t kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+			uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
 			pagedir_install_page(page_addr, kvaddr, true);
 			pagedir_set_dirty(pagedir, page_addr , true);
 			pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
