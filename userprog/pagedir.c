@@ -364,8 +364,9 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 
 	if(pte != NULL){
 		*pte |= aux_data;
+	}else{
+		PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 	}
-	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
 
 uint32_t pagedir_get_aux (uint32_t *pd, const void *uaddr){
