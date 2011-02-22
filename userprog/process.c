@@ -571,6 +571,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
 	for(i = 0, load_i = 0; i < ehdr.e_phnum; i++){
+		printf("around the loop\n");
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
