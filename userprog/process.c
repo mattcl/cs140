@@ -613,6 +613,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			if(validate_segment (&phdr, file)){
 				struct exec_page_info *entry = &exec_pages[load_i];
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
+				printf("page offset %u\n", page_offset);
 				entry->file_page = phdr.p_offset & ~PGMASK;
 				entry->mem_page = phdr.p_vaddr & ~PGMASK;
 				entry->writable = (phdr.p_flags & PF_W) != 0;
@@ -636,7 +637,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 									(uint32_t*)entry->mem_page,
 									PTE_AVL_EXEC, entry->mem_page,
 									entry->writable);
-				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes);
+				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u\n", entry->file_page, entry->mem_page, entry->read_bytes);
 				load_i ++;
 			}else{
 				printf("fail4 %u\n", phdr.p_type);
