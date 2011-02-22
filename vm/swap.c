@@ -103,8 +103,8 @@ bool swap_allocate (void * kvaddr, void *uaddr){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	struct thread cur = thread_current();
-	struct process cur_process = cur->process;
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
 	uint32_t vaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 	size_t start_sector;
 	uint8_t page_ptr, i;
