@@ -851,7 +851,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	uint32_t file_page = info->file_page + offset_seg_start;
 
 
-	printf("File page after converting to single %p, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
+	printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
 
 	bool success = load_segment(cur_process->executable_file,
 						file_page, (uint8_t*)vaddr, read_bytes,
