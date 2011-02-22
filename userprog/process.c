@@ -610,7 +610,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 				pagedir_setup_demand_page(t->pagedir,
 									exec_pages[load_i].mem_page, PTE_AVL_EXEC,
-									exec_pages[load_i].mem_page, exec_pages[load_i].writable);
+									(uint32_t)exec_pages[load_i].mem_page,
+									exec_pages[load_i].writable);
 
 				load_i ++;
 			}else{
@@ -780,8 +781,8 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	}
 
 	bool success = load_segment(cur_process->executable_file,
-			info->file_page, info->mem_page, info->read_bytes,
-			(PGSIZE-info->read_bytes), info->writable);
+			info->file_page, (uint32_t*)info->mem_page, info->read_bytes,
+			info->zero_bytes, info->writable);
 
 	return success;
 }

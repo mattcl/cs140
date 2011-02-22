@@ -4,6 +4,7 @@
 
 #include <hash.h>
 #include <stdint.h>
+#include <debug.h>
 
 struct swap_entry{
 	uint32_t vaddr; 		/* Key into the hash table*/
@@ -12,8 +13,9 @@ struct swap_entry{
 	struct hash_elem elem;  /* The hash elem */
 };
 
-unsigned swap_slot_hash_func (const struct hash_elem *a, AUX);
-bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b, AUX);
+unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED);
+bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b,
+															void *aux UNUSED);
 
 void swap_init (void);
 

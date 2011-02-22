@@ -89,10 +89,10 @@ struct process {
 	   executable. This is an array to save space and avoid the overhead
 	   of a data structure such as an hash table that maps from virtual
 	   addresses to the data for the executable's page. Each entry is
-	   17 bytes. So an executable with a data segment that is 2^20 bytes
+	   21 bytes. So an executable with a data segment that is 2^20 bytes
 	   large will only incur an overhead of 4320 bytes to find the different
 	   segments of the executable. Similaraly if the data segment is all 4 GB
-	   large then we only need 17 MB to find all of the different segments of
+	   large then we only need 21 MB to find all of the different segments of
 	   the executable*/
 	struct exec_page_info *exec_info;
 	uint32_t num_exec_pages;
@@ -124,6 +124,7 @@ struct exec_page_info{
 	uint32_t mem_page;
 	uint32_t file_page;
 	uint32_t read_bytes;
+	uint32_t zero_bytes;
 	bool writable;
 };
 
