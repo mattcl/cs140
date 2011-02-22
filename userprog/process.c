@@ -574,7 +574,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 			|| ehdr->e_machine != 3
 			|| ehdr->e_version != 1
 			|| ehdr->e_phentsize != sizeof (struct Elf32_Phdr)
-			|| ehdr.e_phnum > 1024){
+			|| ehdr->e_phnum > 1024){
 
 		printf ("load: %s: error loading executable\n", file_name);
 		return false;
@@ -585,12 +585,12 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	file_deny_write(cur_process->executable_file);
 
 	/* Read program headers. */
-	file_ofs = ehdr.e_phoff;
+	file_ofs = ehdr->e_phoff;
 
 	/* An array that contains the max number of headers
 	   will eventually only store the number of loadable
 	   headers in it and be malloced */
-	struct exec_page_info head[ehdr.e_phnum];
+	struct exec_page_info head[ehdr->e_phnum];
 
 	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
@@ -598,7 +598,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 		PANIC("KERNEL OUT OF MEMORY");
 	}
 
-	for(i = 0; i < ehdr.e_phnum; i++){
+	for(i = 0; i < ehdr->e_phnum; i++){
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
