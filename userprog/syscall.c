@@ -532,7 +532,7 @@ static int get_user(const uint8_t *uaddr){
 
 static bool put_user (uint8_t *udst, uint8_t byte){
 	int error_code;
-	asm("mov1 $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
+	asm("movl $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
 	return error_code != -1;
 }
 
