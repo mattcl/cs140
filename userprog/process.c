@@ -501,7 +501,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct file *file = NULL;
 	off_t file_ofs;
 	bool success = false;
-	int i, load_i;
+	int i, load_i, j = 0;
 
 	/* Acquire the lock in advance just incase we need to break */
 	lock_acquire(&filesys_lock);
@@ -571,13 +571,11 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	printf("%p\n", &exec_pages[2]);
 
-	printf("filesize %u\n",file_length(file));
+	printf ("filesize %u\n",file_length(file));
 
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
-
-	load_i = 0;
 
 	for(i = 0; i < ehdr.e_phnum; i++){
 		printf("around the loop\n");
@@ -635,10 +633,15 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
-				pagedir_setup_demand_page(t->pagedir,
-									(uint32_t*)entry->mem_page,
-									PTE_AVL_EXEC, entry->mem_page,
+				/* Setup demand paging for all of the executable pages */
+				uint32_t num_pages = (entry->read_bytes+entry->zero_bytes)/PGSIZE;
+				for(j = 0; j < num_pages; j ++){
+					uint8_t uaddr = ((uint8_t)entry->mem_page) + (PGSIZE*j);
+					pagedir_setup_demand_page(t->pagedir,
+									(uint32_t*)uaddr,
+									PTE_AVL_EXEC, uaddr,
 									entry->writable);
+				}
 				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes);
 				load_i ++;
 			}else{
