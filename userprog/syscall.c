@@ -478,11 +478,13 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
-	uaddr += size;
-	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
-		return false;
+	if(size > 1){
+		uaddr += size;
+		if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
+			return false;
+		}
+		return true;
 	}
-	return true;
 }
 
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
@@ -493,11 +495,13 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 		return false;
 	}
 	put_user(uaddr, byte);
-	uaddr += size;
-	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
-		return false;
+	if(size > 1){
+		uaddr += size;
+		if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
+			return false;
+		}
+		put_user(uaddr, byte);
 	}
-	put_user(uaddr, byte);
 	return true;
 }
 

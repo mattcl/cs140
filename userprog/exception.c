@@ -154,11 +154,11 @@ static void page_fault (struct intr_frame *f){
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
+	printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1) Read in the page from the appropriate place,
 	       2) try to grow the stack, or 3) kill them */
-		printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 
 		/* Check the medium bits and IF any of them are set
 		   we read in the data from the appropriate location
@@ -230,7 +230,7 @@ static void page_fault (struct intr_frame *f){
 			printf("kill2\n");
 			kill(f);
 		}else{
-			printf("kernel 1 write %u\n", write);
+			printf("kernel 2 write %u\n", write);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
