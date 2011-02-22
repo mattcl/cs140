@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h" /* PHYS_BASE */
 #include "threads/pte.h"
+#include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "exception.h"
 #include "process.h"
