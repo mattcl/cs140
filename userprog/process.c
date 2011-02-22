@@ -941,7 +941,7 @@ static bool setup_stack (void **esp){
 	if(kpage != NULL){
 		success = pagedir_install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
 		if(success){
-			*esp = PHYS_BASE;n"
+			*esp = PHYS_BASE;
 		}else{
 			frame_clear_page (kpage);
 		}
