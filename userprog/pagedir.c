@@ -326,7 +326,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	}else{
 		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 	}
-	//PANIC("medium set to %u. %u", (*pte & (uint32_t)PTE_AVL), medium);
+	PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
 
 /* Gets the type of medium that this uaddr came from
