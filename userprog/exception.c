@@ -11,6 +11,7 @@
 #include "process.h"
 #include "syscall.h"
 #include "userprog/process.h"
+#include "vm/frame.h"
 #include "vm/swap.h"
 
 /* Number of page faults processed. */
