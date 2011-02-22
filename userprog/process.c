@@ -642,7 +642,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 					uint8_t* uaddr = ((uint8_t*)entry->mem_page) + (PGSIZE*j);
 					printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
-							PTE_AVL_EXEC, uaddr, entry->writable);
+								PTE_AVL_EXEC, (uint32_t)uaddr, entry->writable);
 				}
 				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes, entry->end_addr);
 				load_i ++;
