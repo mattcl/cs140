@@ -115,10 +115,6 @@ struct thread {
 	fixed_point recent_cpu;      /* The recent amount of cpu this thread
 	 	 	 	 	 	 	 	 	has used.*/
 
-	/* Used by syscall.c */
-	void *syscall_esp;  		 /* The current esp of the process at the
-									time of the system call */
-
 	/* Owned by thread.c. */
 	unsigned magic;              /* Detects stack overflow. */
 };

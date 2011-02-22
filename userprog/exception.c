@@ -151,17 +151,16 @@ static void page_fault (struct intr_frame *f){
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
-	void *esp = (user) ? f->esp : thread_current()->syscall_esp;
-
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
-		printf("fault_addr %p, esp %p \n", fault_addr, esp);
+		printf("fault_addr %p, esp %p \n", fault_addr, f->esp);
 
-		if(fault_addr < PHYS_BASE && fault_addr >= esp){
+		if(fault_addr < PHYS_BASE &&
+				(uint32_t)fault_addr >= ((uint32_t)f->esp - 32)){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 			/* While the page is not present and supposed to be in memory */
