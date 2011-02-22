@@ -576,6 +576,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
 			free(exec_pages);
+			printf("fail1\n");
 			goto done;
 		}
 
@@ -583,6 +584,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 		if(file_read (file, &phdr, sizeof phdr) != sizeof phdr){
 			free(exec_pages);
+			printf("fail2\n");
 			goto done;
 		}
 		file_ofs += sizeof phdr;
@@ -592,11 +594,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		case PT_PHDR:
 		case PT_STACK:
 		default:
+			printf("ignored\n");
 			/* Ignore this segment. */
 			break;
 		case PT_DYNAMIC:
 		case PT_INTERP:
 		case PT_SHLIB:
+			printf("fail3\n");
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
@@ -627,6 +631,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 				load_i ++;
 			}else{
+				printf("fail4\n");
 				free(exec_pages);
 				goto done;
 			}
