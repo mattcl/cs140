@@ -801,8 +801,9 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	uint32_t i;
 
 	for(i = 0; i < cur_process->num_exec_pages; i++){
-		if(cur_process->exec_info[i].mem_page >= vaddr &&
-				cur_process->exec_info[i].end_addr <= vaddr	){
+		printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
+		if(vaddr >= cur_process->exec_info[i].mem_page &&
+		   vaddr <= cur_process->exec_info[i].end_addr){
 			info = &cur_process->exec_info[i];
 			break;
 		}
