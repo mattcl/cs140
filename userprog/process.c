@@ -628,7 +628,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 									(uint32_t*)exec_pages[load_i].mem_page,
 									PTE_AVL_EXEC, exec_pages[load_i].mem_page,
 									exec_pages[load_i].writable);
-
+				printf("Data for this vaddr %u, %u %u\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes);
 				load_i ++;
 			}else{
 				printf("fail4 %u\n", phdr.p_type);
@@ -784,7 +784,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	struct exec_page_info *info = NULL;
 	uint32_t i;
 
-	for(i=0; i < cur_process->num_exec_pages; i++){
+	for(i = 0; i < cur_process->num_exec_pages; i++){
 		if(cur_process->exec_info[i].mem_page == vaddr){
 			info = &cur_process->exec_info[i];
 			break;
@@ -799,6 +799,8 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 		PANIC("INCONSISTENCY IN EXCEPTION.C");
 		/*return false;*/
 	}
+
+	printf("loading segment from executable where vaddr = %p");
 
 	bool success = load_segment(cur_process->executable_file,
 			info->file_page, (uint8_t*)info->mem_page, info->read_bytes,

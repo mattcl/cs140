@@ -177,10 +177,12 @@ static void page_fault (struct intr_frame *f){
 				if(type == PTE_AVL_MEMORY){
 					kill(f);
 				}else if(type == PTE_AVL_SWAP){
+					printf("read in from swap\n");
 					if(!swap_read_in(fault_addr)){
 						PANIC("COULDN't read in from swap!!!!");
 					}
 				}else if(type == PTE_AVL_EXEC){
+					printf("read in from exec\n");
 					if(!process_exec_read_in(fault_addr)){
 						PANIC("COULDN'T load the executable segment, KILLL");
 					}
