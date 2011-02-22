@@ -637,7 +637,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 									(uint32_t*)entry->mem_page,
 									PTE_AVL_EXEC, entry->mem_page,
 									entry->writable);
-				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u\n", entry->file_page, entry->mem_page, entry->read_bytes);
+				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %p\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes);
 				load_i ++;
 			}else{
 				printf("fail4 %u\n", phdr.p_type);
