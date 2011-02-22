@@ -628,7 +628,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 									(uint32_t*)exec_pages[load_i].mem_page,
 									PTE_AVL_EXEC, exec_pages[load_i].mem_page,
 									exec_pages[load_i].writable);
-				printf("Data for this vaddr %u, %u %u\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes);
+				printf("Data for this vaddr fpage%u, mempage %p read_bytes %u\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes);
 				load_i ++;
 			}else{
 				printf("fail4 %u\n", phdr.p_type);
@@ -800,8 +800,9 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 		/*return false;*/
 	}
 
-	printf("loading segment from executable where vaddr = %p");
+	printf("loading segment from executable where vaddr = %p\n", vaddr);
 
+	printf("and file_page %u, mem_page %p, read_bytes %u", info->file_page, info->mem_page, info->read_bytes);
 	bool success = load_segment(cur_process->executable_file,
 			info->file_page, (uint8_t*)info->mem_page, info->read_bytes,
 			info->zero_bytes, info->writable);
