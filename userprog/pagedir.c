@@ -345,7 +345,8 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_MMAP){
 			return PTE_AVL_MMAP;
 		}else{
-			PANIC("pagedir_get_medium found unexpected medium %u. %p faulting address", (*pte & (uint32_t)PTE_AVL), uaddr);
+			//PANIC("pagedir_get_medium found unexpected medium %u. %p faulting address", (*pte & (uint32_t)PTE_AVL), uaddr);
+			return PTE_AVL_MEMORY;
 		}
 	}else{
 		PANIC("pagedir_get_medium called on a page table entry that is not initialized");
