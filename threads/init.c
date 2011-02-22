@@ -253,7 +253,7 @@ static char **parse_options (char **argv){
 		}else if(!strcmp (name, "-scratch")){
 			scratch_bdev_name = value;
 #ifdef VM
-		else if(!strcmp (name, "-swap")){
+		}else if(!strcmp (name, "-swap")){
 			swap_bdev_name = value;
 		}else if(!strcmp (name, "-stack")){
 			stack_size = atoi(value)>4?atoi(value)*(1024):MIN_STACK_SIZE;

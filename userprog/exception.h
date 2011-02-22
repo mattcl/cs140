@@ -13,8 +13,6 @@
 						   Which is completely counter intuitive....
 						   Just sayin */
 
-#define MAX_STACK_SIZE
-
 void exception_init (void);
 void exception_print_stats (void);
 
