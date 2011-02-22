@@ -604,7 +604,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
-				printf("execPages[load_i] = %p\n base %p size %u\n", exec_pages[load_i], exec_pages, sizeof(struct exec_page_info));
+				printf("execPages[load_i] = %p base %p size %u\n", exec_pages[load_i], exec_pages, sizeof(struct exec_page_info));
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
 				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
