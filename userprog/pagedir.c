@@ -315,6 +315,8 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 			*pte |= PTE_AVL_EXEC;
 		}else if(medium == PTE_AVL_MMAP){
 			*pte |= PTE_AVL_MMAP;
+		}else if(medium == PTE_AVL_MEMORY){
+			/* Already set up*/
 		}else{
 			PANIC("pagedir_set_medium called with unexpected medium");
 		}
