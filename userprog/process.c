@@ -803,7 +803,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	for(i = 0; i < cur_process->num_exec_pages; i++){
 		printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
 		if(vaddr >= cur_process->exec_info[i].mem_page &&
-		   vaddr <= cur_process->exec_info[i].end_addr){
+		   vaddr < cur_process->exec_info[i].end_addr){
 			info = &cur_process->exec_info[i];
 			break;
 		}
@@ -821,9 +821,31 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	printf("loading segment from executable where vaddr = %p\n", vaddr);
 
 	printf("and file_page %u, mem_page %p, read_bytes %u zero bytes %u\n", info->file_page, info->mem_page, info->read_bytes, info->zero_bytes);
+
+	/* calculate the offset of this particular page from the header information
+	   stored in the exec_page_info*/
+
+	/* If the faulting page is the last in this ELF header segment then it
+	   also has all of the zero bytes of the segment as well*/
+	uint32_t zero_bytes =
+			((uint32_t)info->end_addr-(uint32_t)vaddr) == PGSIZE ?
+												info->zero_bytes : 0;
+	/* read_bytes is always going to make up the difference
+	   between zero_bytes and PGSIZE */
+	uint32_t read_bytes = PGSIZE - zero_bytes;
+
+	/* The file_page (offset into the ELF file) will be the regular page
+	   offset for the header plus the offset between the faulting address
+	   and the beginning of this segments memory. We are only going to read
+	   into memory one page */
+	uint32_t file_page = info->file_page +
+							((uint32_t)vaddr - (uint32_t)info->mem_page);
+
+	printf("File page after converting to single %p, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
+
 	bool success = load_segment(cur_process->executable_file,
-			info->file_page, (uint8_t*)info->mem_page, info->read_bytes,
-			info->zero_bytes, info->writable);
+						file_page, (uint8_t*)vaddr, read_bytes,
+						zero_bytes, info->writable);
 
 	return success;
 }

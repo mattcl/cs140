@@ -83,19 +83,7 @@ struct process {
 	struct hash swap_table;
 
 
-	/* This is data that is stored to easily find the data for the
-	   executable when we page fault on the executable. I.E. we need
-	   to read the executable from disk. To do so we need the data that
-	   is stored in the elf file for this particular virtual address. We
-	   save this data in an array that is the number of pages of the
-	   executable. This is an array to save space and avoid the overhead
-	   of a data structure such as an hash table that maps from virtual
-	   addresses to the data for the executable's page. Each entry is
-	   21 bytes. So an executable with a data segment that is 2^20 bytes
-	   large will only incur an overhead of 4320 bytes to find the different
-	   segments of the executable. Similaraly if the data segment is all 4 GB
-	   large then we only need 21 MB to find all of the different segments of
-	   the executable*/
+	/* */
 	struct exec_page_info *exec_info;
 	uint32_t num_exec_pages;
 };
