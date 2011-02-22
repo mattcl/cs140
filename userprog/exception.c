@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h" /* PHYS_BASE */
+#include "threads/pte.h"
 #include "userprog/pagedir.h"
 #include "exception.h"
 #include "process.h"
@@ -149,64 +150,63 @@ static void page_fault (struct intr_frame *f){
 	user = (f->error_code & PF_U) != 0;
 
 
-		/* This section implements virtual memory from the fault
+	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
-
-		if(not_present){
-			/* We got a page fault for a not-present error.  We need to
+	if(not_present){
+		/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
 
-			if(fault_addr < PHYS_BASE && fault_addr > f->esp){
-				/* To extend the stack we allocate a new page to put the new stack
-				   uint32_t kvaddr  = frame_get_page();
-				   pagedir_install_page(faulting_address, kvaddr, writable = true);
-				   pagedir_set_dirty(faulting_address, true);
-				   pagedir_set_medium(PTE_AVL_MEMORY);
-				   -- DONE --
-				 */
-			}else{
-				/* Check the medium bits and IF any of them are set
+		if(fault_addr < PHYS_BASE && fault_addr > f->esp){
+			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+			/* Get new frame and install it at the faulting addr*/
+			uint32_t kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+			pagedir_install_page(page_addr, kvaddr, true);
+			pagedir_set_dirty(pagedir, page_addr , true);
+			pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
+
+		}else{
+			/* Check the medium bits and IF any of them are set
 				   we read in the data from the appropriate location
 				   ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP),
 				   and it is not present so this process is accessing
 				   invalid memory and must be killed*/
-				medium_t type = pagedir_get_medium(pagedir, fault_addr);
-				if(type == PTE_AVL_MEMORY){
-					/* The data isn't present and doesn't exist
+			medium_t type = pagedir_get_medium(pagedir, fault_addr);
+			if(type == PTE_AVL_MEMORY){
+				/* The data isn't present and doesn't exist
 					   elsewhere... PageFault is legit */
-					if(user){
-						kill(f);
-					}else{
-						f->eip = (void*)f->eax;
-						f->eax = 0xffffffff;
-					}
-				}else if(type == PTE_AVL_SWAP){
-					/* Data is not present but on swap read it in
-					   then return so that dereference becomes valid*/
-					if(!swap_read_in(fault_addr)){
-						PANIC("COULDN't read in from swap!!!!");
-					}
-				}else if(type == PTE_AVL_EXEC){
-					/* Data is not present but is on disk still so
-					   read it in and then derefernece becomes valid*/
-					if(!process_exec_read_in(fault_addr)){
-						PANIC("COULDN'T load the executable segment, KILLL");
-					}
-				}else if(type == PTE_AVL_MMAP){
-
+				if(user){
+					kill(f);
 				}else{
-					PANIC("unrecognized medium in page fault, check exception.c");
+					f->eip = (void*)f->eax;
+					f->eax = 0xffffffff;
 				}
-			}
-		}else{
-			/* Write to read only memory, must kill this process */
-			if(user){
-				kill(f);
+			}else if(type == PTE_AVL_SWAP){
+				/* Data is not present but on swap read it in
+					   then return so that dereference becomes valid*/
+				if(!swap_read_in(fault_addr)){
+					PANIC("COULDN't read in from swap!!!!");
+				}
+			}else if(type == PTE_AVL_EXEC){
+				/* Data is not present but is on disk still so
+					   read it in and then derefernece becomes valid*/
+				if(!process_exec_read_in(fault_addr)){
+					PANIC("COULDN'T load the executable segment, KILLL");
+				}
+			}else if(type == PTE_AVL_MMAP){
+
 			}else{
-				f->eip = (void*)f->eax;
-				f->eax = 0xffffffff;
+				PANIC("unrecognized medium in page fault, check exception.c");
 			}
 		}
+	}else{
+		/* Write to read only memory, must kill this process */
+		if(user){
+			kill(f);
+		}else{
+			f->eip = (void*)f->eax;
+			f->eax = 0xffffffff;
+		}
+	}
 }
 
