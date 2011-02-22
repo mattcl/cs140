@@ -344,6 +344,7 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_MMAP){
 			return PTE_AVL_MMAP;
 		}else{
+			printf("%u\n", (*pte & (uint32_t)PTE_AVL));
 			PANIC("pagedir_get_medium called with unexpected medium");
 		}
 	}else{
