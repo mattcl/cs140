@@ -159,7 +159,7 @@ static void page_fault (struct intr_frame *f){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
 
-		if(fault_addr < PHYS_BASE && fault_addr > f->esp){
+		if(fault_addr < PHYS_BASE && fault_addr >= f->esp){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 			/* While the page is not present and supposed to be in memory */
@@ -186,6 +186,7 @@ static void page_fault (struct intr_frame *f){
 				/* The data isn't present and doesn't exist
 					   elsewhere... PageFault is legit */
 				if(user){
+					printf("kill1\n");
 					kill(f);
 				}else{
 					f->eip = (void*)f->eax;
@@ -212,6 +213,7 @@ static void page_fault (struct intr_frame *f){
 	}else{
 		/* Write to read only memory, must kill this process */
 		if(user){
+			printf("kill2\n");
 			kill(f);
 		}else{
 			f->eip = (void*)f->eax;
