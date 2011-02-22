@@ -491,7 +491,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
 static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
-							 struct process *cur_process);
+							 struct process *cur_process, struct thread* t);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -541,7 +541,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		goto done;
 	}
 
-	if(!read_elf_headers(file, &ehdr, cur_process)){
+	if(!read_elf_headers(file, &ehdr, cur_process, t)){
 		goto done;
 	}
 
@@ -564,7 +564,7 @@ done:
 }
 
 static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
-							 struct process *cur_process){
+							 struct process *cur_process, struct thread* t){
 	off_t file_ofs;
 	uint32_t i, k, j = 0;
 	/* Read and verify executable header. */
@@ -576,7 +576,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 			|| ehdr->e_phentsize != sizeof (struct Elf32_Phdr)
 			|| ehdr->e_phnum > 1024){
 
-		printf ("load: %s: error loading executable\n", file_name);
+		//printf ("load: %s: error loading executable\n", file_name);
 		return false;
 
 	}
