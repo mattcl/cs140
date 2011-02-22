@@ -576,7 +576,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 
 	load_i = 0;
-	uint8_t base_ptr = (uint8_t)exec_pages;
 
 	for(i = 0; i < ehdr.e_phnum; i++){
 		printf("around the loop\n");
@@ -612,31 +611,31 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
-				struct exec_page_info *entry = (struct exec_page_info *)base_ptr;
+				struct exec_page_info *entry = &exec_pages[load_i];
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
-				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
-				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
-				exec_pages[load_i].writable = (phdr.p_flags & PF_W) != 0;
+				entry->file_page = phdr.p_offset & ~PGMASK;
+				entry->mem_page = phdr.p_vaddr & ~PGMASK;
+				entry->writable = (phdr.p_flags & PF_W) != 0;
 
 				if(phdr.p_filesz > 0){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
-					exec_pages[load_i].read_bytes = page_offset + phdr.p_filesz;
-					exec_pages[load_i].zero_bytes =
+					entry->read_bytes = page_offset + phdr.p_filesz;
+					entry->zero_bytes =
 							(ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-							- exec_pages[load_i].read_bytes);
+							- entry->read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
-					exec_pages[load_i].read_bytes = 0;
-					exec_pages[load_i].zero_bytes =
+					entry->read_bytes = 0;
+					entry->zero_bytes =
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
 				pagedir_setup_demand_page(t->pagedir,
-									(uint32_t*)exec_pages[load_i].mem_page,
-									PTE_AVL_EXEC, exec_pages[load_i].mem_page,
-									exec_pages[load_i].writable);
+									(uint32_t*)entry->mem_page,
+									PTE_AVL_EXEC, entry->mem_page,
+									entry->writable);
 				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes);
 				load_i ++;
 			}else{
