@@ -304,18 +304,18 @@ static void invalidate_pagedir (uint32_t *pd){
    +----------------------------------+---+---------------------+
  */
 
-/* Sets the medium as mentioned above. */
+/* Sets the medium that this uaddr originated from, this will be used
+   by eviction and then read by the page fault handler. */
 void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	/* get the page table out of the page directory */
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
-
 	if(pte != NULL){
-		/* These functions asssume these 3 bits are zeroed */
-		ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
-		if(medium == PTE_AVL_MEMORY){
-			*pte &= ~(uint32_t)PTE_AVL;
-		}else if(medium == PTE_AVL_SWAP){
+		/* This function makes sure that these 3 bits are zeroed
+		   before manipulating anything */
+		//ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
+		*pte &= ~(uint32_t)PTE_AVL;
+		if(medium == PTE_AVL_SWAP){
 			*pte |= PTE_AVL_SWAP;
 		}else if(medium == PTE_AVL_EXEC){
 			*pte |= PTE_AVL_EXEC;
@@ -329,10 +329,13 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 }
 
+/* Gets the type of medium that this uaddr came from
+   this is used by the page fault handler to determine
+   where to look for data when it has been evicted, or
+   lazily loaded*/
 medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
-	/*get the page table out of the page directory*/
+	/*get the page table entry out of the page directory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
-
 
 	if(pte != NULL){
 		if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
@@ -351,9 +354,14 @@ medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
 
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
-
 	/* The last 12 bits should be zero */
-	ASSERT(aux_data < PGSIZE);
+	ASSERT((aux_data & ~(uint32_t)PTE_ADDR) == 0);
+
+	/* Set the bottom 12 bits to 0, more usable form of the
+	   function I believe, avoids asserting something. Use
+	   after done debugging
+	aux_data &= ~(uint32_t)PTE_ADDR;
+	 	 */
 
 	if(pte != NULL){
 		*pte |= aux_data;

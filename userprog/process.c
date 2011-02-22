@@ -840,6 +840,10 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			return false;
 		}
 
+		/* Make sure that if this page is evicted and is readonly that it will
+		   be deleted outright instead of put on swap */
+		pagedir_set_medium(thread_current()->pagedir, upage, PTE_AVL_EXEC);
+
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;

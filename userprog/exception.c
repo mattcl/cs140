@@ -157,8 +157,13 @@ static void page_fault (struct intr_frame *f){
 
 			if((uint32_t)fault_addr < PHYS_BASE &&
 					(uint32_t)fault_addr > (uint32_t)f->esp){
-				;//frame get page, install into frame directory
-
+				/* To extend the stack we allocate a new page to put the new stack
+				   uint32_t kvaddr  = frame_get_page();
+				   pagedir_install_page(faulting_address, kvaddr, writable = true);
+				   pagedir_set_dirty(faulting_address, true);
+				   pagedir_set_medium(PTE_AVL_MEMORY);
+				   -- DONE --
+				 */
 			}else{
 				/* Check the medium bits and IF any of them are set
 				   we read in the data from the appropriate location
