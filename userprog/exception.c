@@ -151,6 +151,18 @@ static void page_fault (struct intr_frame *f){
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
+	if(write && !pagedir_is_writable(pagedir, fault_addr)){
+		/* Write to read only memory, must kill this process */
+		if(user){
+			printf("kill2\n");
+			kill(f);
+		}else{
+			printf("kernel 1 write %u\n", write);
+			f->eip = (void*)f->eax;
+			f->eax = 0xffffffff;
+		}
+	}
+
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
@@ -159,7 +171,7 @@ static void page_fault (struct intr_frame *f){
 	       either 1. Grow the stack (possibly evict a page), or kill them */
 		printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 
-		if(fault_addr < PHYS_BASE &&
+		if(user && fault_addr < PHYS_BASE &&
 				(uint32_t)fault_addr >= ((uint32_t)f->esp - 32)){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
@@ -190,6 +202,7 @@ static void page_fault (struct intr_frame *f){
 					printf("kill1\n");
 					kill(f);
 				}else{
+					printf("kernel 1 write %u\n", write);
 					f->eip = (void*)f->eax;
 					f->eax = 0xffffffff;
 				}
@@ -212,15 +225,6 @@ static void page_fault (struct intr_frame *f){
 			}else{
 				PANIC("unrecognized medium in page fault, check exception.c");
 			}
-		}
-	}else{
-		/* Write to read only memory, must kill this process */
-		if(user){
-			printf("kill2\n");
-			kill(f);
-		}else{
-			f->eip = (void*)f->eax;
-			f->eax = 0xffffffff;
 		}
 	}
 }

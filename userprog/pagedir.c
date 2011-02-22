@@ -131,7 +131,7 @@ void *pagedir_get_page (uint32_t *pd, const void *uaddr){
 	}
 }
 
-/* Marks user virtual page uaddr "not present" in page
+/* Marks user virtual page uaddr- "not present" in page
    directory PD.  Later accesses to the page will fault.  Other
    bits in the page table entry are preserved.
    uaddr need not be mapped. */
@@ -202,6 +202,10 @@ bool pagedir_is_present (uint32_t *pd, const void *uaddr){
 	return pte != NULL && (*pte & PTE_P) != 0;
 }
 
+bool pagedir_is_writable (uint32_t *pd, const void *uaddr){
+	uint32_t *pte = lookup_page (pd, uaddr, false);
+	return pte != NULL && (*pte & PTE_W) != 0;
+}
 
 /* Loads page directory PD into the CPU's page directory base
    register. */
