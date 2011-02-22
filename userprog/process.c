@@ -561,29 +561,25 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	file_ofs = ehdr.e_phoff;
 
 	/* An array that contains the max number of headers
-	   will only actually store the number of executable
+	   will eventually only store the number of loadable
 	   headers in it. This must be malloced because of
 	   the existing structure uses a goto and we can't
 	   modify the esp...*/
-	struct exec_page_info *exec_pages = calloc(ehdr.e_phnum, sizeof(struct exec_page_info));
+	struct exec_page_info exec_pages[ehdr.e_phnum];// = calloc(ehdr.e_phnum, sizeof(struct exec_page_info));
 
 	printf("base %p size %u %u\n", exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
-
-	printf("%p\n", &exec_pages[2]);
-
-	printf ("filesize %u\n",file_length(file));
 
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
 
 	for(i = 0; i < ehdr.e_phnum; i++){
-		printf("around the loop\n");
+		//printf("around the loop\n");
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
 			free(exec_pages);
-			printf("fail1\n");
+			//printf("fail1\n");
 			goto done;
 		}
 
@@ -591,7 +587,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 		if(file_read (file, &phdr, sizeof phdr) != sizeof phdr){
 			free(exec_pages);
-			printf("fail2\n");
+			//printf("fail2\n");
 			goto done;
 		}
 		file_ofs += sizeof phdr;
@@ -601,53 +597,52 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		case PT_PHDR:
 		case PT_STACK:
 		default:
-			printf("ignored %u\n", phdr.p_type);
+			//printf("ignored %u\n", phdr.p_type);
 			/* Ignore this segment. */
 			break;
 		case PT_DYNAMIC:
 		case PT_INTERP:
 		case PT_SHLIB:
-			printf("fail3 %u\n", phdr.p_type);
+			//printf("fail3 %u\n", phdr.p_type);
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
-				struct exec_page_info *entry = &exec_pages[load_i];
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
-				printf("page offset %u\n", page_offset);
-				entry->file_page = phdr.p_offset & ~PGMASK;
-				entry->mem_page = phdr.p_vaddr & ~PGMASK;
-				entry->writable = (phdr.p_flags & PF_W) != 0;
+				//printf("page offset %u\n", page_offset);
+				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
+				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
+				exec_pages[load_i].writable = (phdr.p_flags & PF_W) != 0;
 
 				if(phdr.p_filesz > 0){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
-					entry->read_bytes = page_offset + phdr.p_filesz;
-					entry->zero_bytes =
+					exec_pages[load_i].read_bytes = page_offset + phdr.p_filesz;
+					exec_pages[load_i].zero_bytes =
 							(ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-							- entry->read_bytes);
+							- exec_pages[load_i].read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
-					entry->read_bytes = 0;
-					entry->zero_bytes =
+					exec_pages[load_i].read_bytes = 0;
+					exec_pages[load_i].zero_bytes =
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
 				/* Setup demand paging for all of the executable pages */
-				uint32_t num_pages=(entry->read_bytes+entry->zero_bytes)/PGSIZE;
-				entry->end_addr =
-						entry->read_bytes + entry->zero_bytes + entry->mem_page;
+				uint32_t num_pages=(exec_pages[load_i].read_bytes+exec_pages[load_i].zero_bytes)/PGSIZE;
+				exec_pages[load_i].end_addr =
+						exec_pages[load_i].read_bytes + exec_pages[load_i].zero_bytes + exec_pages[load_i].mem_page;
 
 				for(j = 0; j < num_pages; j ++){
-					uint8_t* uaddr = ((uint8_t*)entry->mem_page) + (PGSIZE*j);
-					printf("user address %p\n", uaddr);
+					uint8_t* uaddr = ((uint8_t*)exec_pages[load_i].mem_page) + (PGSIZE*j);
+					//printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
-								PTE_AVL_EXEC, (uint32_t)uaddr, entry->writable);
+								PTE_AVL_EXEC, (uint32_t)uaddr, exec_pages[load_i].writable);
 				}
-				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes, entry->end_addr);
+				//printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes, exec_pages[load_i].zero_bytes, exec_pages[load_i].end_addr);
 				load_i ++;
 			}else{
-				printf("fail4 %u\n", phdr.p_type);
+				//printf("fail4 %u\n", phdr.p_type);
 				free(exec_pages);
 				goto done;
 			}
@@ -801,7 +796,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	uint32_t i;
 
 	for(i = 0; i < cur_process->num_exec_pages; i++){
-		printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
+		//printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
 		if(vaddr >= cur_process->exec_info[i].mem_page &&
 		   vaddr < cur_process->exec_info[i].end_addr){
 			info = &cur_process->exec_info[i];
@@ -818,23 +813,22 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 		/*return false;*/
 	}
 
-	printf("loading segment from executable where vaddr = %p\n", vaddr);
-
-	printf("and file_page %u, mem_page %p, read_bytes %u zero bytes %u\n", info->file_page, info->mem_page, info->read_bytes, info->zero_bytes);
-
-	/* calculate the offset of this particular page from the header information
-	   stored in the exec_page_info*/
-
-	uint32_t range = info->read_bytes + info->zero_bytes;
+	/* The way this works is it calculates the number of bytes that need to be
+	   read in for this particular page. It does this by looking at the number
+	   of full pages that the header describes. This is done by taking the
+	   total number of read_bytes and dividing by PGSIZE then we use the
+	   offset from the page that the faulting address is in to the beginning
+	   of the segment that is described by the header of the segment. Then
+	   we take this offset and divide by PGSIZE to get our "entry" into the
+	   array of pages. calculating zero bytes for this page
+	   falls out nicely after that*/
 	uint32_t full_pages = info->read_bytes / PGSIZE;
 	uint32_t offset_seg_start = ((uint32_t)vaddr) - ((uint32_t)info->mem_page);
 	uint32_t entry = (offset_seg_start) / PGSIZE;
-
 	uint32_t zero_bytes;
-
 	if(entry == full_pages){
 		zero_bytes = info->zero_bytes % PGSIZE;
-	}else if(entry <= full_pages){
+	}else if(entry < full_pages){
 		zero_bytes = 0;
 	}else{
 		zero_bytes = PGSIZE;
@@ -851,12 +845,11 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	uint32_t file_page = info->file_page + offset_seg_start;
 
 
-	printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
+	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
 
 	bool success = load_segment(cur_process->executable_file,
 						file_page, (uint8_t*)vaddr, read_bytes,
 						zero_bytes, info->writable);
-
 	return success;
 }
 
@@ -884,8 +877,11 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
+
+	/* This loop only executed once per call it isn't changed because
+	   it doesn't need to be changed*/
 	while(read_bytes > 0 || zero_bytes > 0){
-		printf("upage %p\n", upage);
+		//printf("upage %p\n", upage);
 		/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
