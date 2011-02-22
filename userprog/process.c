@@ -568,7 +568,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct exec_page_info *exec_pages = calloc(ehdr.e_phnum, sizeof(struct exec_page_info));
 	load_i = 0;
 
-	printf("execPages[load_i] = %p base %p size %u %u\n", exec_pages[load_i], exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
+	printf("base %p size %u %u\n", exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
 
 	printf("%p\n", exec_pages);
 	if(exec_pages == NULL){
