@@ -8,6 +8,9 @@
 #include "exception.h"
 #include "process.h"
 #include "syscall.h"
+#include "userprog/process.h"
+#include "vm/swap.h"
+
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -155,8 +158,7 @@ static void page_fault (struct intr_frame *f){
 			/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
 
-			if((uint32_t)fault_addr < PHYS_BASE &&
-					(uint32_t)fault_addr > (uint32_t)f->esp){
+			if(fault_addr < PHYS_BASE && fault_addr > f->esp){
 				/* To extend the stack we allocate a new page to put the new stack
 				   uint32_t kvaddr  = frame_get_page();
 				   pagedir_install_page(faulting_address, kvaddr, writable = true);
