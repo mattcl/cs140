@@ -894,7 +894,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint8_t *kpage = frame_get_page(PAL_USER);
 		if(kpage == NULL){
 			lock_release(&filesys_lock);
-			PANIC("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 
@@ -902,7 +902,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 			frame_clear_page (kpage);
 			lock_release(&filesys_lock);
-			PANIC("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -913,7 +913,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(!pagedir_install_page (upage, kpage, writable)){
 			frame_clear_page(kpage);
 			lock_release(&filesys_lock);
-			PANIC("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 

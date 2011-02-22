@@ -30,6 +30,7 @@ static void system_tell(struct intr_frame *f, int fd );
 static void system_close(struct intr_frame *f, int fd );
 
 static bool buffer_is_valid (const void * buffer, unsigned int size);
+static bool buffer_is_valid_writable (void * buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
 static unsigned int get_user_int(const uint32_t *uaddr, int *error);
@@ -307,7 +308,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 }
 
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	if(!buffer_is_valid(buffer, size)){
+	if(!buffer_is_valid_writable(buffer, size)){
 		system_exit(f, -1);
 	}
 
@@ -474,6 +475,18 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	}
 	uaddr += size;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
+		return false;
+	}
+	return true;
+}
+
+static bool buffer_is_valid_writable (const void * buffer, unsigned int size){
+	uint8_t *uaddr = (uint8_t*)buffer;
+	if(!is_user_vaddr(uaddr) || put_user(uaddr, 1) < 0){
+		return false;
+	}
+	uaddr += size;
+	if(!is_user_vaddr(uaddr) || put_user(uaddr, 1) < 0){
 		return false;
 	}
 	return true;
