@@ -56,8 +56,8 @@ void swap_init (void){
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
 bool swap_allocate (void * kvaddr, void *uaddr){
-	struct thread cur = thread_current();
-	struct process cur_process = cur->process;
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
 
 	/*Set the auxilary data so that it can index into the swap table*/
 	pagedir_set_aux(cur->pagedir, uaddr, uaddr);

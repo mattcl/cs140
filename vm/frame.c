@@ -99,9 +99,11 @@ bool frame_clear_page (void *kernel_page_addr){
 	}else{
 		//Invalid page to be releasing so.....
 		PANIC("INVALID PAGE REMOVED FROM FRAME");
+		/* return false;*/
 	}
 	lock_release(&f_table.frame_map_lock);
 	palloc_free_page (kernel_page_addr);
+	return true;
 }
 
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
