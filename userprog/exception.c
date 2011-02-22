@@ -149,7 +149,6 @@ static void page_fault (struct intr_frame *f){
 	user = (f->error_code & PF_U) != 0;
 
 
-	if(user){
 		/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
@@ -173,16 +172,24 @@ static void page_fault (struct intr_frame *f){
 				   and it is not present so this process is accessing
 				   invalid memory and must be killed*/
 				medium_t type = pagedir_get_medium(pagedir, fault_addr);
-				//printf("faulting address %p\n", fault_addr);
 				if(type == PTE_AVL_MEMORY){
-					kill(f);
+					/* The data isn't present and doesn't exist
+					   elsewhere... PageFault is legit */
+					if(user){
+						kill(f);
+					}else{
+						f->eip = (void*)f->eax;
+						f->eax = 0xffffffff;
+					}
 				}else if(type == PTE_AVL_SWAP){
-					//printf("read in from swap\n");
+					/* Data is not present but on swap read it in
+					   then return so that dereference becomes valid*/
 					if(!swap_read_in(fault_addr)){
 						PANIC("COULDN't read in from swap!!!!");
 					}
 				}else if(type == PTE_AVL_EXEC){
-					//printf("read in from exec\n");
+					/* Data is not present but is on disk still so
+					   read it in and then derefernece becomes valid*/
 					if(!process_exec_read_in(fault_addr)){
 						PANIC("COULDN'T load the executable segment, KILLL");
 					}
@@ -194,13 +201,12 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else{
 			/* Write to read only memory, must kill this process */
-			kill(f);
+			if(user){
+				kill(f);
+			}else{
+				f->eip = (void*)f->eax;
+				f->eax = 0xffffffff;
+			}
 		}
-	}else{
-		/* Used to check user memory.  When they give us a pointer we
-	     deref it and then check for a -1 in eax. */
-		f->eip = (void*)f->eax;
-		f->eax = 0xffffffff;
-	}
 }
 
