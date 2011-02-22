@@ -14,7 +14,6 @@
 #define PTE_EXECUTABLE 0x00000400
 #define PTE_MMAP 0x00000800
 
-static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
 
 /* Creates a new page directory that has mappings for kernel
@@ -203,7 +202,7 @@ void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 /* Returns whether the present bit is set, and returns true if the
    bit is set or false if the PTE has yet to be allocated or if the
    page is missing */
-bool pagedir_is_present (uint32_t *pd, void *uaddr){
+bool pagedir_is_present (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_P) != 0;
 }
@@ -333,16 +332,16 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
    this is used by the page fault handler to determine
    where to look for data when it has been evicted, or
    lazily loaded*/
-medium_t pagedir_get_medium (uint32_t *pd, void *uaddr){
+medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	/*get the page table entry out of the page directory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){
 		if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
 			return PTE_AVL_SWAP;
-		}else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_EXEC){
+		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_EXEC){
 			return PTE_AVL_EXEC;
-		}else if(*pte & (uint32_t)PTE_AVL == PTE_AVL_MMAP){
+		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_MMAP){
 			return PTE_AVL_MMAP;
 		}else{
 			PANIC("pagedir_get_medium called with unexpected medium");
@@ -369,7 +368,7 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 }
 
-uint32_t pagedir_get_aux (uint32_t *pd, void *uaddr){
+uint32_t pagedir_get_aux (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
 	if(pte != NULL){
@@ -391,7 +390,7 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 
 	/* Verify that there's not already a page present at that virtual
        address, then map our page there. */
-	return (pagedir_is_present (t->pagedir, uaddr) == NULL
+	return (pagedir_is_present (t->pagedir, uaddr) == false
 			&& pagedir_set_page (t->pagedir, uaddr, kaddr, writable));
 }
 
@@ -404,11 +403,15 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 		uint32_t data, bool writable){
 
 	/* Ensure the PTE exists because the following functions won't create it.*/
-	int32_t *pte = lookup_page(pd, uaddr, true);
+	uint32_t *pte = lookup_page(pd, uaddr, true);
 
 	if(pte == NULL){
 		return false;
 	}
+
+	/*Set writable bit */
+	*pte |= (writable ? PTE_W : 0);
+
 	/* Set the aux data*/
 	pagedir_set_aux(pd, uaddr, data);
 
