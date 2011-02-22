@@ -503,6 +503,9 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	bool success = false;
 	int i, load_i;
 
+	/* Acquire the lock in advance just incase we need to break */
+	lock_acquire(&filesys_lock);
+
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
 	strlcpy(arg_buffer, file_name, len);
@@ -520,6 +523,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		/* failure */
 		goto done;
 	}
+
 	strlcpy(cur_process->program_name, f_name , fn_len);
 
 	/* Allocate and activate page directory. */
@@ -530,7 +534,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	process_activate ();
 
 	/* Open executable file. */
-	lock_acquire(&filesys_lock);
 	file = filesys_open (f_name);
 	if(file == NULL){
 		printf ("load: %s: open failed\n", file_name);
@@ -640,7 +643,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	/*Push args*/
 	success = setup_stack_args(esp, f_name, token, save_ptr);
 
-	done:
+done:
 	/* We arrive here whether the load is successful or not. */
 	lock_release(&filesys_lock);
 	return success;
