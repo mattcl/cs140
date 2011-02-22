@@ -567,10 +567,14 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	   modify the esp...*/
 	struct exec_page_info *exec_pages = calloc(ehdr.e_phnum,
 								sizeof(struct exec_page_info));
+	load_i = 0;
+
+	printf("execPages[load_i] = %p base %p size %u %u\n", exec_pages[load_i], exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
+
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
-	for(i = 0, load_i = 0; i < ehdr.e_phnum; i++){
+	for(i = 0; i < ehdr.e_phnum; i++){
 		printf("around the loop\n");
 		struct Elf32_Phdr phdr;
 
@@ -604,7 +608,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
-				printf("execPages[load_i] = %p base %p size %u\n", exec_pages[load_i], exec_pages, sizeof(struct exec_page_info));
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
 				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
