@@ -487,13 +487,16 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	if(!is_user_vaddr(uaddr) || put_user(uaddr, 1) < 0){
+	int byte;
+	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
 		return false;
 	}
+	put_user(uaddr, byte);
 	uaddr += size;
-	if(!is_user_vaddr(uaddr) || put_user(uaddr, 1) < 0){
+	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
 		return false;
 	}
+	put_user(uaddr, byte);
 	return true;
 }
 
@@ -537,7 +540,7 @@ static int get_user(const uint8_t *uaddr){
 
 static bool put_user (uint8_t *udst, uint8_t byte){
 	int error_code;
-	asm("mov1 $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
+	asm("movl $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
 	return error_code != -1;
 }
 
