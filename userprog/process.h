@@ -7,6 +7,8 @@
 #include <hash.h>
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 /* define a limit on the argument length */
 #define MAX_ARG_LENGTH 256
@@ -112,7 +114,7 @@ struct child_list_entry{
 /* An entry into the open file hash of a process
    It allows us to accurately and quickly tell if the process
    currently owns a fd. And get its underlying file*/
-struct fd_hash_entry {
+struct fd_hash_entry{
 	int fd;				    /* hash key and File Descriptor*/
 	struct file *open_file; /* Open file associated with this FD */
 	struct hash_elem elem;  /* hash elem for this fd entry*/
