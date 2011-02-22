@@ -473,6 +473,9 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
 }
 
+/* This function validates the buffer to make sure that we can read
+   the full extent of the buffer. Touches every page to make sure that
+   it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
@@ -487,9 +490,13 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
 	return true;
 }
 
+/* Makes sure that the full exetent of the buffer is valid to be read
+   and written to. This function will return true if the buffer is valid
+   or false if this buffer is not mapped in the user vaddr space or if it
+   is read only segment. Touches every page in buffer to make sure it is
+   writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	printf("Buffer_is_valid_writable\n");
 	int byte;
 	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 		return false;
