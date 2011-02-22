@@ -124,6 +124,7 @@ struct fd_hash_entry{
    it from PGSIZE. this structure is 17 bytes large*/
 struct exec_page_info{
 	uint32_t mem_page;
+	uint32_t end_addr;
 	uint32_t file_page;
 	uint32_t read_bytes;
 	uint32_t zero_bytes;

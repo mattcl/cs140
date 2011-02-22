@@ -634,7 +634,10 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 				}
 
 				/* Setup demand paging for all of the executable pages */
-				uint32_t num_pages = (entry->read_bytes+entry->zero_bytes)/PGSIZE;
+				uint32_t num_pages=(entry->read_bytes+entry->zero_bytes)/PGSIZE;
+				entry->end_addr =
+						entry->read_bytes + entry->zero_bytes + entry->mem_page;
+
 				for(j = 0; j < num_pages; j ++){
 					uint8_t* uaddr = ((uint8_t*)entry->mem_page) + (PGSIZE*j);
 					printf("user address %p\n", uaddr);
@@ -798,7 +801,8 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	uint32_t i;
 
 	for(i = 0; i < cur_process->num_exec_pages; i++){
-		if(cur_process->exec_info[i].mem_page == vaddr){
+		if(cur_process->exec_info[i].mem_page >= vaddr &&
+				cur_process->exec_info[i].end_addr <= vaddr	){
 			info = &cur_process->exec_info[i];
 			break;
 		}
