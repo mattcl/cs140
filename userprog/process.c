@@ -562,18 +562,26 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* An array that contains the max number of headers
 	   will only actually store the number of executable
-	   headers in it */
-	struct exec_page_info exec_pages [ehdr.e_phnum];
-
+	   headers in it. This must be malloced because of
+	   the existing structure uses a goto and we can't
+	   modify the esp...*/
+	struct exec_page_info *exec_pages = calloc(ehdr.e_phnum,
+								sizeof(struct exec_page_info));
+	if(exec_pages == NULL){
+		PANIC("KERNEL OUT OF MEMORY");
+	}
 	for(i = 0, load_i = 0; i < ehdr.e_phnum; i++){
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
+			free(exec_pages);
 			goto done;
 		}
+
 		file_seek (file, file_ofs);
 
 		if(file_read (file, &phdr, sizeof phdr) != sizeof phdr){
+			free(exec_pages);
 			goto done;
 		}
 		file_ofs += sizeof phdr;
@@ -618,6 +626,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 				load_i ++;
 			}else{
+				free(exec_pages);
 				goto done;
 			}
 			break;
@@ -631,6 +640,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 	memcpy (cur_process->exec_info, exec_pages, load_i*sizeof(struct exec_page_info));
 	cur_process->num_exec_pages = load_i;
+	free(exec_pages);
+
 	/* Set up stack. */
 	if(!setup_stack (esp)){
 		printf("failed to setup stack\n");
