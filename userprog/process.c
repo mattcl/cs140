@@ -844,6 +844,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	file_seek (file, ofs);
 	while(read_bytes > 0 || zero_bytes > 0){
+		printf("upage %p\n", upage);
 		/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
