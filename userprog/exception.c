@@ -161,12 +161,20 @@ static void page_fault (struct intr_frame *f){
 
 		if(fault_addr < PHYS_BASE && fault_addr > f->esp){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
-			/* Get new frame and install it at the faulting addr*/
-			uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
-			pagedir_install_page(page_addr, kvaddr, true);
-			pagedir_set_dirty(pagedir, page_addr , true);
-			pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
 
+			/* While the page is not present and supposed to be in memory */
+			while(!pagedir_is_present(pagedir, page_addr) &&
+					pagedir_get_medium(pagedir, page_addr) == PTE_AVL_MEMORY){
+				/* Get new frame and install it at the faulting addr*/
+				uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+				pagedir_install_page(page_addr, kvaddr, true);
+				/* set it to dirty so that it will be put on swap*/
+				pagedir_set_dirty(pagedir, page_addr , true);
+				/* mark it as in memory and not elsewhere right now*/
+				pgedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
+				/* move to the next higher page size */
+				page_addr += PGSIZE;
+			}
 		}else{
 			/* Check the medium bits and IF any of them are set
 				   we read in the data from the appropriate location
