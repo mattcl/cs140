@@ -158,7 +158,7 @@ static void page_fault (struct intr_frame *f){
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
-		printf("fault_addr %p, esp %p\n", fault_addr, f->esp);
+		printf("fault_addr %p, esp %p dummy %p\n", fault_addr, f->esp, f->esp_dummy);
 
 		if(fault_addr < PHYS_BASE && fault_addr >= f->esp){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
