@@ -59,11 +59,9 @@ static const char *swap_bdev_name;
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
-#define DEFAULT_STACK_SIZE (1<<23) /* 8 MB is the default kernel stack
- 	 	 	 	 	 	 	 	 	  size*/
+#define DEFAULT_STACK_SIZE (1<<23) /* 8 MB is the default kernel stack size*/
 #define MIN_STACK_SIZE (1<<12)     /* Min size of stack is one page*/
-#define MAX_STACK_SIZE (1<<26)	   /* Absolute maximum size of stack
-									  is 64 MB */
+#define MAX_STACK_SIZE (1<<25)	   /* Absolute maximum size of stack is 32 MB */
 
 static size_t stack_size = DEFAULT_STACK_SIZE;
 
@@ -103,7 +101,7 @@ int main (void){
   printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
           init_ram_pages * PGSIZE / 1024);
 
-  printf("Maximum process stack size %u mb\n", stack_size);
+  printf("Maximum process stack size %u kb\n", stack_size / 1024);
 
   /* Initialize memory system. */
   palloc_init (user_page_limit);
