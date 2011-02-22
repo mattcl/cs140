@@ -94,7 +94,7 @@ struct process {
 	   segments of the executable. Similaraly if the data segment is all 4 GB
 	   large then we only need 17 MB to find all of the different segments of
 	   the executable*/
-	struct exec_page_info exec_info[];
+	struct exec_page_info *exec_info;
 	uint32_t num_exec_pages;
 };
 
