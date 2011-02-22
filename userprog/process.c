@@ -637,10 +637,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 				uint32_t num_pages = (entry->read_bytes+entry->zero_bytes)/PGSIZE;
 				for(j = 0; j < num_pages; j ++){
 					uint8_t uaddr = ((uint8_t)entry->mem_page) + (PGSIZE*j);
-					pagedir_setup_demand_page(t->pagedir,
-									(uint32_t*)uaddr,
-									PTE_AVL_EXEC, uaddr,
-									entry->writable);
+					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
+							PTE_AVL_EXEC, uaddr, entry->writable);
 				}
 				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes);
 				load_i ++;

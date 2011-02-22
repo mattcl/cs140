@@ -349,7 +349,8 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 			return PTE_AVL_MEMORY;
 		}
 	}else{
-		PANIC("pagedir_get_medium called on a page table entry that is not initialized");
+		//PANIC("pagedir_get_medium called on a page table entry that is not initialized");
+		return 0;
 	}
 
 
@@ -379,7 +380,8 @@ uint32_t pagedir_get_aux (uint32_t *pd, const void *uaddr){
 	if(pte != NULL){
 		return *pte & PTE_ADDR;
 	}else{
-		PANIC("pagedir_get_aux called on a page table entry that is not initialized");
+		//PANIC("pagedir_get_aux called on a page table entry that is not initialized");
+		return 0;
 	}
 }
 
