@@ -9,11 +9,6 @@
 #include "threads/thread.h"
 #include "vm/frame.h"
 
-/* masks to isolate bit corresponding to constants in pagedir.h */
-#define PTE_SWAP 0x00000200
-#define PTE_EXECUTABLE 0x00000400
-#define PTE_MMAP 0x00000800
-
 static void invalidate_pagedir (uint32_t *);
 
 /* Creates a new page directory that has mappings for kernel
@@ -334,7 +329,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
    where to look for data when it has been evicted, or
    lazily loaded*/
 medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
-	/*get the page table entry out of the page directory*/
+	/*get the page table entry out of the page dPTE_SWAP 0x00000200irectory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){

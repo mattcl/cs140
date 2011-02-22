@@ -490,6 +490,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
+static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
+							 struct process *cur_process);
+
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
@@ -499,9 +502,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct process *cur_process = t->process;
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
-	off_t file_ofs;
 	bool success = false;
-	uint32_t i, load_i, j = 0;
 
 	/* Acquire the lock in advance just incase we need to break */
 	lock_acquire(&filesys_lock);
@@ -540,17 +541,43 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		goto done;
 	}
 
+	if(!read_elf_headers(file, &ehdr, cur_process)){
+		goto done;
+	}
+
+	/* Set up stack. */
+	if(!setup_stack (esp)){
+		printf("failed to setup stack\n");
+		goto done;
+	}
+
+	/* Start address. */
+	*eip = (void (*) (void)) ehdr.e_entry;
+
+	/*Push args*/
+	success = setup_stack_args(esp, f_name, token, save_ptr);
+
+done:
+	/* We arrive here whether the load is successful or not. */
+	lock_release(&filesys_lock);
+	return success;
+}
+
+static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
+							 struct process *cur_process){
+	off_t file_ofs;
+	uint32_t i, k, j = 0;
 	/* Read and verify executable header. */
-	if(file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
-			|| memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
-			|| ehdr.e_type != 2
-			|| ehdr.e_machine != 3
-			|| ehdr.e_version != 1
-			|| ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
+	if(file_read (file, ehdr, sizeof(struct Elf32_Ehdr))!=sizeof(struct Elf32_Ehdr)
+			|| memcmp (ehdr->e_ident, "\177ELF\1\1\1", 7)
+			|| ehdr->e_type != 2
+			|| ehdr->e_machine != 3
+			|| ehdr->e_version != 1
+			|| ehdr->e_phentsize != sizeof (struct Elf32_Phdr)
 			|| ehdr.e_phnum > 1024){
 
 		printf ("load: %s: error loading executable\n", file_name);
-		goto done;
+		return false;
 
 	}
 
@@ -562,34 +589,28 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* An array that contains the max number of headers
 	   will eventually only store the number of loadable
-	   headers in it. This must be malloced because of
-	   the existing structure uses a goto and we can't
-	   modify the esp...*/
-	struct exec_page_info exec_pages[ehdr.e_phnum];// = calloc(ehdr.e_phnum, sizeof(struct exec_page_info));
+	   headers in it and be malloced */
+	struct exec_page_info head[ehdr.e_phnum];
 
-	printf("base %p size %u %u\n", exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
+	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
-	if(exec_pages == NULL){
+	if(head == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
 
 	for(i = 0; i < ehdr.e_phnum; i++){
-		//printf("around the loop\n");
 		struct Elf32_Phdr phdr;
 
 		if(file_ofs < 0 || file_ofs > file_length (file)){
-			free(exec_pages);
-			//printf("fail1\n");
-			goto done;
+			return false;
 		}
 
 		file_seek (file, file_ofs);
 
 		if(file_read (file, &phdr, sizeof phdr) != sizeof phdr){
-			free(exec_pages);
-			//printf("fail2\n");
-			goto done;
+			return false;
 		}
+
 		file_ofs += sizeof phdr;
 		switch (phdr.p_type){
 		case PT_NULL:
@@ -597,84 +618,65 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		case PT_PHDR:
 		case PT_STACK:
 		default:
-			//printf("ignored %u\n", phdr.p_type);
 			/* Ignore this segment. */
 			break;
 		case PT_DYNAMIC:
 		case PT_INTERP:
 		case PT_SHLIB:
-			//printf("fail3 %u\n", phdr.p_type);
-			goto done;
+			/* Implementation for shared/dynamic libraries*/
+			return false;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				//printf("page offset %u\n", page_offset);
-				exec_pages[load_i].file_page = phdr.p_offset & ~PGMASK;
-				exec_pages[load_i].mem_page = phdr.p_vaddr & ~PGMASK;
-				exec_pages[load_i].writable = (phdr.p_flags & PF_W) != 0;
+				head[k].file_page = phdr.p_offset & ~PGMASK;
+				head[k].mem_page = phdr.p_vaddr & ~PGMASK;
+				head[k].writable = (phdr.p_flags & PF_W) != 0;
 
 				if(phdr.p_filesz > 0){
 					/* Normal segment.
                      Read initial part from disk and zero the rest. */
-					exec_pages[load_i].read_bytes = page_offset + phdr.p_filesz;
-					exec_pages[load_i].zero_bytes =
+					head[k].read_bytes = page_offset + phdr.p_filesz;
+					head[k].zero_bytes =
 							(ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-							- exec_pages[load_i].read_bytes);
+							- head[k].read_bytes);
 				}else{
 					/* Entirely zero.
                      Don't read anything from disk. */
-					exec_pages[load_i].read_bytes = 0;
-					exec_pages[load_i].zero_bytes =
+					head[k].read_bytes = 0;
+					head[k].zero_bytes =
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
 				/* Setup demand paging for all of the executable pages */
-				uint32_t num_pages=(exec_pages[load_i].read_bytes+exec_pages[load_i].zero_bytes)/PGSIZE;
-				exec_pages[load_i].end_addr =
-						exec_pages[load_i].read_bytes + exec_pages[load_i].zero_bytes + exec_pages[load_i].mem_page;
+				uint32_t num_pages=(head[k].read_bytes+head[k].zero_bytes)/PGSIZE;
+				head[k].end_addr =
+						head[k].read_bytes + head[k].zero_bytes + head[k].mem_page;
 
 				for(j = 0; j < num_pages; j ++){
-					uint8_t* uaddr = ((uint8_t*)exec_pages[load_i].mem_page) + (PGSIZE*j);
+					uint8_t* uaddr = ((uint8_t*)head[k].mem_page) + (PGSIZE*j);
 					//printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
-								PTE_AVL_EXEC, (uint32_t)uaddr, exec_pages[load_i].writable);
+								PTE_AVL_EXEC, (uint32_t)uaddr, head[k].writable);
 				}
 				//printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes, exec_pages[load_i].zero_bytes, exec_pages[load_i].end_addr);
-				load_i ++;
+				k ++;
 			}else{
-				//printf("fail4 %u\n", phdr.p_type);
-				free(exec_pages);
-				goto done;
+				return false;
 			}
 			break;
 		}
 	}
 
 	/* Save all of our infor so that we can handle page_faults */
-	cur_process->exec_info = calloc (load_i, sizeof(struct exec_page_info));
+	cur_process->exec_info = calloc (k, sizeof(struct exec_page_info));
 	if(cur_process->exec_info == NULL){
 		PANIC("KERNEL OUT OF MEMORY!!!!");
 	}
-	memcpy (cur_process->exec_info, exec_pages, load_i*sizeof(struct exec_page_info));
-	cur_process->num_exec_pages = load_i;
-	free(exec_pages);
+	memcpy (cur_process->exec_info, head, k*sizeof(struct exec_page_info));
+	cur_process->num_exec_pages = k;
 
-	/* Set up stack. */
-	if(!setup_stack (esp)){
-		printf("failed to setup stack\n");
-		goto done;
-	}
-	
-	/* Start address. */
-	*eip = (void (*) (void)) ehdr.e_entry;
-
-	/*Push args*/
-	success = setup_stack_args(esp, f_name, token, save_ptr);
-
-done:
-	/* We arrive here whether the load is successful or not. */
-	lock_release(&filesys_lock);
-	return success;
+	return true;
 }
 
 /* Pushes 4 bytes of data onto the buffer represented by
