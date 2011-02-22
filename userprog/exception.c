@@ -186,9 +186,11 @@ static void page_fault (struct intr_frame *f){
 		}else if(type == PTE_AVL_MEMORY){
 
 			if(user){
-				/* Try to grow the stack segment*/
+
 				if(fault_addr < PHYS_BASE &&
 						(uint32_t)fault_addr >= ((uint32_t)f->esp - 32)){
+					/* Trying to grow the stack segment?*/
+
 					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 					/* While the page is not present and supposed to be in memory */
@@ -205,9 +207,10 @@ static void page_fault (struct intr_frame *f){
 						page_addr += PGSIZE;
 					}
 				}else{
-					printf("kernel 1 write %u\n", write);
-					f->eip = (void*)f->eax;
-					f->eax = 0xffffffff;
+					/* This is invalid reference to memory, kill it KUNIT style
+					   It wasn't trying to grow the stack segment*/
+					printf("kill1\n");
+					kill(f);
 				}
 			}else{
 				/* We don't allow for growing the stack in kernel code
