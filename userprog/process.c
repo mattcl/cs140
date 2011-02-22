@@ -501,7 +501,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct file *file = NULL;
 	off_t file_ofs;
 	bool success = false;
-	int i, load_i, j = 0;
+	uint32_t i, load_i, j = 0;
 
 	/* Acquire the lock in advance just incase we need to break */
 	lock_acquire(&filesys_lock);
@@ -644,7 +644,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
 							PTE_AVL_EXEC, uaddr, entry->writable);
 				}
-				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes);
+				printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", entry->file_page, entry->mem_page, entry->read_bytes, entry->zero_bytes, entry->end_addr);
 				load_i ++;
 			}else{
 				printf("fail4 %u\n", phdr.p_type);
