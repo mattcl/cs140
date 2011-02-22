@@ -59,6 +59,14 @@ static const char *swap_bdev_name;
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
+#define DEFAULT_STACK_SIZE (1<<23) /* 8 MB is the default kernel stack
+ 	 	 	 	 	 	 	 	 	  size*/
+#define MIN_STACK_SIZE (1<<12)     /* Min size of stack is one page*/
+#define MAX_STACK_SIZE (1<<26)	   /* Absolute maximum size of stack
+									  is 64 MB */
+
+static size_t stack_size = DEFAULT_STACK_SIZE;
+
 static void bss_init (void);
 static void paging_init (void);
 
@@ -94,6 +102,8 @@ int main (void){
   /* Greet user. */
   printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
           init_ram_pages * PGSIZE / 1024);
+
+  printf("Maximum process stack size %u mb\n", stack_size);
 
   /* Initialize memory system. */
   palloc_init (user_page_limit);
@@ -229,35 +239,43 @@ static char **parse_options (char **argv){
 		char *name = strtok_r (*argv, "=", &save_ptr);
 		char *value = strtok_r (NULL, "", &save_ptr);
       
-		if(!strcmp (name, "-h"))
+		if(!strcmp (name, "-h")){
 			usage ();
-		else if(!strcmp (name, "-q"))
+		}else if(!strcmp (name, "-q")){
 			shutdown_configure (SHUTDOWN_POWER_OFF);
-		else if(!strcmp (name, "-r"))
+		}else if(!strcmp (name, "-r")){
 			shutdown_configure (SHUTDOWN_REBOOT);
 #ifdef FILESYS
-		else if(!strcmp (name, "-f"))
+		}else if(!strcmp (name, "-f")){
 			format_filesys = true;
-		else if(!strcmp (name, "-filesys"))
+		}else if(!strcmp (name, "-filesys")){
 			filesys_bdev_name = value;
-		else if(!strcmp (name, "-scratch"))
+		}else if(!strcmp (name, "-scratch")){
 			scratch_bdev_name = value;
 #ifdef VM
-		else if(!strcmp (name, "-swap"))
+		else if(!strcmp (name, "-swap")){
 			swap_bdev_name = value;
+		}else if(!strcmp (name, "-stack")){
+			stack_size = atoi(value)>4?atoi(value)*(1024):MIN_STACK_SIZE;
+			/* make sure that stack size is not too large for malicious users
+			   who want to break things by passing in large numbers. */
+			stack_size = stack_size > MAX_STACK_SIZE ? MAX_STACK_SIZE : stack_size;
 #endif
 #endif
-		else if(!strcmp (name, "-rs"))
+		}else if(!strcmp (name, "-rs")){
 			random_init (atoi (value));
-		else if(!strcmp (name, "-mlfqs"))
+		}else if(!strcmp (name, "-mlfqs")){
 			thread_mlfqs = true;
 #ifdef USERPROG
-		else if(!strcmp (name, "-ul"))
+		}else if(!strcmp (name, "-ul")){
 			user_page_limit = atoi (value);
 #endif
-		else
+		}else{
 			PANIC ("unknown option `%s' (use -h for help)", name);
+		}
 	}
+
+
 
   /* Initialize the random number generator based on the system
      time.  This has no effect if an "-rs" option was specified.
@@ -365,6 +383,7 @@ static void usage (void){
           "  -scratch=BDEV      Use BDEV for scratch instead of default.\n"
 #ifdef VM
           "  -swap=BDEV         Use BDEV for swap instead of default.\n"
+		  "  -stack=#KB          Set the max process stack size to #MB. \n"
 #endif
 #endif
           "  -rs=SEED           Set random number seed to SEED.\n"

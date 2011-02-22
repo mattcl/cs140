@@ -188,9 +188,8 @@ static void page_fault (struct intr_frame *f){
 			if(user){
 
 				if(fault_addr < PHYS_BASE &&
-						(uint32_t)fault_addr >= ((uint32_t)f->esp - 32)){
+						(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH)){
 					/* Trying to grow the stack segment?*/
-
 					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 					/* While the page is not present and supposed to be in memory */
@@ -213,8 +212,13 @@ static void page_fault (struct intr_frame *f){
 					kill(f);
 				}
 			}else{
-				/* We don't allow for growing the stack in kernel code
-				   just return -1 */
+				/* We don't allow for growing the stack in kernel code.
+				   Plus you really can't grow the stack because if you
+				   passed a pointer to a buffer on the stack, esp must
+				   have already been decremented. And when the user pushed
+				   the pointer for us to read they would have page faulted
+				   and already grown the stack. So it is safe to just return -1
+				   to the kernel code*/
 				//printf("kernel 1 write %u\n", write);
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
@@ -235,4 +239,7 @@ static void page_fault (struct intr_frame *f){
 			f->eax = 0xffffffff;
 		}
 	}
+	/* Page was read in or the return value was set for kernel code
+	   so the memory access will try again and succeed or we will kill
+	   the process or fail silently from the kernel code that faulted */
 }
