@@ -171,7 +171,7 @@ static void page_fault (struct intr_frame *f){
 				/* set it to dirty so that it will be put on swap*/
 				pagedir_set_dirty(pagedir, page_addr , true);
 				/* mark it as in memory and not elsewhere right now*/
-				pgedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
+				pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
 				/* move to the next higher page size */
 				page_addr += PGSIZE;
 			}
