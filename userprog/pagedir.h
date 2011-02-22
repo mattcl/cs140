@@ -9,7 +9,7 @@
 #define PTE_AVL_EXEC (1 << 10) /* 010 */
 #define PTE_AVL_MMAP (1 << 11) /* 100 */
 
-typedef uint8_t medium_t; /* used to represent one of the constants above */
+typedef uint32_t medium_t; /* used to represent one of the constants above */
 
 uint32_t *pagedir_create (void);
 void pagedir_destroy (uint32_t *pd);
