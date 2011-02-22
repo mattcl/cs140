@@ -69,7 +69,10 @@ static int set_args(void *esp, int num, uint32_t argument[]){
 	}
 	return 1;
 }
-
+/* Verifies the stack pointer, and calls set_args to 
+   load up the arugments for the sys_call into the 
+   buffer arg1.  Note that arg1 is initialized to 4
+   the maximum number of arguments a SYS_CALL */
 static void syscall_handler (struct intr_frame *f){
 	int error = 0;
 
@@ -204,6 +207,7 @@ static void system_halt (struct intr_frame *f UNUSED){
 	shutdown_power_off();
 }
 
+
 void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
 	printf("%s: exit(%d)\n", proc->program_name, status);
@@ -211,6 +215,7 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	thread_exit();
 	NOT_REACHED();
 }
+
 
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if(!string_is_valid(cmd_line)){

@@ -503,9 +503,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
 	bool success = false;
+	bool lock_already_owned = false;
 
 	/* Acquire the lock in advance just incase we need to break */
-	lock_acquire(&filesys_lock);
+	lock_already_owned = lock_held_by_current_thread (&filesys_lock);
+	if(!lock_already_owned){
+	    lock_acquire(&filesys_lock);
+	}
 
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
@@ -559,7 +563,9 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	lock_release(&filesys_lock);
+	if(!lock_already_owned){
+	  lock_release(&filesys_lock);
+	}
 	return success;
 }
 
