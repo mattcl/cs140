@@ -326,7 +326,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	}else{
 		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 	}
-	PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
+	//PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
 
 /* Gets the type of medium that this uaddr came from
@@ -425,6 +425,8 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 
 	/*Clear the present bit and clear the TLB*/
 	pagedir_clear_page(pd, uaddr);
+
+	printf("setting %p's page to be medium type %u with auxilary data %p  and present bit %u\n", uaddr, medium, data, pagedir_is_present(pd, uaddr));
 
 	return true;
 }
