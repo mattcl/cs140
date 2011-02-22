@@ -158,6 +158,7 @@ static void page_fault (struct intr_frame *f){
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1. Grow the stack (possibly evict a page), or kill them */
+		printf("fault_addr %p, esp %p\n", fault_addr, f->esp);
 
 		if(fault_addr < PHYS_BASE && fault_addr >= f->esp){
 			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
@@ -177,10 +178,10 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else{
 			/* Check the medium bits and IF any of them are set
-				   we read in the data from the appropriate location
-				   ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP),
-				   and it is not present so this process is accessing
-				   invalid memory and must be killed*/
+			   we read in the data from the appropriate location
+			   ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP),
+			   and it is not present so this process is accessing
+			   invalid memory and must be killed*/
 			medium_t type = pagedir_get_medium(pagedir, fault_addr);
 			if(type == PTE_AVL_MEMORY){
 				/* The data isn't present and doesn't exist
