@@ -594,13 +594,13 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 		case PT_PHDR:
 		case PT_STACK:
 		default:
-			printf("ignored\n");
+			printf("ignored %u\n", phdr.p_type);
 			/* Ignore this segment. */
 			break;
 		case PT_DYNAMIC:
 		case PT_INTERP:
 		case PT_SHLIB:
-			printf("fail3\n");
+			printf("fail3 %u\n", phdr.p_type);
 			goto done;
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
@@ -631,7 +631,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 				load_i ++;
 			}else{
-				printf("fail4\n");
+				printf("fail4 %u\n", phdr.p_type);
 				free(exec_pages);
 				goto done;
 			}
