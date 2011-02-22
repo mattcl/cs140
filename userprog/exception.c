@@ -204,7 +204,7 @@ static void page_fault (struct intr_frame *f){
 				/* Data is not present but is on disk still so
 					   read it in and then derefernece becomes valid*/
 				if(!process_exec_read_in(fault_addr)){
-					print_f("COULDN'T load the executable segment, KILLL");
+					printf("COULDN'T load the executable segment, KILLL");
 					kill(f);
 				}
 			}else if(type == PTE_AVL_MMAP){
