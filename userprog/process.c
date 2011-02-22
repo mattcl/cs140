@@ -569,7 +569,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	printf("base %p size %u %u\n", exec_pages, sizeof(struct exec_page_info), ehdr.e_phnum);
 
-	printf("%p\n", &exec_pages[0]);
+	printf("%p\n", &exec_pages[2]);
 
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
