@@ -636,7 +636,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 				/* Setup demand paging for all of the executable pages */
 				uint32_t num_pages = (entry->read_bytes+entry->zero_bytes)/PGSIZE;
 				for(j = 0; j < num_pages; j ++){
-					uint8_t uaddr = ((uint8_t)entry->mem_page) + (PGSIZE*j);
+					uint8_t* uaddr = ((uint8_t*)entry->mem_page) + (PGSIZE*j);
+					printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
 							PTE_AVL_EXEC, uaddr, entry->writable);
 				}
