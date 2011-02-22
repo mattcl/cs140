@@ -3,6 +3,7 @@
 #include <bitmap.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
 #include "devices/block.h"
@@ -60,7 +61,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	struct process *cur_process = cur->process;
 
 	/*Set the auxilary data so that it can index into the swap table*/
-	pagedir_set_aux(cur->pagedir, uaddr, uaddr);
+	pagedir_set_aux(cur->pagedir, uaddr, (uint32_t)uaddr);
 
 	/* indicate that this is on swap */
 	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
@@ -76,7 +77,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
 
-	new_entry->vaddr = uaddr;
+	new_entry->vaddr = (uint32_t)uaddr;
 
 	lock_acquire(&swap_slots_lock);
 
@@ -89,10 +90,20 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	new_entry->swap_slot = swap_slot;
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
-															new_entry->elem);
+															&new_entry->elem);
 
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
+	}
+
+	/* move the data from kvaddr to the newly allocated swap slot*/
+	/*uint8_t so that incrementing is easy*/
+	uint8_t page_ptr = (uint8_t)kvaddr;
+	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
+	uint32_t i;
+	for(i=0; i < SECTORS_PER_SLOT; i++, start_sector++,
+									    page_ptr += BLOCK_SECTOR_SIZE){
+		block_write(swap_device, start_sector, page_ptr);
 	}
 
 	lock_release(&swap_slots_lock);
@@ -130,7 +141,7 @@ bool swap_read_in (void *faulting_addr){
 
 	lock_acquire(&swap_slots_lock);
 
-	start_sector=swap_slot*SECTORS_PER_SLOT;
+	start_sector = swap_slot * SECTORS_PER_SLOT;
 	page_ptr = free_page;
 
 	/* Read the contents of this swap slot into memory */
