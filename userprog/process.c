@@ -630,7 +630,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 			if(validate_segment (&phdr, file)){
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				//printf("page offset %u\n", page_offset);
-				head[k].file_page = phdr.p_offset & ~PGMASK;
+				head[k].file_offset = phdr.p_offset & ~PGMASK;
 				head[k].mem_page = phdr.p_vaddr & ~PGMASK;
 				head[k].writable = (phdr.p_flags & PF_W) != 0;
 
@@ -845,7 +845,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	   offset for the header plus the offset between the faulting address
 	   and the beginning of this segments memory. We are only going to read
 	   into memory one page */
-	uint32_t file_page = info->file_page + offset_seg_start;
+	uint32_t file_page = info->file_offset + offset_seg_start;
 
 
 	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);

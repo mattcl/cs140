@@ -176,7 +176,7 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_AVL_EXEC){
 			/* Data is not present but is on disk still so
-							   read it in and then derefernece becomes valid*/
+			   read it in and then derefernece becomes valid*/
 			if(!process_exec_read_in(fault_addr)){
 				printf("COULDN'T load the executable segment, KILLL");
 				kill(f);
@@ -235,6 +235,4 @@ static void page_fault (struct intr_frame *f){
 			f->eax = 0xffffffff;
 		}
 	}
-
 }
-
