@@ -98,7 +98,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
-	uint8_t page_ptr = (uint8_t)kvaddr;
+	uint8_t *page_ptr = (uint8_t*)kvaddr;
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
 	uint32_t i;
 	for(i=0; i < SECTORS_PER_SLOT; i++, start_sector++,
@@ -107,6 +107,8 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	}
 
 	lock_release(&swap_slots_lock);
+
+	return true;
 }
 
 /* Takes the faulting addr and then reads the data back into main memory
@@ -118,7 +120,7 @@ bool swap_read_in (void *faulting_addr){
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 	size_t start_sector;
-	uint8_t page_ptr, i;
+	uint8_t *page_ptr, i;
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
