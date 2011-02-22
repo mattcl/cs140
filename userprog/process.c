@@ -759,12 +759,13 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 bool process_exec_read_in(uint32_t *faulting_addr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	uint32_t vaddr = faulting_addr & ~(uint32_t)PGMASK;
+	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
 	struct exec_page_info *info = NULL;
 	uint32_t i;
+
 	for(i=0; i < cur_process->num_exec_pages; i++){
-		if((cur_process->exec_info[i])->mem_page == vaddr){
-			info = cur_process->exec_info[i];
+		if(cur_process->exec_info[i].mem_page == vaddr){
+			info = &cur_process->exec_info[i];
 			break;
 		}
 	}
