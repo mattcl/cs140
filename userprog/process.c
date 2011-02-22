@@ -571,6 +571,8 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	printf("%p\n", &exec_pages[2]);
 
+	print("filesize %u\n",file_length(file));
+
 	if(exec_pages == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
 	}
