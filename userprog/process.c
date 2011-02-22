@@ -566,7 +566,7 @@ done:
 static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 							 struct process *cur_process, struct thread* t){
 	off_t file_ofs;
-	uint32_t i, j, k = 0;
+	uint32_t i = 0, j = 0, k = 0;
 	/* Read and verify executable header. */
 	if(file_read (file, ehdr, sizeof(struct Elf32_Ehdr))!=sizeof(struct Elf32_Ehdr)
 			|| memcmp (ehdr->e_ident, "\177ELF\1\1\1", 7)
