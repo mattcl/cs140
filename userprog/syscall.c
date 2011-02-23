@@ -646,10 +646,13 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	}
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+	if(fd_entry == NULL){
+		PANIC("mmapped file was closed");
+	}
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 
-	save_dirty_pages(entry);
+	save_dirty_pages(entry, fd_entry);
 
 	clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 

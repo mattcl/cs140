@@ -180,7 +180,8 @@ void process_activate (void);
 bool initialize_process (struct process *p, struct thread *our_thread);
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
-void save_dirty_pages(struct mmap_hash_entry *entry);
+void save_dirty_pages(struct mmap_hash_entry *entry,
+		struct fd_hash_entry *fd_entry);
 
 /* Called by exception.c */
 bool process_exec_read_in(uint32_t *faulting_addr);

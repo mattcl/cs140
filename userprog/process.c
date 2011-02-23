@@ -1121,13 +1121,10 @@ static void mmap_hash_entry_destroy (struct hash_elem *e, AUX){
 }
 
 /* Saves all of the pages that are dirty for the given mmap_hash_entry */
-void save_dirty_pages(struct mmap_hash_entry *entry){
+void save_dirty_pages(struct mmap_hash_entry *entry,
+		struct fd_hash_entry *fd_entry){
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
-	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
-	if(fd_entry == NULL){
-		PANIC("mmapped file was closed");
-	}
 	fd_entry->num_mmaps --;
 	/* Write all of the files out to disk */
 	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
