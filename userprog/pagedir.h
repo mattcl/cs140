@@ -15,7 +15,7 @@
 #define MAX_STACK_SIZE (1<<25)	   /* Absolute maximum size of stack is 32 MB */
 
 /* Global Data */
-uint32_t stack_size = DEFAULT_STACK_SIZE;
+extern uint32_t stack_size = DEFAULT_STACK_SIZE;
 
 typedef uint32_t medium_t; /* used to represent one of the constants above */
 
