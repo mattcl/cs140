@@ -10,6 +10,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -1118,30 +1119,6 @@ static void mmap_hash_entry_destroy (struct hash_elem *e, AUX){
 	/*File close needs to be called here */
 	save_dirty_pages(hash_entry(e, struct mmap_hash_entry, elem));
 	free(hash_entry(e, struct mmap_hash_entry, elem));
-}
-
-/* Saves all of the pages that are dirty for the given mmap_hash_entry */
-void save_dirty_pages(struct mmap_hash_entry *entry,
-		struct fd_hash_entry *fd_entry){
-	struct thread * cur = thread_current();
-	uint32_t *pd = cur->pagedir;
-	fd_entry->num_mmaps --;
-	/* Write all of the files out to disk */
-	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
-	uint32_t j;
-	lock_acquire(&filesys_lock);
-	uint32_t original_position = file_tell(fd_entry->open_file);
-	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
-		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)){
-			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
-			file_seek(fd_entry->open_file, offset);
-			uint32_t read_bytes = (entry->num_pages -1 == j) ?
-					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-			file_write(fd_entry->open_file, pg_ptr, PGSIZE);
-		}
-	}
-	file_seek(fd_entry->open_file, original_position);
-	lock_release(&filesys_lock);
 }
 
 #undef HASH_ELEM
