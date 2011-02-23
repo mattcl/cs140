@@ -12,6 +12,8 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "threads/malloc.h"
+#include "threads/palloc.h"
+#include "vm/frame.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
@@ -311,7 +313,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	fd_entry->fd = ++(process->fd_count);
 	fd_entry->open_file = opened_file;
 	fd_entry->is_closed = false;
-	fd_entry->is_mmaped = false;
+	fd_entry->num_mmaps = 0;
 	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
 
 	if(returned != NULL){
@@ -525,7 +527,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 		return;
 	}
 	/* verify the virtual addr */
-	if(virtual_addr%PGSIZE != 0 || virtual_addr == NULL
+	if( ((uint32_t)virtual_addr % PGSIZE) != 0 || virtual_addr == NULL
 			|| !is_user_vaddr(virtual_addr)){
 		f->eax = -1;
 		return;
@@ -561,7 +563,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	   any of the memory requested is already mapped in the virtual
 	   address space*/
 	uint8_t *temp_ptr = (uint8_t*)virtual_addr;
-	uint32_t i, j;
+	uint32_t i;
 	for(i = 0; i < num_pages; i ++, temp_ptr += PGSIZE){
 		if(pagedir_is_mapped(pd, temp_ptr)){
 			/* if this virtual address is mapped then we can't create
@@ -589,7 +591,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
-	for(i = 0, temp_ptr = (uint8_t)virtual_addr; i < num_pages; i ++, temp_ptr += PGSIZE){
+	for(i = 0, temp_ptr = (uint8_t*)virtual_addr; i < num_pages; i ++, temp_ptr += PGSIZE){
 		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP, aux_data, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
@@ -641,7 +643,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 
 	fd_entry->num_mmaps --;
 
-	clear_pages(thread_current()->pagedir, entry->begin_addr, entry->num_pages);
+	clear_pages(thread_current()->pagedir, (uint32_t*)entry->begin_addr, entry->num_pages);
 
 	struct hash_elem *returned = hash_delete(&thread_current()->process->mmap_table, &entry->elem);
 	if(returned == NULL){
@@ -661,7 +663,6 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 /* Read in the appropriate file block from disk */
 bool process_mmap_read_in(uint32_t *faulting_addr){
 	struct thread *cur = thread_current();
-	struct process *cur_process = cur->process;
 
 	/* Mask off the lower 12 bits */
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -688,7 +689,7 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
 	file_read(fd_entry->open_file, kvaddr, PGSIZE);
-	file_seek(original_spot);
+	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
 	return pagedir_install_page(vaddr, kvaddr, true);
@@ -699,7 +700,7 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 /* Clears all of the PTE's starting at base and going to
    num_pages.*/
 static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
-	uint8_t rm_ptr = (uint8_t)base;
+	uint8_t* rm_ptr = (uint8_t*)base;
 	int j;
 	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
 		if(pagedir_is_present(pd, rm_ptr)){
