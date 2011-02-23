@@ -398,6 +398,10 @@ void process_exit (void){
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
+	/* Free all of the swap slots that are currently occupied
+	   by this process */
+	hash_destroy(&cur_process->mmap_table, &swap_slot_destroy);
+
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle
 	   for this process through the all process hash table

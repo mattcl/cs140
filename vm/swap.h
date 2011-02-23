@@ -18,6 +18,7 @@ struct swap_entry{
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED);
 bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b,
 															void *aux UNUSED);
+void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED);
 
 void swap_init (void);
 

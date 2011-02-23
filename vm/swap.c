@@ -85,12 +85,12 @@ bool swap_read_in (void *faulting_addr){
 	page_ptr = (uint8_t*)free_page;
 
 	/* Read the contents of this swap slot into memory */
-	for(i=0; i<SECTORS_PER_SLOT; i++, start_sector++,
-	page_ptr += BLOCK_SECTOR_SIZE){
+	for(i=0; i<SECTORS_PER_SLOT;
+			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
 	}
 
-	/* Set this swap slot to usable*/
+	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
 	lock_release(&swap_slots_lock);
 
@@ -166,6 +166,7 @@ bool swap_read_out (uint32_t *pd, void *uaddr){
 
 	lock_acquire(&swap_slots_lock);
 
+	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 
 	if(swap_slot == BITMAP_ERROR){
@@ -213,5 +214,19 @@ bool swap_slot_compare (const struct hash_elem *a,
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct swap_entry, elem)->uaddr <
 			hash_entry(b, struct swap_entry, elem)->uaddr);
+}
+
+/* call all destructor for hash_destroy */
+void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED){
+	/*File close needs to be called here */
+	struct swap_entry *entry = hash_entry(e, struct swap_entry, elem);
+	uint32_t swap_slot = entry->swap_slot;
+
+	lock_acquire(&swap_slots_lock);
+	/* Set this swap slot to usable*/
+	bitmap_set(used_swap_slots, entry->swap_slot, false);
+	lock_release(&swap_slots_lock);
+
+	free(entry);
 }
 
