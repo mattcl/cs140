@@ -20,6 +20,9 @@ static unsigned frame_hash_func (HASH_ELEM *e, AUX);
 static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
 
 
+/* Stores the next hand for the clock algorithm */
+uint32_t clock_hand;
+
 /* Initializes the frame table. Setting the bitmap and the
    hash table that represents each frame */
 void frame_init(void){
@@ -27,6 +30,7 @@ void frame_init(void){
 	f_table.used_frames = bitmap_create(palloc_number_user_pages());
 	lock_init(&f_table.frame_map_lock);
 	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
+	evict_init();
 }
 
 /* Gets a page which is in a frame, evicts if there are no available frames
@@ -43,8 +47,8 @@ void  *frame_get_page (enum palloc_flags flags){
 	lock_release (&f_table.frame_map_lock);
 	//printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
-		printf("evict\n");
-		return evict_page();
+	    printf("evict\n");
+	    return get_least_recently_used_page();	   	   
 	}
 
 	uint8_t *kpage = palloc_get_page (flags);
@@ -116,8 +120,53 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	return (hash_entry(a, struct frame_hash_entry, elem)->position_in_bitmap <
 			hash_entry(b, struct frame_hash_entry, elem)->position_in_bitmap);
 }
+n
 
+static void evict_init (){
+    clock_hand = NULL;
+}
 
+static void init_clock_hand (){
+    hash_first(clock_hand, &f_table.frame_hash);
+    ASSERT(iter != NULL);
+}
 
+void *get_least_recently_used_page (){
+  
+    if(clock_hand == NULL){
+        init_clock_hand();
+    }
 
+    struct hash_iterator *iter = clock_hand;
+    while(true){
+      struct frame_hash_entry *frame = elem_to_frame(hash_next(iter));
+      ASSERT(elem != NULL);
+      
+      if(pagedir_is_accessed(frame->current_page_dir,frame->page)){
+	  return frame_evict(frame);
+      }
+      if(iter == clock_hand){
+	  break;
+      }
+    }
+}
+       
+void *frame_evict (frame_hash_entry * frame){
+    medium_t medium = pagedir_get_medium(frame->page);
+    /*  not sure about this */
+    ASSERT(medium != PTE_AVL_MEMORY);
+
+    if(pagedir_is_dirty(upage)){
+      if(medium == PTE_AVL_MMAP){
+	/* must write to file system */
+      }else if(medium == PTE_AVL_SWAP){
+	/* put on swap */
+      } else{
+	PANIC("John doesn't get how eviction works o_O");
+      }
+    }else{
+      /* we should be able to overwrite the data here */
+      frame_ha
+    }
+}
 
