@@ -91,7 +91,6 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 															&new_entry->elem);
-
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}

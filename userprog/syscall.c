@@ -175,11 +175,15 @@ static void syscall_handler (struct intr_frame *f){
 		}
 		/* Project 3 Syscalls */
 		case SYS_MMAP:{
-			printf("SYS_MMAP called\n");
+			error = set_args(esp, 2, arg1);
+			if(error < 0)system_exit(f, -1);
+			system_mmap(f, (int)arg1[0], (void*)arg1[1]);
 			break;
 		}
 		case SYS_MUNMAP:{
-			printf("SYS_MUNMAP called\n");
+			error = set_args(esp, 1, arg1);
+			if(error < 0)system_exit(f, -1);
+			system_munmap(f, (int)arg1[0]);
 			break;
 		}
 		/* Progect 4 Syscalls */
@@ -509,16 +513,6 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	}
 }
 
-//struct mmap_hash_entry{
-//  mmapid_t mmap_id;     	/* Key into the hash table*/
-//	uint32_t begin_addr;	/* start address of this mmapping*/
-//    uint32_t end_addr;		/* While we can calculate this from the filesize
-//							   accessing the disk in any way is too slow so just
-//							   keep it stored in memory*/
-//	int fd;					/* FD for this mapping*/
-//	struct hash_elem elem;  /* hash elem*/
-//};
-
 static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
@@ -693,7 +687,7 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
-	return pagedir_install_page(vaddr, kvaddr, true);
+	return pagedir_install_page((uint32_t*)vaddr, (uint32_t*)kvaddr, true);
 }
 
 /* System call helpers */
@@ -702,7 +696,7 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
    num_pages.*/
 static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 	uint8_t* rm_ptr = (uint8_t*)base;
-	int j;
+	uint32_t j;
 	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
 		if(pagedir_is_present(pd, rm_ptr)){
 			frame_clear_page(pagedir_get_page(pd, rm_ptr));
