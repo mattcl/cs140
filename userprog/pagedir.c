@@ -42,7 +42,7 @@ void pagedir_destroy (uint32_t *pd){
 				if(*pte & PTE_P){
 					frame_clear_page(pte_get_page (*pte));
 				} else {
-				  /* if its in the swap we need to "free"
+					/* if its in the swap we need to "free"
 				     it's swap memory */
 				}
 			}
@@ -324,14 +324,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 		   before manipulating anything */
 		//ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		*pte &= ~(uint32_t)PTE_AVL;
-		if(medium == PTE_AVL_SWAP){
-			*pte |= PTE_AVL_SWAP;
-		}else if(medium == PTE_AVL_EXEC){
-			*pte |= PTE_AVL_EXEC;
-		}else if(medium == PTE_AVL_MMAP){
-			*pte |= PTE_AVL_MMAP;
-		}else if(medium == PTE_AVL_ERROR){
-			/* Already set up*/
+		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC ||
+				medium == PTE_AVL_MMAP ||medium == PTE_AVL_STACK ||
+				medium == PTE_AVL_ERROR){
+			*pte |= medium;
 		}else{
 			PANIC("pagedir_set_medium called with unexpected medium");
 		}
@@ -350,26 +346,15 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){
-		if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_SWAP){
-			return PTE_AVL_SWAP;
-		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_EXEC){
-			return PTE_AVL_EXEC;
-		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_MMAP){
-			return PTE_AVL_MMAP;
-		}else{
-
-
-
-			/* Add PTE_AVL_STACK */
-
-
-
-			return PTE_AVL_ERROR;
+		medium_t medium = (*pte & (uint32_t)PTE_AVL);
+		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC||
+				medium == PTE_AVL_MMAP || medium == PTE_AVL_STACK){
+			return medium;
 		}
-	}else{
-		/* It is not currently mapped so return 0 because there is no medium*/
-		return PTE_AVL_ERROR;
 	}
+	/* It is not currently mapped or is an invalid medium so we
+	   can return error*/
+	return PTE_AVL_ERROR;
 }
 
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
@@ -381,7 +366,7 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	   function I believe, avoids asserting something. Use
 	   after done debugging
 	aux_data &= ~(uint32_t)PTE_ADDR;
-	 	 */
+	 */
 
 	if(pte != NULL){
 		*pte |= aux_data;
