@@ -37,7 +37,7 @@ void *evict_page(void){
 		struct frame_hash_entry *frame = frame_at_position(evict_hand);
 		ASSERT(frame != NULL);
 		/*return the first page we find that has not been accesed */
-		if(!pagedir_is_accesed(frame->current_page_dir,frame->page)){
+		if(!pagedir_is_accessed(frame->current_page_dir,frame->page)){
 			/*  evict page from frame moving it to the appropriate
 		location and return the kernel virtual address of the 
 		physical page represented by the evict_hand in the bitmap*/
