@@ -1,12 +1,13 @@
 #include "frame.h"
 #include <debug.h>
-#include "page.h"
-#include "../threads/thread.h"
+#include "evict.h"
+#include "threads/thread.h"
 #include <bitmap.h>
 #include <hash.h>
-#include "../threads/palloc.h"
-#include "../threads/malloc.h"
-#include "../threads/synch.h"
+#include "threads/palloc.h"
+#include "threads/malloc.h"
+#include "threads/synch.h"
+#include "devices/timer.h"
 #include <stdint.h>
 
 static struct frame_table f_table;
@@ -18,9 +19,6 @@ static struct frame_table f_table;
 /* HASH table functions*/
 static unsigned frame_hash_func (HASH_ELEM *e, AUX);
 static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
-
-
-
 
 /* Initializes the frame table. Setting the bitmap and the
    hash table that represents each frame */
@@ -46,13 +44,11 @@ void  *frame_get_page (enum palloc_flags flags){
 	lock_release (&f_table.frame_map_lock);
 	//printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
-	    printf("evict\n");
-	    return evict_page(&f_table);
+		printf("evict\n");
+		return evict_page(&f_table);
 	}
 
 	uint8_t *kpage = palloc_get_page (flags);
-
-	//printf("%p\n", kpage);
 
 	frame_idx = palloc_get_user_page_index(kpage);
 
@@ -67,8 +63,6 @@ void  *frame_get_page (enum palloc_flags flags){
 	f_hash_entry->current_page_dir = thread_current()->pagedir;
 	f_hash_entry->page = kpage;
 
-	//printf("Index, %lu\n", frame_idx);
-
 	lock_acquire (&f_table.frame_map_lock);
 	bitmap_set(f_table.used_frames, frame_idx, true);
 
@@ -81,8 +75,6 @@ void  *frame_get_page (enum palloc_flags flags){
 	if(frame_entry != NULL){
 		PANIC("Weird Error occured");
 	}
-
-	//printf("%p\n", f_hash_entry->page);
 
 	return f_hash_entry->page;
 }
@@ -118,15 +110,5 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct frame_hash_entry, elem)->position_in_bitmap <
 			hash_entry(b, struct frame_hash_entry, elem)->position_in_bitmap);
-}
-n
-
-static void evict_init (){
-    clock_hand = NULL;
-}
-
-static void init_clock_hand (){
-    hash_first(clock_hand, &f_table.frame_hash);
-    ASSERT(iter != NULL);
 }
 
