@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define PTE_AVL_MEMORY 0       /* 000 */
+#define PTE_AVL_ERROR 0       /* 000 */
 #define PTE_AVL_SWAP (1 << 9)  /* 001 */
 #define PTE_AVL_EXEC (1 << 10) /* 010 */
 #define PTE_AVL_MMAP (1 << 11) /* 100 */

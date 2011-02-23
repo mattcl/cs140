@@ -29,9 +29,10 @@ void frame_init(void);
    Whenever allocated memory for a user process call this function instead of
    palloc*/
 void  *frame_get_page (enum palloc_flags flags);
-
 bool frame_clear_page (void *kernel_page_addr);
 
-struct frame_hash_entry *get_frame_at_position(size_t bit_num);
+size_t frame_table_size (void);
+struct frame_hash_entry  *frame_at_position(size_t bit_num);
+
 
 #endif /* FRAME_H_ */

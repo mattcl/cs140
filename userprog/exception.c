@@ -187,7 +187,7 @@ static void page_fault (struct intr_frame *f){
 				printf("Couldn't load page from mmaped file");
 				kill(f);
 			}
-		}else if(type == PTE_AVL_MEMORY){
+		}else if(type == PTE_AVL_ERROR){
 			if(user){
 
 			  /* For explanation of f->esp - MAX_ASM_PUSH see
@@ -200,17 +200,22 @@ static void page_fault (struct intr_frame *f){
 
 					/* Get the page address of the faulting address*/
 					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+					
+
+					/* NOTE READ IN OF STACK PAGES
+					   NEEDS TO BE LAZILY EVALUATED */
+
 
 					/* While the page is not present and supposed to be in memory */
 					while(!pagedir_is_present(pagedir, page_addr) &&
-							pagedir_get_medium(pagedir, page_addr) == PTE_AVL_MEMORY){
+							pagedir_get_medium(pagedir, page_addr) == PTE_AVL_ERROR){
 						/* Get new frame and install it at the faulting addr*/
 						uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
 						pagedir_install_page(page_addr, kvaddr, true);
 						/* set it to dirty so that it will be put on swap*/
 						pagedir_set_dirty(pagedir, page_addr , true);
 						/* mark it as in memory and not elsewhere right now*/
-						pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
+						pagedir_set_medium(pagedir, page_addr, PTE_AVL_STACK);
 						/* move to the next higher page size */
 						page_addr += PGSIZE;
 					}
@@ -232,8 +237,11 @@ static void page_fault (struct intr_frame *f){
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
 			}
+		}else if(type == PTE_AVL_STACK){
+		  /* read in zero page */
+  		    PANIC("read in zero page not yet implemented!");
 		}else{
-			PANIC("unrecognized medium in page fault, check exception.c");
+		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
 		/* The page is present and we got a page fault so this means that

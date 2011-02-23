@@ -101,6 +101,16 @@ bool frame_clear_page (void *kernel_page_addr){
 	return true;
 }
 
+uint32_t frame_table_size (void){
+
+	return 0;
+}
+
+struct frame_hash_entry  *frame_at_position(size_t bit_num){
+
+	return NULL;
+}
+
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
 	return hash_bytes(&hash_entry(e, struct frame_hash_entry, elem)->position_in_bitmap, sizeof(uint32_t));
 }

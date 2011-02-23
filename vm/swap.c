@@ -89,7 +89,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	new_entry->swap_slot = swap_slot;
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
-															&new_entry->elem);
+			&new_entry->elem);
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
@@ -100,7 +100,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
 	uint32_t i;
 	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++,
-									    page_ptr += BLOCK_SECTOR_SIZE){
+	page_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, page_ptr);
 	}
 
@@ -124,7 +124,7 @@ bool swap_read_in (void *faulting_addr){
 	struct swap_entry key;
 	key.vaddr = vaddr;
 	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
-																	&key.elem);
+			&key.elem);
 	if(slot_result == NULL){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
@@ -134,7 +134,7 @@ bool swap_read_in (void *faulting_addr){
 	}
 
 	uint32_t swap_slot =
-				hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
+			hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
 
 	/* May evict a page to swap */
 	uint32_t* free_page = frame_get_page(PAL_USER);
@@ -146,7 +146,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT; i++, start_sector++,
-											page_ptr += BLOCK_SECTOR_SIZE){
+	page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
 	}
 
@@ -156,7 +156,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Remove this swap slot from the processes swap table */
 	struct hash_elem *deleted = hash_delete(&cur_process->swap_table,
-																slot_result);
+			slot_result);
 
 	if(deleted == NULL){
 		PANIC("Element found but then not able to be deleted????");
@@ -176,8 +176,23 @@ bool swap_read_in (void *faulting_addr){
 		/*return false*/
 	}
 
+
+
+
+
+
+
+	/* Need to implement saving the medium type on swap out and
+	   reseting the same medium type on swap in */
+
+
+
+
+
+
+
 	/* indicate that this is in memorry */
-	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_MEMORY);
+	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_ERROR);
 
 	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
 
@@ -190,7 +205,7 @@ bool swap_read_in (void *faulting_addr){
    produce collisions*/
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->vaddr,
-															  sizeof (int));
+			sizeof (int));
 }
 
 /* Function to compare the individual swap hash table elements
@@ -198,7 +213,7 @@ unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
    addresses are unique in each process we know that this will not
    produce collisions*/
 bool swap_slot_compare (const struct hash_elem *a,
-						 const struct hash_elem *b, void *aux UNUSED){
+		const struct hash_elem *b, void *aux UNUSED){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct swap_entry, elem)->vaddr <

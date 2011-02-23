@@ -215,7 +215,7 @@ bool pagedir_is_writable (uint32_t *pd, const void *uaddr){
 bool pagedir_is_mapped (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 	return 	pte != NULL && ((*pte & PTE_P) != 0 ||
-			(*pte & (uint32_t)PTE_AVL) != PTE_AVL_MEMORY);
+			(*pte & (uint32_t)PTE_AVL) != PTE_AVL_ERROR);
 }
 
 /* Loads page directory PD into the CPU's page directory base
@@ -330,7 +330,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 			*pte |= PTE_AVL_EXEC;
 		}else if(medium == PTE_AVL_MMAP){
 			*pte |= PTE_AVL_MMAP;
-		}else if(medium == PTE_AVL_MEMORY){
+		}else if(medium == PTE_AVL_ERROR){
 			/* Already set up*/
 		}else{
 			PANIC("pagedir_set_medium called with unexpected medium");
@@ -346,7 +346,7 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
    where to look for data when it has been evicted, or
    lazily loaded*/
 medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
-	/*get the page table entry out of the page dPTE_SWAP 0x00000200irectory*/
+	/*get the page table entry out of the page directory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){
@@ -357,11 +357,18 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 		}else if((*pte & (uint32_t)PTE_AVL) == PTE_AVL_MMAP){
 			return PTE_AVL_MMAP;
 		}else{
-			return PTE_AVL_MEMORY;
+
+
+
+			/* Add PTE_AVL_STACK */
+
+
+
+			return PTE_AVL_ERROR;
 		}
 	}else{
 		/* It is not currently mapped so return 0 because there is no medium*/
-		return PTE_AVL_MEMORY;
+		return PTE_AVL_ERROR;
 	}
 }
 

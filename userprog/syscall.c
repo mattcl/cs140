@@ -701,7 +701,7 @@ static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 		if(pagedir_is_present(pd, rm_ptr)){
 			frame_clear_page(pagedir_get_page(pd, rm_ptr));
 		}
-		pagedir_set_medium(pd, rm_ptr, PTE_AVL_MEMORY);
+		pagedir_set_medium(pd, rm_ptr, PTE_AVL_ERROR);
 		pagedir_clear_page(pd, rm_ptr);
 	}
 }
