@@ -193,6 +193,14 @@ static void page_fault (struct intr_frame *f){
 				printf("Couldn't load page from mmaped file");
 				kill(f);
 			}
+		}else if(type == PTE_AVL_STACK){
+			/* read in zero page */
+			/* Get new frame and install it at the faulting addr*/
+			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+
+			/* it will be set to dirty or accessed on the retry*/
+			pagedir_install_page(uaddr, kaddr, true);
+
 		}else if(type == PTE_AVL_ERROR){
 			if(user){
 
@@ -232,13 +240,6 @@ static void page_fault (struct intr_frame *f){
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
 			}
-		}else if(type == PTE_AVL_STACK){
-			/* read in zero page */
-			/* Get new frame and install it at the faulting addr*/
-			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO);
-
-			/* it will be set to dirty or accessed on the retry*/
-			pagedir_install_page(uaddr, kaddr, true);
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
