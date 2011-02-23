@@ -10,7 +10,6 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
-#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -48,7 +47,6 @@ static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
 
 static unsigned mmap_hash_func (HASH_ELEM *a, AUX);
 static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
-static void mmap_hash_entry_destroy (struct hash_elem *e, AUX);
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
 static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
@@ -345,10 +343,6 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
-
-	/* Must be done before destroying the page dir which will lose all
-	   of the data from the mmapped files */
-	hash_destroy(&cur_process->mmap_table, &mmap_hash_entry_destroy);
 
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
