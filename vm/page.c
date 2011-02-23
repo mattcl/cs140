@@ -1,9 +1,13 @@
 #include "page.h"
 
 
-/* This file implements eviction using the clock algorithm. */
 
-static frame_hash_entry first_hand;
+#include <stdint.h>
+#include <stdbool.h>
+#include "threads/vaddr.h"
+#include "threads/thread.h"
+#include "userprog/process.h"
+#include <debug.h>
 
 /* returns the key to the frame that is now available, use the entry
    to install this page into the pagedir of the evicting thread that

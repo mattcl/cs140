@@ -4,10 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define PTE_AVL_MEMORY 0 /* 000 */ 
-#define PTE_AVL_SWAP (1 << 9) /* 001 */
+#define PTE_AVL_MEMORY 0       /* 000 */
+#define PTE_AVL_SWAP (1 << 9)  /* 001 */
 #define PTE_AVL_EXEC (1 << 10) /* 010 */
 #define PTE_AVL_MMAP (1 << 11) /* 100 */
+#define PTE_AVL_STACK (3 << 9)  /* 110 */
 
 typedef uint32_t medium_t; /* used to represent one of the constants above */
 
@@ -23,6 +24,7 @@ void pagedir_set_accessed (uint32_t *pd, const void *upage, bool accessed);
 void pagedir_activate (uint32_t *pd); 
 bool pagedir_is_present(uint32_t *pd, const void *upage);
 bool pagedir_is_writable (uint32_t *pd, const void *uaddr);
+bool pagedir_is_mapped (uint32_t *pd, const void *uaddr);
 
 uint32_t *active_pd (void);
 

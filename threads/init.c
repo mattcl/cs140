@@ -28,6 +28,7 @@
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
 #include "userprog/tss.h"
+#include "userprog/pagedir.h"
 #else
 #include "tests/threads/tests.h"
 #endif
@@ -42,6 +43,8 @@
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
+
+uint32_t stack_size = DEFAULT_STACK_SIZE;
 
 #ifdef FILESYS
 /* -f: Format the file system? */
@@ -58,12 +61,6 @@ static const char *swap_bdev_name;
 
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
-
-#define DEFAULT_STACK_SIZE (1<<23) /* 8 MB is the default kernel stack size*/
-#define MIN_STACK_SIZE (1<<12)     /* Min size of stack is one page*/
-#define MAX_STACK_SIZE (1<<25)	   /* Absolute maximum size of stack is 32 MB */
-
-static size_t stack_size = DEFAULT_STACK_SIZE;
 
 static void bss_init (void);
 static void paging_init (void);

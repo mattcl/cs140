@@ -45,6 +45,9 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
 static unsigned process_hash_func (HASH_ELEM *a, AUX);
 static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
 
+static unsigned mmap_hash_func (HASH_ELEM *a, AUX);
+static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
+
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
 static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
 	return ((list_entry(cle,struct child_list_entry,elem))->child_tid==*(tid_t*)c_tid);
@@ -111,6 +114,14 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	if(!success){
 		return false;
 	}
+
+	success = hash_init(&p->mmap_table, &mmap_hash_func, &mmap_hash_compare, NULL);
+
+	if(!success){
+		return false;
+	}
+
+	p->mapid_counter = 1;
 
 	sema_init(&p->waiting_semaphore, 0);
 	list_init(&p->children_list);
@@ -417,8 +428,7 @@ void process_activate (void){
 	/* Activate thread's page tables. */
 	pagedir_activate (t->pagedir);
 
-	/* Set thread's kernel stack for use in processing
-     interrupts. */
+	/* Set thread's kernel stack for use in processing interrupts. */
 	tss_update ();
 }
 
@@ -485,8 +495,6 @@ struct Elf32_Phdr{
 
 static bool setup_stack (void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-        uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 static bool setup_stack_args(void **esp, char *f_name, char *token, char *save_ptr);
 
@@ -563,6 +571,77 @@ done:
 	
 	return success;
 }
+
+/* Reads in the appropriate page of the executable for this
+   faulting address */
+bool process_exec_read_in(uint32_t *faulting_addr){
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
+	struct exec_page_info *info = NULL;
+	uint32_t i;
+
+	for(i = 0; i < cur_process->num_exec_pages; i++){
+		//printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
+		if(vaddr >= cur_process->exec_info[i].mem_page &&
+		   vaddr < cur_process->exec_info[i].end_addr){
+			info = &cur_process->exec_info[i];
+			break;
+		}
+	}
+
+	if(info == NULL){
+		/* We have inconsistency, we are loading a page from
+		   the process executable but we don't have the info
+		   for it that should have been set in process load
+		   EXEC bit shouldn't be set unless the corresponding
+		   data can be found in the exec_info array*/
+		PANIC("INCONSISTENCY IN EXCEPTION.C");
+		/*return false;*/
+	}
+
+	/* The way this works is it calculates the number of bytes that need to be
+	   read in for this particular page. It does this by looking at the number
+	   of full pages that the header describes. This is done by taking the
+	   total number of read_bytes and dividing by PGSIZE then we use the
+	   offset from the page that the faulting address is in to the beginning
+	   of the segment that is described by the header of the segment. Then
+	   we take this offset and divide by PGSIZE to get our "entry" into the
+	   array of pages. calculating zero bytes for this page
+	   falls out nicely after that.
+	   This can also be calcultated using thu number of empty pages and
+	   doing the opposite.*/
+	uint32_t full_pages = info->read_bytes / PGSIZE;
+	uint32_t offset_seg_start = ((uint32_t)vaddr) - ((uint32_t)info->mem_page);
+	uint32_t entry = (offset_seg_start) / PGSIZE;
+	uint32_t zero_bytes;
+	if(entry == full_pages){
+		zero_bytes = info->zero_bytes % PGSIZE;
+	}else if(entry < full_pages){
+		zero_bytes = 0;
+	}else{
+		zero_bytes = PGSIZE;
+	}
+
+	/* read_bytes is always going to make up the difference
+	   between zero_bytes and PGSIZE */
+	uint32_t read_bytes = PGSIZE - zero_bytes;
+
+	/* The file_page (offset into the ELF file) will be the regular page
+	   offset for the header plus the offset between the faulting address
+	   and the beginning of this segments memory. We are only going to read
+	   into memory one page */
+	uint32_t file_page = info->file_offset + offset_seg_start;
+
+
+	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
+
+	return load_segment(cur_process->executable_file,
+			file_page, (uint8_t*)vaddr, read_bytes,
+			zero_bytes, info->writable);
+}
+
+/* LOAD HELPER FUNCTIONS */
 
 static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 							 struct process *cur_process, struct thread* t){
@@ -649,7 +728,8 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 							ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
 
-				/* Setup demand paging for all of the executable pages */
+				/* Setup demand paging for all of the executable pages in this
+				   segment, marking them all as not present but on disk */
 				uint32_t num_pages=(head[k].read_bytes+head[k].zero_bytes)/PGSIZE;
 				head[k].end_addr =
 						head[k].read_bytes + head[k].zero_bytes + head[k].mem_page;
@@ -791,71 +871,6 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 	return true;
 }
 
-bool process_exec_read_in(uint32_t *faulting_addr){
-	struct thread *cur = thread_current();
-	struct process *cur_process = cur->process;
-	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
-	struct exec_page_info *info = NULL;
-	uint32_t i;
-
-	for(i = 0; i < cur_process->num_exec_pages; i++){
-		//printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
-		if(vaddr >= cur_process->exec_info[i].mem_page &&
-		   vaddr < cur_process->exec_info[i].end_addr){
-			info = &cur_process->exec_info[i];
-			break;
-		}
-	}
-	if(info == NULL){
-		/* We have inconsistency, we are loading a page from
-		   the process executable but we don't have the info
-		   for it that should have been set in process load
-		   EXEC bit shouldn't be set unless the corresponding
-		   data can be found in the exec_info array*/
-		PANIC("INCONSISTENCY IN EXCEPTION.C");
-		/*return false;*/
-	}
-
-	/* The way this works is it calculates the number of bytes that need to be
-	   read in for this particular page. It does this by looking at the number
-	   of full pages that the header describes. This is done by taking the
-	   total number of read_bytes and dividing by PGSIZE then we use the
-	   offset from the page that the faulting address is in to the beginning
-	   of the segment that is described by the header of the segment. Then
-	   we take this offset and divide by PGSIZE to get our "entry" into the
-	   array of pages. calculating zero bytes for this page
-	   falls out nicely after that*/
-	uint32_t full_pages = info->read_bytes / PGSIZE;
-	uint32_t offset_seg_start = ((uint32_t)vaddr) - ((uint32_t)info->mem_page);
-	uint32_t entry = (offset_seg_start) / PGSIZE;
-	uint32_t zero_bytes;
-	if(entry == full_pages){
-		zero_bytes = info->zero_bytes % PGSIZE;
-	}else if(entry < full_pages){
-		zero_bytes = 0;
-	}else{
-		zero_bytes = PGSIZE;
-	}
-
-	/* read_bytes is always going to make up the difference
-	   between zero_bytes and PGSIZE */
-	uint32_t read_bytes = PGSIZE - zero_bytes;
-
-	/* The file_page (offset into the ELF file) will be the regular page
-	   offset for the header plus the offset between the faulting address
-	   and the beginning of this segments memory. We are only going to read
-	   into memory one page */
-	uint32_t file_page = info->file_offset + offset_seg_start;
-
-
-	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
-
-	bool success = load_segment(cur_process->executable_file,
-						file_page, (uint8_t*)vaddr, read_bytes,
-						zero_bytes, info->writable);
-	return success;
-}
-
 /* Loads a segment starting at offset OFS in FILE at address
    UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
    memory are initialized, as follows:
@@ -870,7 +885,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
              uint32_t read_bytes, uint32_t zero_bytes, bool writable){
 
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
@@ -954,9 +969,12 @@ static bool setup_stack (void **esp){
 	return success;
 }
 
+/* PROCESS ID / THREAD ID and PARENT HELPER FUNCTIONS */
+
 /* Returns a process * or NULL if the parent has already exited
    MUST BE CALLED WITH THE procces_hash_lock HELD!!!*/
 static struct process *parent_process_from_child (struct process* our_process){
+	ASSERT(lock_held_by_current_thread(&processes_hash_lock));
 	return process_lookup(our_process->parent_id);
 }
 
@@ -964,6 +982,7 @@ static struct process *parent_process_from_child (struct process* our_process){
    looks up a process in the process_hash_table without
    acquiring the lock*/
 static struct process *process_lookup (pid_t pid){
+	ASSERT(lock_held_by_current_thread(&processes_hash_lock));
 	struct process key;
 	key.pid = pid;
 	struct hash_elem *process_result = hash_find(&processes, &key.elem);
@@ -1037,6 +1056,8 @@ tid_t child_pid_to_tid (pid_t c_pid){
 	return PID_ERROR;
 }
 
+/* HASH FUNCTIONS */
+
 /* Compare for open file hashes */
 static bool file_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(a != NULL);
@@ -1072,6 +1093,18 @@ static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
+}
+
+static unsigned mmap_hash_func (HASH_ELEM *a, AUX){
+	mapid_t mapid = hash_entry(a, struct mmap_hash_entry, elem)->mmap_id;
+	return hash_bytes(&mapid, (sizeof(mapid_t)));
+}
+
+static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	return (hash_entry(a, struct mmap_hash_entry, elem)->mmap_id <
+			hash_entry(b, struct mmap_hash_entry, elem)->mmap_id);
 }
 
 #undef HASH_ELEM

@@ -210,6 +210,14 @@ bool pagedir_is_writable (uint32_t *pd, const void *uaddr){
 	return pte != NULL && (*pte & PTE_W) != 0;
 }
 
+/* Returns true if the uaddr has any mapping, this doesn't mean
+   that it has to be in memory, it can also be on swap/disk*/
+bool pagedir_is_mapped (uint32_t *pd, const void *uaddr){
+	uint32_t *pte = lookup_page(pd, uaddr, false);
+	return 	pte != NULL && ((*pte & PTE_P) != 0 ||
+			(*pte & (uint32_t)PTE_AVL) != PTE_AVL_MEMORY);
+}
+
 /* Loads page directory PD into the CPU's page directory base
    register. */
 void pagedir_activate (uint32_t *pd){
@@ -399,7 +407,7 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 
 	/* Verify that there's not already a page present at that virtual
        address, then map our page there. */
-	return (pagedir_is_present (t->pagedir, uaddr) == false
+	return (!pagedir_is_present (t->pagedir, uaddr)
 			&& pagedir_set_page (t->pagedir, uaddr, kaddr, writable));
 }
 

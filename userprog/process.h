@@ -18,6 +18,8 @@ typedef int32_t pid_t;
 
 struct lock filesys_lock;
 
+typedef uint32_t mapid_t;
+
 struct process {
 	/* This processes ID. Also hash key */
 	pid_t pid;
@@ -82,7 +84,6 @@ struct process {
 	   swap.*/
 	struct hash swap_table;
 
-
 	/* The exec_info is a pointer to an array of ELF program
 	   header information this information is used to determine
 	   where on disk the particular missing page is located.
@@ -94,6 +95,12 @@ struct process {
 	   data.*/
 	struct exec_page_info *exec_info;
 	uint32_t num_exec_pages;
+
+	/* A hash table that stores the necessary information to
+	   map a file into the address space and to lazily load
+	   the information from the file */
+	struct hash mmap_table;
+	mapid_t mapid_counter;
 };
 
 /* An entry into the list of children that a particular process
@@ -114,6 +121,11 @@ struct fd_hash_entry{
 	int fd;				    /* hash key and File Descriptor*/
 	struct file *open_file; /* Open file associated with this FD */
 	struct hash_elem elem;  /* hash elem for this fd entry*/
+	bool is_closed;			/* bool to prevent a file from being closed
+							   if mmaped, but prevent it from being
+							   accessed by other syscalls*/
+	uint32_t num_mmaps;		/* number of referencing maps if > 0
+							   this fd must be saved.*/
 };
 
 /* This is the struct that describes the necessary ELF
@@ -140,6 +152,18 @@ struct exec_page_info{
 							   end of this segment. MAY BE MORE THAN ONE
 							   page worth of zero bytes*/
 	bool writable;   		/* Whether this segment is read/write or read only*/
+	/* Is writable can be written in the lower 12 bits of mem_page for efficiency*/
+};
+
+struct mmap_hash_entry{
+	mapid_t mmap_id;     	/* Key into the hash table*/
+	uint32_t begin_addr;	/* start address of this mmapping*/
+	uint32_t end_addr;		/* While we can calculate this from the filesize
+							   accessing the disk in any way is too slow so just
+							   keep it stored in memory*/
+	int fd;					/* FD for this mapping*/
+	uint32_t num_pages;		/* Number of pages so I don't have to think*/
+	struct hash_elem elem;  /* hash elem*/
 };
 
 void process_init(void);
@@ -154,8 +178,9 @@ void process_exit (void);
 void process_activate (void);
 
 bool initialize_process (struct process *p, struct thread *our_thread);
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+        uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 /* Called by exception.c */
 bool process_exec_read_in(uint32_t *faulting_addr);
-
 #endif /* userprog/process.h */
