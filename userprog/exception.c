@@ -190,6 +190,10 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_AVL_MEMORY){
 			if(user){
+
+			  /* For explanation of f->esp - MAX_ASM_PUSH see
+			     note on MAX_ASM_PUSH */
+
 				if(fault_addr < PHYS_BASE &&
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
@@ -212,7 +216,7 @@ static void page_fault (struct intr_frame *f){
 						page_addr += PGSIZE;
 					}
 				}else{
-					/* This is invalid reference to memory, kill it KUNIT style
+					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/
 					//printf("kill1\n");
 					kill(f);

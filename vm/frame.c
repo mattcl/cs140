@@ -112,7 +112,3 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX){
 			hash_entry(b, struct frame_hash_entry, elem)->position_in_bitmap);
 }
 
-
-
-
-
