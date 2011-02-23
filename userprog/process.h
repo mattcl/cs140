@@ -83,7 +83,15 @@ struct process {
 	struct hash swap_table;
 
 
-	/* */
+	/* The exec_info is a pointer to an array of ELF program
+	   header information this information is used to determine
+	   where on disk the particular missing page is located.
+	   the information that it stores is for the entire header,
+	   each header is an entire segment so the size of this
+	   struct will be less than 5 * sizeof(exec_page_info).
+	   The only loadable segments right now are the code
+	   segment and the data segment with the global and static
+	   data.*/
 	struct exec_page_info *exec_info;
 	uint32_t num_exec_pages;
 };
@@ -108,15 +116,30 @@ struct fd_hash_entry{
 	struct hash_elem elem;  /* hash elem for this fd entry*/
 };
 
-/* Implicitly calculate the number of zero bytes by subtracting
-   it from PGSIZE. this structure is 17 bytes large*/
+/* This is the struct that describes the necessary ELF
+   program header information that is needed to read
+   in the executable on a page fault. It does this by
+   taking the faulting addresses most significant 20
+   bits and seeing if it is in this particular entries
+   bounds (mem_page and end_addr). Then it takes this
+   offset from the faulting address and mem_page and
+   adds it to the file_offset of the elf file and then
+   reads in the appropriate amounts of data by calculating
+   the appropriate read_bytes and zero_bytes.
+   NOTE: the segment is not constrained to be only one page */
 struct exec_page_info{
-	uint32_t mem_page;
-	uint32_t end_addr;
-	uint32_t file_page;
-	uint32_t read_bytes;
-	uint32_t zero_bytes;
-	bool writable;
+	uint32_t mem_page;		/* The starting address in virtual memory
+							   of this segment*/
+	uint32_t end_addr;      /* The address one byte past the end of this
+							   headers segment*/
+	uint32_t file_offset;	/* The offset into the executable file for
+							   this particular segment*/
+	uint32_t read_bytes;    /* The number of bytes to read from this
+							   segment*/
+	uint32_t zero_bytes;    /* The number of bytes that are zero at the
+							   end of this segment. MAY BE MORE THAN ONE
+							   page worth of zero bytes*/
+	bool writable;   		/* Whether this segment is read/write or read only*/
 };
 
 void process_init(void);

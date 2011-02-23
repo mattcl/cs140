@@ -473,38 +473,62 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
 }
 
+/* This function validates the buffer to make sure that we can read
+   the full extent of the buffer. Touches every page to make sure that
+   it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
 	}
-	uaddr += size;
-	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
-		return false;
+	if(size > 1){
+		while(size != 0){
+			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
+			uaddr += increment;
+			if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
+				return false;
+			}
+			size -= increment;
+		}
 	}
 	return true;
 }
 
+/* Makes sure that the full exetent of the buffer is valid to be read
+   and written to. This function will return true if the buffer is valid
+   or false if this buffer is not mapped in the user vaddr space or if it
+   is read only segment. Touches every page in buffer to make sure it is
+   writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
-	printf("Buffer_is_valid_writable\n");
 	int byte;
-	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
+	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 		return false;
 	}
 	put_user(uaddr, byte);
-	uaddr += size;
-	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || put_user(uaddr, 1) < 0){
-		return false;
+	if(size > 1){
+		while(size != 0){
+			/* Touch every page in the buffer to make sure it
+			   is valid and touch the last address in the buffer*/
+			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
+
+			uaddr += increment;
+			if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
+				return false;
+			}
+			/* put the data back*/
+			put_user(uaddr, byte);
+
+			size -= increment;
+		}
 	}
-	put_user(uaddr, byte);
 	return true;
 }
 
 
  /* Returns a unsigned int representing 4 bytes of data
     if there was a segfault it will set
-    ERROR will be negative, positive otherwise*/
+    error to be negative, positive otherwise*/
 static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){
 	uint8_t *uaddr = (uint8_t*)uaddr_in;
 	uint32_t returnValue = 0;
@@ -531,7 +555,8 @@ static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){
 	return returnValue;
 }
 
-
+/* Attempts to get a byte from the user address
+   returns -1 on segfault */
 static int get_user(const uint8_t *uaddr){
 	int result;
 	asm("movl $1f, %0; movzbl %1, %0; 1:"
@@ -539,12 +564,21 @@ static int get_user(const uint8_t *uaddr){
 	return result;
 }
 
+/* Attempts to write one byte to the user address
+   returns true if the address was written to and
+   false if a page fault occured*/
 static bool put_user (uint8_t *udst, uint8_t byte){
 	int error_code;
 	asm("movl $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
 	return error_code != -1;
 }
 
+/* Verifies that the string pointer passed in is a valid
+   string character, this function will look at every address
+   of the string until it finds a terminating character if the
+   user passes in a bad pointer but it doesn't page fault then
+   the string will be used anyway and may result in undefined
+   behavior*/
 static bool string_is_valid(const char* str){
 	int c;
 	while(true){

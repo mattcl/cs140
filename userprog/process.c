@@ -630,7 +630,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 			if(validate_segment (&phdr, file)){
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
 				//printf("page offset %u\n", page_offset);
-				head[k].file_page = phdr.p_offset & ~PGMASK;
+				head[k].file_offset = phdr.p_offset & ~PGMASK;
 				head[k].mem_page = phdr.p_vaddr & ~PGMASK;
 				head[k].writable = (phdr.p_flags & PF_W) != 0;
 
@@ -845,10 +845,10 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 	   offset for the header plus the offset between the faulting address
 	   and the beginning of this segments memory. We are only going to read
 	   into memory one page */
-	uint32_t file_page = info->file_page + offset_seg_start;
+	uint32_t file_page = info->file_offset + offset_seg_start;
 
 
-	printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
+	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
 
 	bool success = load_segment(cur_process->executable_file,
 						file_page, (uint8_t*)vaddr, read_bytes,
@@ -897,7 +897,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint8_t *kpage = frame_get_page(PAL_USER);
 		if(kpage == NULL){
 			lock_release(&filesys_lock);
-			printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			//printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 
@@ -905,7 +905,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 			frame_clear_page (kpage);
 			lock_release(&filesys_lock);
-			printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -916,7 +916,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(!pagedir_install_page (upage, kpage, writable)){
 			frame_clear_page(kpage);
 			lock_release(&filesys_lock);
-			printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 			return false;
 		}
 

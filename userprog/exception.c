@@ -154,76 +154,92 @@ static void page_fault (struct intr_frame *f){
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
+	//printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
-	       either 1. Grow the stack (possibly evict a page), or kill them */
-		printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
+	       either 1) Read in the page from the appropriate place,
+	       2) try to grow the stack, or 3) kill them */
 
-		if(user && fault_addr < PHYS_BASE &&
-				(uint32_t)fault_addr >= ((uint32_t)f->esp - 32)){
-			uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+		/* Check the medium bits and IF any of them are set
+		   we read in the data from the appropriate location
+		   ELSE medium_t is PTE_AVL_MEMORY (i.e. it isn't EXEC, SWAP, or MMAP),
+		   and it is not present so this process is either growing the
+		   stack or accessing invalid memory and must be killed*/
+		medium_t type = pagedir_get_medium(pagedir, fault_addr);
 
-			/* While the page is not present and supposed to be in memory */
-			while(!pagedir_is_present(pagedir, page_addr) &&
-					pagedir_get_medium(pagedir, page_addr) == PTE_AVL_MEMORY){
-				/* Get new frame and install it at the faulting addr*/
-				uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
-				pagedir_install_page(page_addr, kvaddr, true);
-				/* set it to dirty so that it will be put on swap*/
-				pagedir_set_dirty(pagedir, page_addr , true);
-				/* mark it as in memory and not elsewhere right now*/
-				pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
-				/* move to the next higher page size */
-				page_addr += PGSIZE;
+		if(type == PTE_AVL_SWAP){
+			/* Data is not present but on swap read it in
+							   then return so that dereference becomes valid*/
+			if(!swap_read_in(fault_addr)){
+				printf("COULDN't read in from swap!!!!");
+				kill(f);
+			}
+		}else if(type == PTE_AVL_EXEC){
+			/* Data is not present but is on disk still so
+			   read it in and then derefernece becomes valid*/
+			if(!process_exec_read_in(fault_addr)){
+				printf("COULDN'T load the executable segment, KILLL");
+				kill(f);
+			}
+		}else if(type == PTE_AVL_MMAP){
+
+		}else if(type == PTE_AVL_MEMORY){
+
+			if(user){
+
+				if(fault_addr < PHYS_BASE &&
+						(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH)){
+					/* Trying to grow the stack segment?*/
+					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+
+					/* While the page is not present and supposed to be in memory */
+					while(!pagedir_is_present(pagedir, page_addr) &&
+							pagedir_get_medium(pagedir, page_addr) == PTE_AVL_MEMORY){
+						/* Get new frame and install it at the faulting addr*/
+						uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+						pagedir_install_page(page_addr, kvaddr, true);
+						/* set it to dirty so that it will be put on swap*/
+						pagedir_set_dirty(pagedir, page_addr , true);
+						/* mark it as in memory and not elsewhere right now*/
+						pagedir_set_medium(pagedir, page_addr, PTE_AVL_MEMORY);
+						/* move to the next higher page size */
+						page_addr += PGSIZE;
+					}
+				}else{
+					/* This is invalid reference to memory, kill it KUNIT style
+					   It wasn't trying to grow the stack segment*/
+					//printf("kill1\n");
+					kill(f);
+				}
+			}else{
+				/* We don't allow for growing the stack in kernel code.
+				   Plus you really can't grow the stack because if you
+				   passed a pointer to a buffer on the stack, esp must
+				   have already been decremented. And when the user pushed
+				   the pointer for us to read they would have page faulted
+				   and already grown the stack. So it is safe to just return -1
+				   to the kernel code*/
+				//printf("kernel 1 write %u\n", write);
+				f->eip = (void*)f->eax;
+				f->eax = 0xffffffff;
 			}
 		}else{
-			/* Check the medium bits and IF any of them are set
-			   we read in the data from the appropriate location
-			   ELSE medium_t is 0 (i.e. it isn't EXEC, SWAP, or MMAP),
-			   and it is not present so this process is accessing
-			   invalid memory and must be killed*/
-			medium_t type = pagedir_get_medium(pagedir, fault_addr);
-			if(type == PTE_AVL_MEMORY){
-				/* The data isn't present and doesn't exist
-					   elsewhere... PageFault is legit */
-				if(user){
-					printf("kill1\n");
-					kill(f);
-				}else{
-					printf("kernel 1 write %u\n", write);
-					f->eip = (void*)f->eax;
-					f->eax = 0xffffffff;
-				}
-			}else if(type == PTE_AVL_SWAP){
-				/* Data is not present but on swap read it in
-					   then return so that dereference becomes valid*/
-				if(!swap_read_in(fault_addr)){
-					printf("COULDN't read in from swap!!!!");
-					kill(f);
-				}
-			}else if(type == PTE_AVL_EXEC){
-				/* Data is not present but is on disk still so
-					   read it in and then derefernece becomes valid*/
-				if(!process_exec_read_in(fault_addr)){
-					printf("COULDN'T load the executable segment, KILLL");
-					kill(f);
-				}
-			}else if(type == PTE_AVL_MMAP){
-
-			}else{
-				PANIC("unrecognized medium in page fault, check exception.c");
-			}
+			PANIC("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
-		/* Write to read only memory, must kill this process */
+		/* The page is present and we got a page fault so this means that
+		   we tried to write to read only memory. This will kill a user
+		   process or return -1 to kernel code*/
 		if(user){
-			printf("kill2\n");
+			//printf("kill2\n");
 			kill(f);
 		}else{
-			printf("kernel 1 write %u\n", write);
+			//printf("kernel 2 write %u\n", write);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
 	}
+	/* Page was read in or the return value was set for kernel code
+	   so the memory access will try again and succeed or we will kill
+	   the process or fail silently from the kernel code that faulted */
 }
-
