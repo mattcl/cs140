@@ -73,6 +73,7 @@ void evict_init(void){
 	clear_hand = evict_hand + threshold;
 }
 
+/* Likely to be called from a timer interrupt*/
 void clear_until_threshold(){
 
 }

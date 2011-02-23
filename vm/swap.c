@@ -220,7 +220,6 @@ bool swap_slot_compare (const struct hash_elem *a,
 void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
 	struct swap_entry *entry = hash_entry(e, struct swap_entry, elem);
-	uint32_t swap_slot = entry->swap_slot;
 
 	lock_acquire(&swap_slots_lock);
 	/* Set this swap slot to usable*/
