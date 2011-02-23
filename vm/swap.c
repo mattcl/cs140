@@ -7,7 +7,7 @@
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
 #include "devices/block.h"
-
+#include "threads/pte.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
@@ -54,13 +54,13 @@ void swap_init (void){
 bool swap_read_in (void *faulting_addr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	uint32_t vaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 	size_t start_sector;
 	uint8_t *page_ptr, i;
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
-	key.vaddr = vaddr;
+	key.uaddr = uaddr;
 	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
 			&key.elem);
 	if(slot_result == NULL){
@@ -71,8 +71,11 @@ bool swap_read_in (void *faulting_addr){
 		/*return false*/
 	}
 
-	uint32_t swap_slot =
-			hash_entry(slot_result, struct swap_entry, elem)->swap_slot;
+	struct swap_entry *entry =
+			hash_entry(slot_result, struct swap_entry, elem);
+
+	uint32_t swap_slot = entry->swap_slot;
+	medium_t org_medium = entry->org_medium;
 
 	/* May evict a page to swap */
 	uint32_t* free_page = frame_get_page(PAL_USER);
@@ -114,23 +117,8 @@ bool swap_read_in (void *faulting_addr){
 		/*return false*/
 	}
 
-
-
-
-
-
-
-	/* Need to implement saving the medium type on swap out and
-	   reseting the same medium type on swap in */
-
-
-
-
-
-
-
 	/* indicate that this is in memorry */
-	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_ERROR);
+	pagedir_set_medium(cur->pagedir, faulting_addr, org_medium);
 
 	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
 
@@ -145,20 +133,25 @@ bool swap_read_in (void *faulting_addr){
    You should only allocate a swap slot for this particular frame and virtual
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
-bool swap_read_out (void * kvaddr, void *uaddr){
+bool swap_read_out (uint32_t *pd, void *uaddr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
-	/*Set the auxilary data so that it can index into the swap table*/
-	pagedir_set_aux(cur->pagedir, uaddr, (uint32_t)uaddr);
+	/* Set the auxilary data so that it can index into the swap table
+	   Bit mask makes sure we only overwrite the most significant
+	   20 bits of the PTE*/
+	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
+	pagedir_set_aux(pd, uaddr, addr_to_save);
+
+	medium_t org_medium = pagedir_get_medium(pd, uaddr);
 
 	/* indicate that this is on swap */
-	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
+	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
 	/* Force a page fault when we are lookin this virtual address up
 	   clear page preserves all the other bits in the PTE sets the
 	   present bit to 0*/
-	pagedir_clear_page(cur->pagedir, uaddr);
+	pagedir_clear_page(pd, uaddr);
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 
@@ -166,7 +159,8 @@ bool swap_read_out (void * kvaddr, void *uaddr){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
 
-	new_entry->vaddr = (uint32_t)uaddr;
+	new_entry->uaddr = addr_to_save;
+	new_entry->org_medium = org_medium;
 
 	lock_acquire(&swap_slots_lock);
 
@@ -186,14 +180,13 @@ bool swap_read_out (void * kvaddr, void *uaddr){
 
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
-	uint8_t *page_ptr = (uint8_t*)kvaddr;
+	uint8_t *page_ptr = pagedir_get_page(pd, uaddr);
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
 	uint32_t i;
-	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++,
-	page_ptr += BLOCK_SECTOR_SIZE){
+	for(i = 0; i < SECTORS_PER_SLOT;
+			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, page_ptr);
 	}
-
 	lock_release(&swap_slots_lock);
 
 	return true;
@@ -204,7 +197,7 @@ bool swap_read_out (void * kvaddr, void *uaddr){
    addresses are unique in each process-- we know that this will not
    produce collisions*/
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
-	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->vaddr,
+	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->uaddr,
 			sizeof (int));
 }
 
@@ -216,7 +209,7 @@ bool swap_slot_compare (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	return (hash_entry(a, struct swap_entry, elem)->vaddr <
-			hash_entry(b, struct swap_entry, elem)->vaddr);
+	return (hash_entry(a, struct swap_entry, elem)->uaddr <
+			hash_entry(b, struct swap_entry, elem)->uaddr);
 }
 

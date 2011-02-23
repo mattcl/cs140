@@ -676,7 +676,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 }
 
 /* Read in the appropriate file block from disk */
-bool mmap_read_in(uint32_t *faulting_addr){
+bool mmap_read_in(void *faulting_addr){
 	struct thread *cur = thread_current();
 
 	/* Mask off the lower 12 bits */
@@ -714,7 +714,7 @@ bool mmap_read_in(uint32_t *faulting_addr){
 	lock_release(&filesys_lock);
 
 	bool success =
-			pagedir_install_page((uint32_t*)uaddr, (uint32_t*)kaddr, true);
+			pagedir_install_page((void*)uaddr, (void*)kaddr, true);
 
 	/* Make sure that we stay consistent with our naming scheme
 	   of memory*/
@@ -724,7 +724,7 @@ bool mmap_read_in(uint32_t *faulting_addr){
 	return success;
 }
 
-static struct mmap_hash_entry *uaddr_to_mmap_entry(uint32_t *uaddr){
+static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
 	struct hash_iterator i;
 	struct hash_elem *e;
 	hash_first (&i, thread_current()->process->mmap_table);
@@ -739,14 +739,14 @@ static struct mmap_hash_entry *uaddr_to_mmap_entry(uint32_t *uaddr){
 	return NULL;
 }
 
-bool mmap_read_out(uint32_t *pd, uint32_t *uaddr){
+bool mmap_read_out(uint32_t *pd, void *uaddr){
 	if(!pagedir_is_present(pd, uaddr)){
 		/* Can't read back to disk if the memory isn't
 		   actually present*/
 		return false;
 	}
 
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
 	if(entry == NULL){
 		return false;
 	}

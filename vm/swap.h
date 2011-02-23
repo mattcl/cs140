@@ -5,11 +5,13 @@
 #include <hash.h>
 #include <stdint.h>
 #include <debug.h>
+#include <pagedir.h>
 
 struct swap_entry{
-	uint32_t vaddr; 		/* Key into the hash table*/
+	uint32_t uaddr; 		/* Key into the hash table*/
 	uint32_t swap_slot; 	/* The swap slot that this vaddr's page
 							   resides*/
+	medium_t org_medium;
 	struct hash_elem elem;  /* The hash elem */
 };
 
@@ -20,6 +22,6 @@ bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b,
 void swap_init (void);
 
 bool swap_read_in (void *faulting_addr);
-bool swap_read_out (void * kvaddr, void *uaddr);
+bool swap_read_out (uint32_t * pd, void *uaddr);
 
 #endif /* SWAP_H_ */
