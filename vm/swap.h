@@ -5,7 +5,7 @@
 #include <hash.h>
 #include <stdint.h>
 #include <debug.h>
-#include <pagedir.h>
+#include "userprog/pagedir.h"
 
 struct swap_entry{
 	uint32_t uaddr; 		/* Key into the hash table*/
