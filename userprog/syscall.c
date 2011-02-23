@@ -13,6 +13,7 @@
 #include "devices/input.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "threads/init.h"
 #include "vm/frame.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */

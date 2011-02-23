@@ -44,6 +44,8 @@
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
 
+uint32_t stack_size = DEFAULT_STACK_SIZE;
+
 #ifdef FILESYS
 /* -f: Format the file system? */
 static bool format_filesys;
