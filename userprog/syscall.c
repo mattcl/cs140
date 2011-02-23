@@ -718,7 +718,7 @@ bool mmap_read_in(void *faulting_addr){
 
 	/* Make sure that we stay consistent with our naming scheme
 	   of memory*/
-	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_MMAP);
+	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_AVL_MMAP);
 
 	/*"Kernel out of memory! if false;"*/
 	return success;
@@ -727,7 +727,7 @@ bool mmap_read_in(void *faulting_addr){
 static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
 	struct hash_iterator i;
 	struct hash_elem *e;
-	hash_first (&i, thread_current()->process->mmap_table);
+	hash_first (&i, &thread_current()->process->mmap_table);
 	while((e = hash_next(&i)) != NULL){
 		struct mmap_hash_entry *test =
 				hash_entry(e, struct mmap_hash_entry, elem);
@@ -760,7 +760,8 @@ bool mmap_read_out(uint32_t *pd, void *uaddr){
 	lock_acquire(&filesys_lock);
 	uint32_t offset = (uint32_t) uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
-	uint32_t write_bytes = (entry->num_pages -1 == j) ?
+	/* If this is the last page only read the appropriate number of bytes*/
+	uint32_t write_bytes = (entry->end_addr - (uint32_t)uaddr) / PGSIZE == 1 ?
 			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
 	file_write(fd_entry->open_file, uaddr, write_bytes);
 	lock_release(&filesys_lock);
