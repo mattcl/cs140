@@ -97,120 +97,120 @@ static void syscall_handler (struct intr_frame *f){
 	uint32_t arg1 [4];
 
 	switch (sys_call_num){
-		case SYS_HALT:{
-			system_halt(f);
-			break;
-		}
-		case SYS_EXIT:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0) system_exit(f, -1);
-			system_exit(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_EXEC:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_exec(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_WAIT:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_wait(f, (pid_t)arg1[0]);
-			break;
-		}
-		case SYS_CREATE:{
-			error = set_args(esp, 2, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_create(f, (char*)arg1[0], (int)arg1[1]);
-			break;
-		}
-		case SYS_REMOVE:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_remove(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_OPEN:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_open(f, (char*)arg1[0]);
-			break;
-		}
-		case SYS_FILESIZE:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_filesize(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_READ:{
-			error = set_args(esp, 3, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-			break;
-		}
-		case SYS_WRITE:{
-			error = set_args(esp, 3, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
-			break;
-		}
-		case SYS_SEEK:{
-			error = set_args(esp, 2, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
-			break;
-		}
-		case SYS_TELL:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_tell(f, (int)arg1[0]);
-			break;
-		}
-		case SYS_CLOSE:{
-			error = set_args(esp, 2, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_close(f, (int)arg1[0]);
-			break;
-		}
-		/* Project 3 Syscalls */
-		case SYS_MMAP:{
-			error = set_args(esp, 2, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_mmap(f, (int)arg1[0], (void*)arg1[1]);
-			break;
-		}
-		case SYS_MUNMAP:{
-			error = set_args(esp, 1, arg1);
-			if(error < 0)system_exit(f, -1);
-			system_munmap(f, (int)arg1[0]);
-			break;
-		}
-		/* Progect 4 Syscalls */
-		case SYS_CHDIR:{
-			printf("SYS_CHDIR called\n");
-			break;
-		}
-		case SYS_MKDIR:{
-			printf("SYS_MKDIR called\n");
-			break;
-		}
-		case SYS_READDIR:{
-			printf("SYS_READDIR called\n");
-			break;
-		}
-		case SYS_ISDIR:{
-			printf("SYS_ISDIR called\n");
-			break;
-		}
-		case SYS_INUMBER:{
-			printf("SYS_INUMBER called\n");
-			break;
-		}
-		default:{
-			PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
-			break;
-		}
+	case SYS_HALT:{
+		system_halt(f);
+		break;
+	}
+	case SYS_EXIT:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0) system_exit(f, -1);
+		system_exit(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_EXEC:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_exec(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_WAIT:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_wait(f, (pid_t)arg1[0]);
+		break;
+	}
+	case SYS_CREATE:{
+		error = set_args(esp, 2, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_create(f, (char*)arg1[0], (int)arg1[1]);
+		break;
+	}
+	case SYS_REMOVE:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_remove(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_OPEN:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_open(f, (char*)arg1[0]);
+		break;
+	}
+	case SYS_FILESIZE:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_filesize(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_READ:{
+		error = set_args(esp, 3, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_read(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+		break;
+	}
+	case SYS_WRITE:{
+		error = set_args(esp, 3, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_write(f, (int)arg1[0], (char*)arg1[1], (int)arg1[2]);
+		break;
+	}
+	case SYS_SEEK:{
+		error = set_args(esp, 2, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_seek(f, (int)arg1[0], (unsigned int)arg1[1]);
+		break;
+	}
+	case SYS_TELL:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_tell(f, (int)arg1[0]);
+		break;
+	}
+	case SYS_CLOSE:{
+		error = set_args(esp, 2, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_close(f, (int)arg1[0]);
+		break;
+	}
+	/* Project 3 Syscalls */
+	case SYS_MMAP:{
+		error = set_args(esp, 2, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_mmap(f, (int)arg1[0], (void*)arg1[1]);
+		break;
+	}
+	case SYS_MUNMAP:{
+		error = set_args(esp, 1, arg1);
+		if(error < 0)system_exit(f, -1);
+		system_munmap(f, (int)arg1[0]);
+		break;
+	}
+	/* Progect 4 Syscalls */
+	case SYS_CHDIR:{
+		printf("SYS_CHDIR called\n");
+		break;
+	}
+	case SYS_MKDIR:{
+		printf("SYS_MKDIR called\n");
+		break;
+	}
+	case SYS_READDIR:{
+		printf("SYS_READDIR called\n");
+		break;
+	}
+	case SYS_ISDIR:{
+		printf("SYS_ISDIR called\n");
+		break;
+	}
+	case SYS_INUMBER:{
+		printf("SYS_INUMBER called\n");
+		break;
+	}
+	default:{
+		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+		break;
+	}
 	}
 }
 
@@ -513,6 +513,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	}
 }
 
+
 static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
@@ -544,9 +545,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	}
 
 	/* If the end of the mmap would collide with the maximum size of the stack
-	   or go into userspace then we can't map this ish*/
-	if((uint32_t)virtual_addr + (num_pages*PGSIZE) >=   	/* might be just > */
-								(uint32_t)PHYS_BASE -(stack_size)){
+	   or go into userspace then we can't map this ish. These two quatities
+	   may be equal because that means we will have 0 fragmentation between
+	   the stack and the mmapped segment. This also means that the user may
+	   actually grow the stack larger than the max size by cleverly mmapping
+	   files*/
+	if((uint32_t)virtual_addr + (num_pages * PGSIZE) >
+			(uint32_t)PHYS_BASE - (stack_size)){
 		f->eax = -1;
 		return;
 	}
@@ -572,7 +577,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	   pages.*/
 
 	bool pagedir_setup_demand_page(uint32_t* pd, void *uaddr, medium_t medium ,
-											    uint32_t data, bool writable);
+			uint32_t data, bool writable);
 
 	mapid_t new_id = process->mapid_counter++;
 
@@ -586,11 +591,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
-	for(i = 0, temp_ptr = (uint8_t*)virtual_addr; i < num_pages; i ++, temp_ptr += PGSIZE){
-		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP, aux_data, true)){
+	for(i = 0, temp_ptr = (uint8_t*)virtual_addr; i < num_pages;
+			i ++, temp_ptr += PGSIZE){
+		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP,
+				aux_data, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
-			clear_pages(pd, virtual_addr, i+1); /* maybe i +1*/
+			clear_pages(pd, virtual_addr, i);
 			f->eax = -1;
 			return;
 		}
@@ -600,7 +607,8 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 
 	entry->num_mmaps ++;
 
-	struct mmap_hash_entry *mmap_entry = calloc(1, sizeof(struct mmap_hash_entry));
+	struct mmap_hash_entry *mmap_entry =
+			calloc(1, sizeof(struct mmap_hash_entry));
 	if(mmap_entry == NULL){
 		/* Can't be allocated, KERNEL OUT OF MEMORY
 		   unmap all our PTE's*/
@@ -615,7 +623,8 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	mmap_entry->mmap_id = new_id;
 	mmap_entry->num_pages = num_pages;
 
-	struct hash_elem *returned = hash_insert(&process->mmap_table, &mmap_entry->elem);
+	struct hash_elem *returned =
+			hash_insert(&process->mmap_table, &mmap_entry->elem);
 
 	if(returned != NULL){
 		/* We have just tried to put the mmap of an identical mmap into the hash
@@ -628,19 +637,25 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	f->eax = mmap_entry->mmap_id;
 }
 
+/* Called from process exit because it can never kill and we need to make
+   sure all of the changes to the mmapped regions are saved to disk.*/
 static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
 	if(entry == NULL){
 		f->eax = -1;
 		return;
 	}
+
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+	struct thread * cur = thread_current();
+	uint32_t *pd = cur->pagedir;
 
-	fd_entry->num_mmaps --;
+	save_dirty_pages(entry);
 
-	clear_pages(thread_current()->pagedir, (uint32_t*)entry->begin_addr, entry->num_pages);
+	clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
-	struct hash_elem *returned = hash_delete(&thread_current()->process->mmap_table, &entry->elem);
+	struct hash_elem *returned =
+			hash_delete(&cur->process->mmap_table, &entry->elem);
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
@@ -680,6 +695,11 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(entry != NULL);
 
+	/* The actual reading in from the block always tries to read PGSIZE
+	   even though the last page may have many actually not be used
+	   this is because it leverages the fact that file_read will only
+	   read up till the end of the file and never more so we know we
+	   will only read the appropriate amount of data into the page*/
 	lock_acquire(&filesys_lock);
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
@@ -693,7 +713,8 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 /* System call helpers */
 
 /* Clears all of the PTE's starting at base and going to
-   num_pages.*/
+   num_pages. Clear means that it will clear its page, set its
+   medium bits to error and set it to not present.*/
 static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 	uint8_t* rm_ptr = (uint8_t*)base;
 	uint32_t j;
@@ -704,6 +725,33 @@ static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 		pagedir_set_medium(pd, rm_ptr, PTE_AVL_ERROR);
 		pagedir_clear_page(pd, rm_ptr);
 	}
+}
+
+/* Saves all of the pages that are dirty for the given mmap_hash_entry */
+void save_dirty_pages(struct mmap_hash_entry *entry){
+	struct thread * cur = thread_current();
+	uint32_t *pd = cur->pagedir;
+	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+	if(fd_entry == NULL){
+		PANIC("mmapped file was closed");
+	}
+	fd_entry->num_mmaps --;
+	/* Write all of the files out to disk */
+	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
+	uint32_t j;
+	lock_acquire(&filesys_lock);
+	uint32_t original_position = file_tell(fd_entry->open_file);
+	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
+		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)){
+			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
+			file_seek(fd_entry->open_file, offset);
+			uint32_t read_bytes = (entry->num_pages -1 == j) ?
+					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+			file_write(fd_entry->open_file, pg_ptr, PGSIZE);
+		}
+	}
+	file_seek(fd_entry->open_file, original_position);
+	lock_release(&filesys_lock);
 }
 
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
@@ -800,7 +848,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 }
 
 
- /* Returns a unsigned int representing 4 bytes of data
+/* Returns a unsigned int representing 4 bytes of data
     if there was a segfault it will set
     error to be negative, positive otherwise*/
 static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){

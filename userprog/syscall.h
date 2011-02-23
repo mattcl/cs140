@@ -8,4 +8,6 @@ void syscall_init (void);
 void system_exit (struct intr_frame *f, int status );
 bool process_mmap_read_in(uint32_t *faulting_addr);
 
+void save_dirty_pages(struct mmap_hash_entry *entry);
+
 #endif /* userprog/syscall.h */
