@@ -1,7 +1,6 @@
 
 #ifndef SWAP_H_
 #define SWAP_H_
-
 #include <hash.h>
 #include <stdint.h>
 #include <debug.h>

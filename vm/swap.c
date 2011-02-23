@@ -29,19 +29,19 @@ static struct lock swap_slots_lock;
 void swap_init (void){
 	swap_device = block_get_role(BLOCK_SWAP);
 	if(swap_device == NULL){
-		PANIC("NO SWAP!!!!");
+		PANIC("swap not created");
 	}
 
 	/* Calculate the number of swap slots supported
 	   by our swap device  */
-	uint32_t num_sectors = block_size(swap_device);
+	block_sector_t num_sectors = block_size(swap_device);
 
-	uint32_t num_slots = num_sectors/SECTORS_PER_SLOT;
+	block_sector_t num_slots = num_sectors/SECTORS_PER_SLOT;
 
-	used_swap_slots = bitmap_create(num_slots);
+	used_swap_slots = bitmap_create((uint32_t) num_slots);
 
 	if(used_swap_slots == NULL){
-		PANIC("Couldn't allocat swap bitmap");
+		PANIC("Couldn't allocate swap bitmap");
 	}
 
 	lock_init(&swap_slots_lock);
