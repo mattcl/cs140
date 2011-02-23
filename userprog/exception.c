@@ -129,7 +129,7 @@ static void page_fault (struct intr_frame *f){
 	bool write;        /* True: access was write, false: access was read. */
 	bool user;         /* True: access by user, false: access by kernel. */
 	void *fault_addr;  /* Fault address. */
-	void *pagedir = active_pd(); 	   /* The page directory used to obtain the fault */
+	void *pd = active_pd(); 	   /* The page directory used to obtain the fault */
 
 	/* Obtain faulting address, the virtual address that was
        accessed to cause the fault.  It may point to code or to
@@ -166,7 +166,13 @@ static void page_fault (struct intr_frame *f){
 		   ELSE medium_t is PTE_AVL_MEMORY (i.e. it isn't EXEC, SWAP, or MMAP),
 		   and it is not present so this process is either growing the
 		   stack or accessing invalid memory and must be killed*/
-		medium_t type = pagedir_get_medium(pagedir, fault_addr);
+		medium_t type = pagedir_get_medium(pd, fault_addr);
+
+		/* Get the page address of the faulting address, masks off
+		   the lower 12 bits and makes it a byte pointer so that
+		   we can increment it easily*/
+		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+
 
 		if(type == PTE_AVL_SWAP){
 			/* Data is not present but on swap read it in
@@ -190,34 +196,23 @@ static void page_fault (struct intr_frame *f){
 		}else if(type == PTE_AVL_ERROR){
 			if(user){
 
-			  /* For explanation of f->esp - MAX_ASM_PUSH see
-			     note on MAX_ASM_PUSH */
-
 				if(fault_addr < PHYS_BASE &&
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
+					  /* For explanation of (f->esp - MAX_ASM_PUSH) see
+					     note on MAX_ASM_PUSH */
+
 					/* Trying to grow the stack segment?*/
-
-					/* Get the page address of the faulting address*/
-					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
-					
-
-					/* NOTE READ IN OF STACK PAGES
-					   NEEDS TO BE LAZILY EVALUATED */
-
-
 					/* While the page is not present and supposed to be in memory */
-					while(!pagedir_is_present(pagedir, page_addr) &&
-							pagedir_get_medium(pagedir, page_addr) == PTE_AVL_ERROR){
-						/* Get new frame and install it at the faulting addr*/
-						uint32_t* kvaddr  = frame_get_page(PAL_USER | PAL_ZERO);
-						pagedir_install_page(page_addr, kvaddr, true);
-						/* set it to dirty so that it will be put on swap*/
-						pagedir_set_dirty(pagedir, page_addr , true);
-						/* mark it as in memory and not elsewhere right now*/
-						pagedir_set_medium(pagedir, page_addr, PTE_AVL_STACK);
+					while(!pagedir_is_present(pd, uaddr) &&
+							pagedir_get_medium(pd, uaddr) == PTE_AVL_ERROR){
+
+						/* Put a demand stack page in the page table*/
+						pagedir_setup_demand_page(pd, uaddr,
+								PTE_AVL_STACK,0 , true);
+
 						/* move to the next higher page size */
-						page_addr += PGSIZE;
+						uaddr += PGSIZE;
 					}
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
@@ -238,20 +233,12 @@ static void page_fault (struct intr_frame *f){
 				f->eax = 0xffffffff;
 			}
 		}else if(type == PTE_AVL_STACK){
-		  /* read in zero page */
+			/* read in zero page */
+			/* Get new frame and install it at the faulting addr*/
+			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO);
 
-
-
-
-
-  		    PANIC("read in zero page not yet implemented!");
-
-
-
-
-
-
-
+			/* it will be set to dirty or accessed on the retry*/
+			pagedir_install_page(uaddr, kaddr, true);
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
 		}

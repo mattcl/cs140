@@ -121,6 +121,9 @@ bool swap_read_in (void *faulting_addr){
 
 	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
 
+	/* This page will be set to accessed after the page is read in
+	   from swap so it is unnecessary to set it here*/
+
 	return true;
 }
 
