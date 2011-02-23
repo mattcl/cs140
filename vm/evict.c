@@ -36,13 +36,11 @@ n   */
 void *evict_page(struct frame_table * f_table){
   
     struct bitmap *bmap = f_table->used_frames;
-  
+    
     while(evict_hand + threshold % NUM_FRAMES < clear_hand){
     /* Our clear hand is still at least theshold bits in front of us */
-      
-    if(!pagedir_is_accesed(
-			  ;
-      
+      struct frame_hash_entry *frame = get_frame_at_position(evict_hand);;
+      if(frame->
   }
       
 
