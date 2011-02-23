@@ -46,6 +46,7 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 
 static struct file *file_for_fd (int fd, bool mmap);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
+static void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 /* Maximum size of output to to go into the putbuf command*/
 #define MAX_SIZE_PUTBUF 300
@@ -799,6 +800,13 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 		return NULL;
 	}
 	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
+}
+
+/* call all destructor for hash_destroy */
+void mmap_hash_entry_destroy (struct hash_elem *e, AUX){
+	/*File close needs to be called here */
+	save_dirty_pages(hash_entry(e, struct mmap_hash_entry, elem));
+	free(hash_entry(e, struct mmap_hash_entry, elem));
 }
 
 /* This function validates the buffer to make sure that we can read

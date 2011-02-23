@@ -1108,13 +1108,6 @@ static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 			hash_entry(b, struct mmap_hash_entry, elem)->mmap_id);
 }
 
-/* call all destructor for hash_destroy */
-static void mmap_hash_entry_destroy (struct hash_elem *e, AUX){
-	/*File close needs to be called here */
-	save_dirty_pages(hash_entry(e, struct mmap_hash_entry, elem));
-	free(hash_entry(e, struct mmap_hash_entry, elem));
-}
-
 #undef HASH_ELEM
 #undef AUX
 

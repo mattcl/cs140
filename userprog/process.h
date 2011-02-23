@@ -181,8 +181,6 @@ bool initialize_process (struct process *p, struct thread *our_thread);
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
-/* Called by system call */
-void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 /* Called by exception.c */
 bool process_exec_read_in(uint32_t *faulting_addr);
 #endif /* userprog/process.h */
