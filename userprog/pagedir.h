@@ -10,13 +10,6 @@
 #define PTE_AVL_MMAP (1 << 11) /* 100 */
 #define PTE_AVL_STACK (3 << 9)  /* 110 */
 
-#define DEFAULT_STACK_SIZE (1<<23) /* 8 MB is the default kernel stack size*/
-#define MIN_STACK_SIZE (1<<12)     /* Min size of stack is one page*/
-#define MAX_STACK_SIZE (1<<25)	   /* Absolute maximum size of stack is 32 MB */
-
-/* Global Data */
-extern uint32_t stack_size = DEFAULT_STACK_SIZE;
-
 typedef uint32_t medium_t; /* used to represent one of the constants above */
 
 uint32_t *pagedir_create (void);
