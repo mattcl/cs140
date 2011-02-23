@@ -32,4 +32,6 @@ void  *frame_get_page (enum palloc_flags flags);
 
 bool frame_clear_page (void *kernel_page_addr);
 
+
+
 #endif /* FRAME_H_ */
