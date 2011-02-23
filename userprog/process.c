@@ -400,7 +400,7 @@ void process_exit (void){
 
 	/* Free all of the swap slots that are currently occupied
 	   by this process */
-	hash_destroy(&cur_process->mmap_table, &swap_slot_destroy);
+	hash_destroy(&cur_process->swap_table, &swap_slot_destroy);
 
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle
