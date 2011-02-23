@@ -13,7 +13,6 @@
 #include "userprog/process.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
-#include "vm/page.h"
 #include "threads/init.h"
 
 /* Number of page faults processed. */

@@ -1,4 +1,4 @@
-#include "page.h"
+#include "evict.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include "threads/vaddr.h"
@@ -7,14 +7,9 @@
 #include "vm/frame.h"
 #include <debug.h>
 
-
 static size_t evict_hand;
-static site_t clear_hand;
+static size_t clear_hand;
 static size_t threshold;
-
-
-
-
 
 /* returns the key to the frame that is now available, use the entry
    to install this page into the pagedir of the evicting thread that
