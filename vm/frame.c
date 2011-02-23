@@ -45,7 +45,7 @@ void  *frame_get_page (enum palloc_flags flags){
 	//printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
 		printf("evict\n");
-		return evict_page(&f_table);
+		return evict_page();
 	}
 
 	uint8_t *kpage = palloc_get_page (flags);
@@ -106,7 +106,7 @@ uint32_t frame_table_size (void){
 	return 0;
 }
 
-struct frame_hash_entry  *frame_at_position(size_t bit_num){
+struct frame_hash_entry *frame_at_position(size_t bit_num){
 
 	return NULL;
 }
