@@ -36,7 +36,7 @@ void swap_init (void){
 	   by our swap device  */
 	uint32_t num_sectors = block_size(swap_device);
 
-	uint32_t num_slots = num_sectors/SECTORS_PER_SLOT;
+	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
 	used_swap_slots = bitmap_create(num_slots);
 
@@ -46,7 +46,6 @@ void swap_init (void){
 
 	lock_init(&swap_slots_lock);
 }
-
 
 /* Takes the data from the page pointed to by kvaddr and moves that content
    to an available swap slot, if there is no swap slot currently available
@@ -100,7 +99,7 @@ bool swap_allocate (void * kvaddr, void *uaddr){
 	uint8_t *page_ptr = (uint8_t*)kvaddr;
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
 	uint32_t i;
-	for(i=0; i < SECTORS_PER_SLOT; i++, start_sector++,
+	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++,
 									    page_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, page_ptr);
 	}
@@ -187,7 +186,7 @@ bool swap_read_in (void *faulting_addr){
 
 /* Function that hashes the individual elements in the swap hash table
    this function hashes the vaddr, because all virtual
-   addresses are unique in each process we know that this will not
+   addresses are unique in each process-- we know that this will not
    produce collisions*/
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->vaddr,
