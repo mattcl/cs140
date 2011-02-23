@@ -1,6 +1,6 @@
 #include "frame.h"
 #include <debug.h>
-#include "page.h"
+#include "evict.h"
 #include "threads/thread.h"
 #include <bitmap.h>
 #include <hash.h>
