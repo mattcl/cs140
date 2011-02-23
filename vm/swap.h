@@ -19,8 +19,7 @@ bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b,
 
 void swap_init (void);
 
-bool swap_allocate (void * kvaddr, void *uaddr);
-
 bool swap_read_in (void *faulting_addr);
+bool swap_read_out (void * kvaddr, void *uaddr);
 
 #endif /* SWAP_H_ */

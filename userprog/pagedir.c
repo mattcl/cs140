@@ -435,3 +435,18 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	return true;
 }
 
+/* Clears all of the PTE's starting at base and going to
+   num_pages. Clear means that it will clear its page, set its
+   medium bits to error and set it to not present.*/
+void pagedir_clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
+	uint8_t* rm_ptr = (uint8_t*)base;
+	uint32_t j;
+	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
+		if(pagedir_is_present(pd, rm_ptr)){
+			frame_clear_page(pagedir_get_page(pd, rm_ptr));
+		}
+		pagedir_set_medium(pd, rm_ptr, PTE_AVL_ERROR);
+		pagedir_clear_page(pd, rm_ptr);
+	}
+}
+

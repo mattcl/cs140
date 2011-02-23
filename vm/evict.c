@@ -31,28 +31,50 @@ static void *relocate_page (struct frame_hash_entry *frame);
 
    MMAP - If we evict an mmapped page we write it back to the file system.   */
 void *evict_page(void){
-
+	struct frame_hash_entry *frame ;
+	struct frame_hash_entry *frame_to_clear;
 	while((evict_hand + threshold) % frame_table_size() < clear_hand){
 		/* Our clear hand is still at least theshold bits in front of us */
-		struct frame_hash_entry *frame = frame_at_position(evict_hand);
+		frame= frame_at_position(evict_hand);
+		evict_hand ++;
+
 		ASSERT(frame != NULL);
 		/*return the first page we find that has not been accesed */
-		if(!pagedir_is_accessed(frame->current_page_dir,frame->page)){
+		if(!pagedir_is_accessed(frame->current_page_dir,frame->page)
+				&& !frame->pinned_to_frame){
 			/*  evict page from frame moving it to the appropriate
 		location and return the kernel virtual address of the 
 		physical page represented by the evict_hand in the bitmap*/
 			return relocate_page(frame);
 		}
-
 	}
+
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
+	while(true){
+		frame = frame_at_position(evict_hand);
+		frame_to_clear = frame_at_position(clear_hand);
+
+		evict_hand++;
+		clear_hand++;
+
+		pagedir_set_accessed(frame_to_clear->current_page_dir, frame_to_clear->page, false);
+
+		if(!pagedir_is_accessed(frame->current_page_dir, frame->page)
+				&& !frame->pinned_to_frame){
+			return relocate_page(frame);
+		}
+	}
 }
 
 void evict_init(void){
 	threshold = 1;
 	evict_hand = 0;
 	clear_hand = evict_hand + threshold;
+}
+
+void clear_until_threshold(){
+
 }
 
 static void *relocate_page (struct frame_hash_entry *frame){

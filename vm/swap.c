@@ -47,68 +47,6 @@ void swap_init (void){
 	lock_init(&swap_slots_lock);
 }
 
-/* Takes the data from the page pointed to by kvaddr and moves that content
-   to an available swap slot, if there is no swap slot currently available
-   it panics the kernel, kvaddr is assumed to point to a valid frame, sets
-   the bits in the page table entry for the uaddr that referenced this frame
-   so that it can find this  swap slot
-   You should only allocate a swap slot for this particular frame and virtual
-   address if the PTE says that this page has been modified since it was
-   created, or if it is a stack segment that has been accessed*/
-bool swap_allocate (void * kvaddr, void *uaddr){
-	struct thread *cur = thread_current();
-	struct process *cur_process = cur->process;
-
-	/*Set the auxilary data so that it can index into the swap table*/
-	pagedir_set_aux(cur->pagedir, uaddr, (uint32_t)uaddr);
-
-	/* indicate that this is on swap */
-	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
-
-	/* Force a page fault when we are lookin this virtual address up
-	   clear page preserves all the other bits in the PTE sets the
-	   present bit to 0*/
-	pagedir_clear_page(cur->pagedir, uaddr);
-
-	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
-
-	if(new_entry == NULL){
-		PANIC("KERNEL OUT OF MEMORRY");
-	}
-
-	new_entry->vaddr = (uint32_t)uaddr;
-
-	lock_acquire(&swap_slots_lock);
-
-	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
-
-	if(swap_slot == BITMAP_ERROR){
-		PANIC("SWAP IS FULL BABY");
-	}
-
-	new_entry->swap_slot = swap_slot;
-
-	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
-			&new_entry->elem);
-	if(returned != NULL){
-		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
-	}
-
-	/* move the data from kvaddr to the newly allocated swap slot*/
-	/*uint8_t so that incrementing is easy*/
-	uint8_t *page_ptr = (uint8_t*)kvaddr;
-	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
-	uint32_t i;
-	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++,
-	page_ptr += BLOCK_SECTOR_SIZE){
-		block_write(swap_device, start_sector, page_ptr);
-	}
-
-	lock_release(&swap_slots_lock);
-
-	return true;
-}
-
 /* Takes the faulting addr and then reads the data back into main memory
    setting the pagedir to point to the new location, obtained using frame.h's
    frame_get_page function which might evict something else of the data that
@@ -195,6 +133,68 @@ bool swap_read_in (void *faulting_addr){
 	pagedir_set_medium(cur->pagedir, faulting_addr, PTE_AVL_ERROR);
 
 	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
+
+	return true;
+}
+
+/* Takes the data from the page pointed to by kvaddr and moves that content
+   to an available swap slot, if there is no swap slot currently available
+   it panics the kernel, kvaddr is assumed to point to a valid frame, sets
+   the bits in the page table entry for the uaddr that referenced this frame
+   so that it can find this  swap slot
+   You should only allocate a swap slot for this particular frame and virtual
+   address if the PTE says that this page has been modified since it was
+   created, or if it is a stack segment that has been accessed*/
+bool swap_read_out (void * kvaddr, void *uaddr){
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+
+	/*Set the auxilary data so that it can index into the swap table*/
+	pagedir_set_aux(cur->pagedir, uaddr, (uint32_t)uaddr);
+
+	/* indicate that this is on swap */
+	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_SWAP);
+
+	/* Force a page fault when we are lookin this virtual address up
+	   clear page preserves all the other bits in the PTE sets the
+	   present bit to 0*/
+	pagedir_clear_page(cur->pagedir, uaddr);
+
+	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
+
+	if(new_entry == NULL){
+		PANIC("KERNEL OUT OF MEMORRY");
+	}
+
+	new_entry->vaddr = (uint32_t)uaddr;
+
+	lock_acquire(&swap_slots_lock);
+
+	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
+
+	if(swap_slot == BITMAP_ERROR){
+		PANIC("SWAP IS FULL BABY");
+	}
+
+	new_entry->swap_slot = swap_slot;
+
+	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
+			&new_entry->elem);
+	if(returned != NULL){
+		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
+	}
+
+	/* move the data from kvaddr to the newly allocated swap slot*/
+	/*uint8_t so that incrementing is easy*/
+	uint8_t *page_ptr = (uint8_t*)kvaddr;
+	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
+	uint32_t i;
+	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++,
+	page_ptr += BLOCK_SECTOR_SIZE){
+		block_write(swap_device, start_sector, page_ptr);
+	}
+
+	lock_release(&swap_slots_lock);
 
 	return true;
 }

@@ -39,4 +39,6 @@ bool pagedir_install_page (void *upage, void *kpage, bool writable);
 bool pagedir_setup_demand_page(uint32_t* pd, void *uaddr, medium_t medium ,
 										    uint32_t data, bool writable);
 
+void pagedir_clear_pages(uint32_t* pd, void *base, uint32_t num_pages);
+
 #endif /* userprog/pagedir.h */

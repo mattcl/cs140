@@ -31,10 +31,9 @@ static void system_write (struct intr_frame *f, int fd, const void *buffer, unsi
 static void system_seek (struct intr_frame *f, int fd, unsigned int position );
 static void system_tell (struct intr_frame *f, int fd );
 static void system_close (struct intr_frame *f, int fd );
-static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr);
+static void system_mmap (struct intr_frame *f, int fd, void *uaddr);
 static void system_munmap (struct intr_frame *f, mapid_t map_id);
 
-static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages);
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
@@ -46,6 +45,7 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 
 static struct file *file_for_fd (int fd, bool mmap);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
+static void mmap_save_all(struct mmap_hash_entry *entry);
 static void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 /* Maximum size of output to to go into the putbuf command*/
@@ -521,7 +521,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 }
 
 
-static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
+static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
 	   verifies the fd*/
@@ -530,8 +530,8 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 		return;
 	}
 	/* verify the virtual addr */
-	if( ((uint32_t)virtual_addr % PGSIZE) != 0 || virtual_addr == NULL
-			|| !is_user_vaddr(virtual_addr)){
+	if( ((uint32_t)uaddr % PGSIZE) != 0 || uaddr == NULL
+			|| !is_user_vaddr(uaddr)){
 		f->eax = -1;
 		return;
 	}
@@ -557,7 +557,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	   the stack and the mmapped segment. This also means that the user may
 	   actually grow the stack larger than the max size by cleverly mmapping
 	   files*/
-	if((uint32_t)virtual_addr + (num_pages * PGSIZE) >
+	if((uint32_t)uaddr + (num_pages * PGSIZE) >
 			(uint32_t)PHYS_BASE - (stack_size)){
 		f->eax = -1;
 		return;
@@ -569,7 +569,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	/* Here we passed the simple ish so now we are going to check if
 	   any of the memory requested is already mapped in the virtual
 	   address space*/
-	uint8_t *temp_ptr = (uint8_t*)virtual_addr;
+	uint8_t *temp_ptr = (uint8_t*)uaddr;
 	uint32_t i;
 	for(i = 0; i < num_pages; i ++, temp_ptr += PGSIZE){
 		if(pagedir_is_mapped(pd, temp_ptr)){
@@ -579,12 +579,10 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 			return;
 		}
 	}
+
 	/* All of the pages that are being requested are not mapped if we get
 	   here, including other mmapped files that this user has so set up
 	   pages.*/
-
-	bool pagedir_setup_demand_page(uint32_t* pd, void *uaddr, medium_t medium ,
-			uint32_t data, bool writable);
 
 	mapid_t new_id = process->mapid_counter++;
 
@@ -598,13 +596,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
-	for(i = 0, temp_ptr = (uint8_t*)virtual_addr; i < num_pages;
+	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
 			i ++, temp_ptr += PGSIZE){
 		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP,
 				aux_data, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
-			clear_pages(pd, virtual_addr, i);
+			pagedir_clear_pages(pd, uaddr, i);
 			f->eax = -1;
 			return;
 		}
@@ -619,13 +617,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
 	if(mmap_entry == NULL){
 		/* Can't be allocated, KERNEL OUT OF MEMORY
 		   unmap all our PTE's*/
-		clear_pages(pd, virtual_addr, num_pages);
+		pagedir_clear_pages(pd, uaddr, num_pages);
 		f->eax = -1;
 		return;
 	}
 
-	mmap_entry->begin_addr = (uint32_t)virtual_addr;
-	mmap_entry->end_addr  =  (uint32_t)virtual_addr + (num_pages*PGSIZE);
+	mmap_entry->begin_addr = (uint32_t)uaddr;
+	mmap_entry->end_addr  =  (uint32_t)uaddr + (num_pages*PGSIZE);
 	mmap_entry->fd = entry->fd;
 	mmap_entry->mmap_id = new_id;
 	mmap_entry->num_pages = num_pages;
@@ -657,9 +655,9 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 
-	save_dirty_pages(entry);
+	mmap_save_all(entry);
 
-	clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
+	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
 	struct hash_elem *returned =
 			hash_delete(&cur->process->mmap_table, &entry->elem);
@@ -678,11 +676,11 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 }
 
 /* Read in the appropriate file block from disk */
-bool process_mmap_read_in(uint32_t *faulting_addr){
+bool mmap_read_in(uint32_t *faulting_addr){
 	struct thread *cur = thread_current();
 
 	/* Mask off the lower 12 bits */
-	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
+	uint32_t uaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
 
 	uint32_t map_id = pagedir_get_aux(cur->pagedir, faulting_addr);
 
@@ -695,53 +693,104 @@ bool process_mmap_read_in(uint32_t *faulting_addr){
 		return false;
 	}
 
-	uint32_t offset = vaddr - entry->begin_addr;
+	uint32_t offset = uaddr - entry->begin_addr;
 
-	uint32_t *kvaddr = frame_get_page(PAL_USER|PAL_ZERO);
+	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(entry != NULL);
 
 	/* The actual reading in from the block always tries to read PGSIZE
-	   even though the last page may have many actually not be used
-	   this is because it leverages the fact that file_read will only
-	   read up till the end of the file and never more so we know we
-	   will only read the appropriate amount of data into the page*/
+	   bytes even though the last page may have many zeros that don't
+	   belong to the file. This is because it leverages the fact that
+	   file_read will only read up untill the end of the file and
+	   never more so we know we will only read the appropriate amount
+	   of data into our zero page*/
 	lock_acquire(&filesys_lock);
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
-	file_read(fd_entry->open_file, kvaddr, PGSIZE);
+	file_read(fd_entry->open_file, kaddr, PGSIZE);
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
-	return pagedir_install_page((uint32_t*)vaddr, (uint32_t*)kvaddr, true);
+	bool success =
+			pagedir_install_page((uint32_t*)uaddr, (uint32_t*)kaddr, true);
+
+	/* Make sure that we stay consistent with our naming scheme
+	   of memory*/
+	pagedir_set_medium(cur->pagedir, uaddr, PTE_AVL_MMAP);
+
+	/*"Kernel out of memory! if false;"*/
+	return success;
+}
+
+static struct mmap_hash_entry *uaddr_to_mmap_entry(uint32_t *uaddr){
+	struct hash_iterator i;
+	struct hash_elem *e;
+	hash_first (&i, thread_current()->process->mmap_table);
+	while((e = hash_next(&i)) != NULL){
+		struct mmap_hash_entry *test =
+				hash_entry(e, struct mmap_hash_entry, elem);
+		if((uint32_t)uaddr < test->end_addr &&
+				(uint32_t)uaddr > test->begin_addr){
+			return test;
+		}
+	}
+	return NULL;
+}
+
+bool mmap_read_out(uint32_t *pd, uint32_t *uaddr){
+	if(!pagedir_is_present(pd, uaddr)){
+		/* Can't read back to disk if the memory isn't
+		   actually present*/
+		return false;
+	}
+
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(uaddr);
+	if(entry == NULL){
+		return false;
+	}
+
+	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+
+	/* The file should never be closed as long as there is a
+	   mmapping to it */
+	ASSERT(entry != NULL);
+
+	lock_acquire(&filesys_lock);
+	uint32_t offset = (uint32_t) uaddr - entry->begin_addr;
+	file_seek(fd_entry->open_file, offset);
+	uint32_t write_bytes = (entry->num_pages -1 == j) ?
+			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+	file_write(fd_entry->open_file, uaddr, write_bytes);
+	lock_release(&filesys_lock);
+
+	int32_t aux_data = entry->mmap_id << 12;
+
+	frame_clear_page(pagedir_get_page(pd, uaddr));
+
+	/* Clear this page so that it can be used, and set this PTE
+	   back to on demand status*/
+	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_MMAP,
+			aux_data, true)){
+		/* This virtual address cannot be allocated so we have an error*/
+		return false;
+	}
+	return true;
 }
 
 /* System call helpers */
 
-/* Clears all of the PTE's starting at base and going to
-   num_pages. Clear means that it will clear its page, set its
-   medium bits to error and set it to not present.*/
-static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
-	uint8_t* rm_ptr = (uint8_t*)base;
-	uint32_t j;
-	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
-		if(pagedir_is_present(pd, rm_ptr)){
-			frame_clear_page(pagedir_get_page(pd, rm_ptr));
-		}
-		pagedir_set_medium(pd, rm_ptr, PTE_AVL_ERROR);
-		pagedir_clear_page(pd, rm_ptr);
-	}
-}
-
 /* Saves all of the pages that are dirty for the given mmap_hash_entry */
-void save_dirty_pages(struct mmap_hash_entry *entry){
+static void mmap_save_all(struct mmap_hash_entry *entry){
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
-	if(fd_entry == NULL){
-		PANIC("mmapped file was closed");
-	}
+
+	/* The file should never be closed as long as there is a
+	   mmapping to it */
+	ASSERT(fd_entry == NULL);
+
 	fd_entry->num_mmaps --;
 	/* Write all of the files out to disk */
 	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
@@ -752,9 +801,9 @@ void save_dirty_pages(struct mmap_hash_entry *entry){
 		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)){
 			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
 			file_seek(fd_entry->open_file, offset);
-			uint32_t read_bytes = (entry->num_pages -1 == j) ?
+			uint32_t write_bytes = (entry->num_pages -1 == j) ?
 					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-			file_write(fd_entry->open_file, pg_ptr, read_bytes);
+			file_write(fd_entry->open_file, pg_ptr, write_bytes);
 		}
 	}
 	file_seek(fd_entry->open_file, original_position);
@@ -805,7 +854,7 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 /* call all destructor for hash_destroy */
 void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
-	save_dirty_pages(hash_entry(e, struct mmap_hash_entry, elem));
+	mmap_save_all(hash_entry(e, struct mmap_hash_entry, elem));
 	free(hash_entry(e, struct mmap_hash_entry, elem));
 }
 

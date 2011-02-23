@@ -183,7 +183,7 @@ static void page_fault (struct intr_frame *f){
 				kill(f);
 			}
 		}else if(type == PTE_AVL_MMAP){
-			if(!process_mmap_read_in(fault_addr)){
+			if(!mmap_read_in(fault_addr)){
 				printf("Couldn't load page from mmaped file");
 				kill(f);
 			}
@@ -239,7 +239,19 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_AVL_STACK){
 		  /* read in zero page */
+
+
+
+
+
   		    PANIC("read in zero page not yet implemented!");
+
+
+
+
+
+
+
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
