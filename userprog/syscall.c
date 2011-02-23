@@ -3,7 +3,6 @@
 #include <syscall-nr.h>
 #include "threads/thread.h"
 #include "threads/synch.h"
-#include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
 #include <console.h>

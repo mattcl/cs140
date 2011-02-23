@@ -2,6 +2,7 @@
 #define USERPROG_SYSCALL_H
 #include "filesys/file.h"
 #include "threads/interrupt.h"
+#include "userprog/process.h"
 void syscall_init (void);
 
 /* Also called from exception.c */
