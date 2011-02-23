@@ -726,33 +726,6 @@ static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 	}
 }
 
-/* Saves all of the pages that are dirty for the given mmap_hash_entry */
-void save_dirty_pages(struct mmap_hash_entry *entry){
-	struct thread * cur = thread_current();
-	uint32_t *pd = cur->pagedir;
-	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
-	if(fd_entry == NULL){
-		PANIC("mmapped file was closed");
-	}
-	fd_entry->num_mmaps --;
-	/* Write all of the files out to disk */
-	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
-	uint32_t j;
-	lock_acquire(&filesys_lock);
-	uint32_t original_position = file_tell(fd_entry->open_file);
-	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
-		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)){
-			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
-			file_seek(fd_entry->open_file, offset);
-			uint32_t read_bytes = (entry->num_pages -1 == j) ?
-					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-			file_write(fd_entry->open_file, pg_ptr, PGSIZE);
-		}
-	}
-	file_seek(fd_entry->open_file, original_position);
-	lock_release(&filesys_lock);
-}
-
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 	struct process *process = thread_current()->process;
 	struct mmap_hash_entry key;
