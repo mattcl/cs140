@@ -13,6 +13,7 @@
 #include "userprog/process.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -182,14 +183,18 @@ static void page_fault (struct intr_frame *f){
 				kill(f);
 			}
 		}else if(type == PTE_AVL_MMAP){
-
+			if(!process_mmap_read_in(fault_addr)){
+				printf("Couldn't load page from mmaped file");
+				kill(f);
+			}
 		}else if(type == PTE_AVL_MEMORY){
-
 			if(user){
-
 				if(fault_addr < PHYS_BASE &&
-						(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH)){
+					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
+					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
 					/* Trying to grow the stack segment?*/
+
+					/* Get the page address of the faulting address*/
 					uint8_t *page_addr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 					/* While the page is not present and supposed to be in memory */

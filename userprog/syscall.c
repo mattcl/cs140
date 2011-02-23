@@ -20,15 +20,19 @@ static void system_halt (struct intr_frame *f );
 static void system_exec (struct intr_frame *f, const char *cmd_line );
 static void system_wait (struct intr_frame *f, pid_t pid );
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size );
-static void system_remove(struct intr_frame *f, const char *file_name );
+static void system_remove (struct intr_frame *f, const char *file_name );
 static void system_open (struct intr_frame *f, const char *file_name );
-static void system_filesize(struct intr_frame *f, int fd );
-static void system_read(struct intr_frame *f, int fd , void *buffer, unsigned int size );
-static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size);
-static void system_seek(struct intr_frame *f, int fd, unsigned int position );
-static void system_tell(struct intr_frame *f, int fd );
-static void system_close(struct intr_frame *f, int fd );
+static void system_filesize (struct intr_frame *f, int fd );
+static void system_read (struct intr_frame *f, int fd , void *buffer, unsigned int size );
+static void system_write (struct intr_frame *f, int fd, const void *buffer, unsigned int size);
+static void system_seek (struct intr_frame *f, int fd, unsigned int position );
+static void system_tell (struct intr_frame *f, int fd );
+static void system_close (struct intr_frame *f, int fd );
+static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr);
+static void system_munmap (struct intr_frame *f, mapid_t map_id);
 
+static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages);
+static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
 static bool string_is_valid(const char* str);
@@ -37,7 +41,7 @@ static unsigned int get_user_int(const uint32_t *uaddr, int *error);
 static int get_user(const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
-static struct file *file_for_fd (int fd);
+static struct file *file_for_fd (int fd, bool mmap);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
 /* Maximum size of output to to go into the putbuf command*/
@@ -203,11 +207,17 @@ static void syscall_handler (struct intr_frame *f){
 	}
 }
 
+/* General note: if the user passes in a pointer to memory
+   that is not valid and would have page faulted the process
+   will get killed. For other errors the function will just
+   fail silently */
+
+/* Halts the system*/
 static void system_halt (struct intr_frame *f UNUSED){
 	shutdown_power_off();
 }
 
-
+/* Exits the currently running process*/
 void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
 	printf("%s: exit(%d)\n", proc->program_name, status);
@@ -216,11 +226,12 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	NOT_REACHED();
 }
 
-
+/* Starts a new child process with the given file name
+   returns -1 if the process could not start, kills if
+   cmd_line points to invalid memory*/
 static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if(!string_is_valid(cmd_line)){
-		f->eax = -1;
-		return;
+		system_exit(f, -1);
 	}
 	tid_t returned = process_execute(cmd_line);
 	if(returned == TID_ERROR){
@@ -236,6 +247,11 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	}
 }
 
+/* Waits on the given pid to finish and returns that pid's
+   exit code upon completion. Returns -1 if the pid isn't
+   a valid child or if this pid has already been waited on
+   once. But we still have the exit code so we could actually
+   return the exit code again if it wouldn't fail a test */
 static void system_wait (struct intr_frame *f, pid_t pid){
 	tid_t child_tid;
 	if((child_tid = child_pid_to_tid(pid)) == PID_ERROR){
@@ -246,6 +262,9 @@ static void system_wait (struct intr_frame *f, pid_t pid){
 	f->eax = process_wait(child_tid);
 }
 
+/* Creates a new file by the name of filename. It doesn't open
+   the file though. The error code from the filesystem is passed
+   back. Kills if file_name points to invalid memory*/
 static void system_create (struct intr_frame *f, const char *file_name, unsigned int initial_size){
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
@@ -255,6 +274,8 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	lock_release(&filesys_lock);
 }
 
+/* removes a file by the name of file name returns the value from
+   the filesystem. Kills if file_name points to invalid memory*/
 static void system_remove(struct intr_frame *f, const char *file_name){
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
@@ -264,6 +285,8 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 	lock_release(&filesys_lock);
 }
 
+/* Opens the file by the name of file_name returns -1 if the file
+   wasn't opened. Kills if the file_name refers to invalid memory*/
 static void system_open (struct intr_frame *f, const char *file_name){
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
@@ -287,7 +310,8 @@ static void system_open (struct intr_frame *f, const char *file_name){
 
 	fd_entry->fd = ++(process->fd_count);
 	fd_entry->open_file = opened_file;
-
+	fd_entry->is_closed = false;
+	fd_entry->is_mmaped = false;
 	struct hash_elem *returned = hash_insert(&process->open_files, &fd_entry->elem);
 
 	if(returned != NULL){
@@ -300,8 +324,10 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	f->eax = fd_entry->fd;
 }
 
+/* Returns the size of the file for the fd, or -1 if the fd
+   is invalid */
 static void system_filesize(struct intr_frame *f, int fd){
-	struct file *open_file = file_for_fd(fd);
+	struct file *open_file = file_for_fd(fd, false);
 	if(open_file == NULL){
 		f->eax = -1;
 		return;
@@ -312,6 +338,10 @@ static void system_filesize(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
+/* Reads size bytes into buffer an returns the number of bytes
+   actually written. Kills if the buffer refers to invalid memory
+   or if the buffer refers to memory that is read only. Checks to make
+   sure that buffer is contiguous*/
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
 	if(!buffer_is_valid_writable(buffer, size)){
 		system_exit(f, -1);
@@ -334,7 +364,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		return;
 	}
 
-	struct file * file = file_for_fd(fd);
+	struct file * file = file_for_fd(fd, false);
 
 	if(file == NULL){
 		f->eax = 0;
@@ -347,6 +377,9 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	f->eax = bytes_read;
 }
 
+/* Writes size bytes from buffer to the fd. Returns the number of bytes written
+   to the fd. If the buffer does not refer to contiguous valid memory then this
+   will kill the process.*/
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
 	if(!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
@@ -373,7 +406,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 		return;
 	}
 
-	struct file * open_file = file_for_fd(fd);
+	struct file * open_file = file_for_fd(fd, false);
 
 	if(open_file == NULL){
 		f->eax = 0;
@@ -386,8 +419,13 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	f->eax = bytes_written;
 }
 
+/* Seeks to the position in the file described by fd. If the offset is
+   larger than the size of the file it will return -1. If the fd is invalid
+   it will return -1. if it completes the seek it will return 1. But seek
+   is a void funciton so these numbers are actually meaningless
+ */
 static void system_seek(struct intr_frame *f, int fd, unsigned int position){
-	struct file *file = file_for_fd(fd);
+	struct file *file = file_for_fd(fd, false);
 	if(file == NULL){
 		f->eax = -1;
 		return;
@@ -416,11 +454,13 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	file_seek(file, position);
 	lock_release(&filesys_lock);
 
-	f->eax = -1;
+	f->eax = 1;
 }
 
+/* Returns the position of the file described by fd, or
+   -1 if the fd is not valid */
 static void system_tell(struct intr_frame *f, int fd){
-	struct file *open_file = file_for_fd(fd);
+	struct file *open_file = file_for_fd(fd, false);
 	if(open_file == NULL){
 		f->eax = -1;
 		return;
@@ -431,37 +471,275 @@ static void system_tell(struct intr_frame *f, int fd){
 	lock_release(&filesys_lock);
 }
 
+/* Closes the file described by fd and removes fd from the list of open
+   files for this process. Does nothing if fd is invalid*/
 static void system_close(struct intr_frame *f UNUSED, int fd ){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
-	if(entry == NULL){
+	/* Can't close something that is already closed */
+	if(entry == NULL || entry->is_closed){
+		f->eax = -1;
 		return;
 	}
 
 	/* if fd was stdin or stdout it CAN'T be in the fd table
-	   so it won't get here if STDIN or STDOUT  is passed in*/
-	lock_acquire(&filesys_lock);
-	file_close(entry->open_file);
-	lock_release(&filesys_lock);
+	   so it won't get here if STDIN or STDOUT  is passed in.
+	   If this fd is not mmapped then we can actually delete
+	   it and remove it from the hash, otherwise we will mark
+	   it as closed but not really close it. This will be called
+	   again on system munmap, which will set both flags to false
+	   so that it will actually remove the file.*/
+	if(entry->num_mmaps == 0){
+		lock_acquire(&filesys_lock);
+		file_close(entry->open_file);
+		lock_release(&filesys_lock);
+		struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
+		if(returned == NULL){
+			/* We have just tried to delete a fd that was not in our fd table....
+				   This Is obviously a huge problem so system KILLLLLLL!!!! */
+			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+		}
 
-	struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
+		free(entry);
+
+	}else{
+		entry->is_closed = true;
+	}
+}
+
+//struct mmap_hash_entry{
+//  mmapid_t mmap_id;     	/* Key into the hash table*/
+//	uint32_t begin_addr;	/* start address of this mmapping*/
+//    uint32_t end_addr;		/* While we can calculate this from the filesize
+//							   accessing the disk in any way is too slow so just
+//							   keep it stored in memory*/
+//	int fd;					/* FD for this mapping*/
+//	struct hash_elem elem;  /* hash elem*/
+//};
+
+static void system_mmap (struct intr_frame *f, int fd, void *virtual_addr){
+	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
+	/* Can't mmap a closed file. Fd to hash_entry also implicitly
+	   verifies the fd*/
+	if(entry == NULL || entry->is_closed){
+		f->eax = -1;
+		return;
+	}
+	/* verify the virtual addr */
+	if(virtual_addr%PGSIZE != 0 || virtual_addr == NULL
+			|| !is_user_vaddr(virtual_addr)){
+		f->eax = -1;
+		return;
+	}
+
+	/* Bounds checking */
+	lock_acquire(&filesys_lock);
+	int32_t length = file_length(entry->open_file);
+	lock_release(&filesys_lock);
+	if(length < 1){
+		f->eax = -1;
+		return;
+	}
+
+	/*Number of pages to allocate*/
+	uint32_t num_pages = length / PGSIZE;
+	if(length % PGSIZE != 0){
+		num_pages ++;
+	}
+
+	/* If the end of the mmap would collide with the maximum size of the stack
+	   or go into userspace then we can't map this ish*/
+	if((uint32_t)virtual_addr + (num_pages*PGSIZE) >=   	/* might be just > */
+								(uint32_t)PHYS_BASE -(stack_size)){
+		f->eax = -1;
+		return;
+	}
+
+	struct thread *cur = thread_current();
+	struct process *process = cur->process;
+	uint32_t *pd = cur->pagedir;
+	/* Here we passed the simple ish so now we are going to check if
+	   any of the memory requested is already mapped in the virtual
+	   address space*/
+	uint8_t *temp_ptr = (uint8_t*)virtual_addr;
+	uint32_t i, j;
+	for(i = 0; i < num_pages; i ++, temp_ptr += PGSIZE){
+		if(pagedir_is_mapped(pd, temp_ptr)){
+			/* if this virtual address is mapped then we can't create
+			   this mmap */
+			f->eax = -1;
+			return;
+		}
+	}
+	/* All of the pages that are being requested are not mapped if we get
+	   here, including other mmapped files that this user has so set up
+	   pages.*/
+
+	bool pagedir_setup_demand_page(uint32_t* pd, void *uaddr, medium_t medium ,
+											    uint32_t data, bool writable);
+
+	mapid_t new_id = process->mapid_counter++;
+
+	/* We can only store 20 bits worth of the unsigned int in the
+	   PTE so we know have overflow*/
+	if(process->mapid_counter > (1<<20)){
+		PANIC("map_id overflow");
+	}
+
+	uint32_t aux_data = new_id << 12;
+
+	/* Try to setup all of the pages. Will only fail when kernel out of
+	   memory*/
+	for(i = 0, temp_ptr = (uint8_t)virtual_addr; i < num_pages; i ++, temp_ptr += PGSIZE){
+		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP, aux_data, true)){
+			/* This virtual address cannot be allocated so we have an error...
+			   Clear the addresses that have been set*/
+			clear_pages(pd, virtual_addr, i+1); /* maybe i +1*/
+			f->eax = -1;
+			return;
+		}
+	}
+
+	/* If we get here all pages are on demand and ready to be faulted in*/
+
+	entry->num_mmaps ++;
+
+	struct mmap_hash_entry *mmap_entry = calloc(1, sizeof(struct mmap_hash_entry));
+	if(mmap_entry == NULL){
+		/* Can't be allocated, KERNEL OUT OF MEMORY
+		   unmap all our PTE's*/
+		clear_pages(pd, virtual_addr, num_pages);
+		f->eax = -1;
+		return;
+	}
+
+	mmap_entry->begin_addr = (uint32_t)virtual_addr;
+	mmap_entry->end_addr  =  (uint32_t)virtual_addr + (num_pages*PGSIZE);
+	mmap_entry->fd = entry->fd;
+	mmap_entry->mmap_id = new_id;
+	mmap_entry->num_pages = num_pages;
+
+	struct hash_elem *returned = hash_insert(&process->mmap_table, &mmap_entry->elem);
+
+	if(returned != NULL){
+		/* We have just tried to put the mmap of an identical mmap into the hash
+		   Table this is a problem with the hash table and should fail the kernel
+		   Cause our memory has been corrupted somehow. Or our hash function isn't
+		   working appropriately */
+		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+	}
+
+	f->eax = mmap_entry->mmap_id;
+}
+
+static void system_munmap (struct intr_frame *f, mapid_t map_id){
+	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
+	if(entry == NULL){
+		f->eax = -1;
+		return;
+	}
+	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+
+	fd_entry->num_mmaps --;
+
+	clear_pages(thread_current()->pagedir, entry->begin_addr, entry->num_pages);
+
+	struct hash_elem *returned = hash_delete(&thread_current()->process->mmap_table, &entry->elem);
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
-		PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+		PANIC("ERROR WITH HASH IN munmap!! CLOSE");
 	}
 
 	free(entry);
+
+	if(fd_entry->num_mmaps == 0  && fd_entry->is_closed){
+		fd_entry->is_closed = false;
+		system_close(f, fd_entry->fd);
+	}
 }
 
-/* Returns the file or NULL if the fd is invalid */
-static struct file *file_for_fd (int fd){
+/* Read in the appropriate file block from disk */
+bool process_mmap_read_in(uint32_t *faulting_addr){
+	struct thread *cur = thread_current();
+	struct process *cur_process = cur->process;
+
+	/* Mask off the lower 12 bits */
+	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
+
+	uint32_t map_id = pagedir_get_aux(cur->pagedir, faulting_addr);
+
+	/* shift the map_id down by 12 bits */
+	map_id = map_id >> 12;
+
+	/* Get hash entry if it exists */
+	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
+	if(entry == NULL){
+		return false;
+	}
+
+	uint32_t offset = vaddr - entry->begin_addr;
+
+	uint32_t *kvaddr = frame_get_page(PAL_USER|PAL_ZERO);
+
+	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
+	ASSERT(entry != NULL);
+
+	lock_acquire(&filesys_lock);
+	off_t original_spot = file_tell(fd_entry->open_file);
+	file_seek(fd_entry->open_file, offset);
+	file_read(fd_entry->open_file, kvaddr, PGSIZE);
+	file_seek(original_spot);
+	lock_release(&filesys_lock);
+
+	return pagedir_install_page(vaddr, kvaddr, true);
+}
+
+/* System call helpers */
+
+/* Clears all of the PTE's starting at base and going to
+   num_pages.*/
+static void clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
+	uint8_t rm_ptr = (uint8_t)base;
+	int j;
+	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
+		if(pagedir_is_present(pd, rm_ptr)){
+			frame_clear_page(pagedir_get_page(pd, rm_ptr));
+		}
+		pagedir_set_medium(pd, rm_ptr, PTE_AVL_MEMORY);
+		pagedir_clear_page(pd, rm_ptr);
+	}
+}
+
+static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
+	struct process *process = thread_current()->process;
+	struct mmap_hash_entry key;
+	key.mmap_id = mid;
+	struct hash_elem *map_hash_elem = hash_find(&process->mmap_table, &key.elem);
+	if(map_hash_elem == NULL){
+		return NULL;
+	}
+	return hash_entry(map_hash_elem, struct mmap_hash_entry, elem);
+}
+
+/* Returns the file or NULL if the fd is invalid.
+   If the file is closed, but needs to be held to
+   read in for mmapping files then we need to return
+   NULL to functions that are not related to mmap
+   functions*/
+static struct file *file_for_fd (int fd, bool mmap){
 	struct fd_hash_entry *hash_elem = fd_to_fd_hash_entry (fd);
 	if(hash_elem == NULL){
+		return NULL;
+	}
+	if(!mmap && hash_elem->is_closed){
 		return NULL;
 	}
 	return  hash_elem->open_file;
 }
 
+/* Returns the corresponding fd_hash_entry for the fd
+   may return null, in which case we know that the fd
+   is invalid soooo..... */
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 	struct process *process = thread_current()->process;
 	struct fd_hash_entry key;
