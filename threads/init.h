@@ -14,6 +14,6 @@ extern uint32_t *init_page_dir;
 #define MAX_STACK_SIZE (1<<25)	   /* Absolute maximum size of stack is 32 MB */
 
 /* Global Data */
-extern uint32_t stack_size = DEFAULT_STACK_SIZE;
+extern uint32_t stack_size;
 
 #endif /* threads/init.h */
