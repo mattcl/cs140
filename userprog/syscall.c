@@ -790,7 +790,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 
 	/* The file should never be closed as long as there is a
 	   mmapping to it */
-	ASSERT(fd_entry == NULL);
+	ASSERT(fd_entry != NULL);
 
 	fd_entry->num_mmaps --;
 	/* Write all of the files out to disk */
