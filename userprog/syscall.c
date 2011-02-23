@@ -747,7 +747,7 @@ void save_dirty_pages(struct mmap_hash_entry *entry){
 			file_seek(fd_entry->open_file, offset);
 			uint32_t read_bytes = (entry->num_pages -1 == j) ?
 					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-			file_write(fd_entry->open_file, pg_ptr, PGSIZE);
+			file_write(fd_entry->open_file, pg_ptr, read_bytes);
 		}
 	}
 	file_seek(fd_entry->open_file, original_position);
