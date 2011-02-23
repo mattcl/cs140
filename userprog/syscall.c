@@ -803,7 +803,7 @@ static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
 }
 
 /* call all destructor for hash_destroy */
-void mmap_hash_entry_destroy (struct hash_elem *e, AUX){
+void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
 	save_dirty_pages(hash_entry(e, struct mmap_hash_entry, elem));
 	free(hash_entry(e, struct mmap_hash_entry, elem));
