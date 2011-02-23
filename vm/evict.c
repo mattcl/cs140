@@ -12,7 +12,7 @@ static size_t evict_hand;
 static site_t clear_hand;
 static size_t threshold;
 
-
+static void *relocate_page (struct frame_hash_entry *frame);
 
 
 
@@ -31,60 +31,60 @@ static size_t threshold;
    page from thin air.  If we evict a dirty stack page, we write it to swap.
 
    EXECUTABLE - cannot write to executable, if we evict this we do nothing.
-   MMAP - If we evict an mmapped page we write it back to the file system.
-n   */
-void *evict_page(struct frame_table * f_table){
+   MMAP - If we evict an mmapped page we write it back to the file system.   */
+void *evict_page(){
   
     struct bitmap *bmap = f_table->used_frames;
     
-    while(evict_hand + threshold % NUM_FRAMES < clear_hand){
-    /* Our clear hand is still at least theshold bits in front of us */
-      struct frame_hash_entry *frame = get_frame_at_position(evict_hand);;
-      if(frame->
-  }
+    while((evict_hand + threshold) % frame_table_size() < clear_hand){
+        /* Our clear hand is still at least theshold bits in front of us */
+        struct frame_hash_entry *frame = get_frame_at_position(evict_hand);
+	ASSERT(frame != NULL);
+	/*return the first page we find that has not been accesed */
+	if(!pagedir_is_accesed(frame->current_page_dir,frame->page)){
+	    /*  evict page from frame moving it to the appropriate
+		location and return the kernel virtual address of the 
+		physical page represented by the evict_hand in the bitmap*/
+	    return relocate_page(frame);
+	}
       
+    }
+    /* in this case we need to move both hands simultaneously until the
+       evict_hand finds a !accessed page */
 
 }
 
 void evict_init(){
+  threshold = 1; 
   evict_hand = 0;
-  clear_hand = 0;
-  threshold = 1;
-  
+  clear_hand = evict_hand + threshold;
 }
 
-void *get_least_recently_used_page (){
-  
-
-    while(true){
-      struct frame_hash_entry *frame = elem_to_frame(hash_next(iter));
-      ASSERT(elem != NULL);
+static void *relocate_page (struct frame_hash_entry *frame){
+    if(pagedir_is_dirty(frame->current_pagedir, frame->page)){
+        medium_t medium = pagedir_get_medium(frame->current_pagedir,frame->page);
       
-      if(pagedir_is_accessed(frame->current_page_dir,frame->page)){
-	  return frame_evict(frame);
-      }
-      if(iter == clock_hand){
-	  break;
-      }
-    }
-}
-       
-void *frame_evict (frame_hash_entry * frame){
-    medium_t medium = pagedir_get_medium(frame->page);
-    /*  not sure about this */
-    ASSERT(medium != PTE_AVL_MEMORY);
-
-    if(pagedir_is_dirty(upage)){
-      if(medium == PTE_AVL_MMAP){
-	/* must write to file system */
-      }else if(medium == PTE_AVL_SWAP){
-	/* put on swap */
-      } else{
-	PANIC("John doesn't get how eviction works o_O");
-      }
+	ASSERT(medium != PTE_AVL_MEMORY);
+      
+	if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
+	  /* write to swap */
+	}else if(medium == PTE_AVL_MMAP){
+	  /* write back to disk */
+	}else{
+  	    PANIC("relocate_page called with dirty page of medium_t: %x", medium);
+	}
     }else{
-      /* we should be able to overwrite the data here */
-      frame_ha
+      if(medium == PTE_AVL_STACK){
+	/* User has read a 0'd page they have not written to, delete the
+	   page, return frame. */
+      }else if(medium == PTE_AVL_EXEC){
+	/* this one should just set up on demand page again */
+      }else if(medium == PTE_AVL_MMAP){
+	/* this should also set up an on demand page */
+      }else{
+	  PANIC("realocate_page called with clean page of medium_t: %x", medium);
+      }
     }
+    /* return the frame corresponding to evict_hand */
 }
 
