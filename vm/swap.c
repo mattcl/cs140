@@ -214,7 +214,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	intr_disable();
 
 	uint32_t *save = thread_current()->pagedir;
-	pagedir_activate(NULL);
+	pagedir_activate(save);
 
 	if(thread_current()->pagedir == active_pd()){
 		printf("Active pd is the same as the current threads\n");
