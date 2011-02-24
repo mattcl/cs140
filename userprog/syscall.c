@@ -609,11 +609,6 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	   here, including other mmapped files that this user has so set up
 	   pages.*/
 
-
-	/* We know only 20 bits can be set in uaddr so no
-	   bit shifting needs to occur */
-	uint32_t aux_data = (uint32_t)uaddr;
-
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
 	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
