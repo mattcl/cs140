@@ -619,7 +619,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
 			i ++, temp_ptr += PGSIZE){
 		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP,
-				aux_data, true)){
+				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
 			pagedir_clear_pages(pd, uaddr, i);

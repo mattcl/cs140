@@ -39,6 +39,8 @@ void swap_init (void){
 
 	used_swap_slots = bitmap_create(num_slots);
 
+	ASSERT(used_swap_slots != NULL);
+
 	if(used_swap_slots == NULL){
 		PANIC("Couldn't allocat swap bitmap");
 	}
