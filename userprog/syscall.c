@@ -236,7 +236,6 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	   of the data from the mmapped files and before we dissable interrupts
 	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
-	printf("mmap destroyed\n");
 	thread_exit();
 	NOT_REACHED();
 }
