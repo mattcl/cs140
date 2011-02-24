@@ -161,12 +161,6 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		PANIC("SWAP IS FULL BABY");
 	}
 
-	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
-			&new_entry->elem);
-	if(returned != NULL){
-		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
-	}
-
 	/* Set up entry */
 
 	/* Set the auxilary data so that it can index into the swap table
@@ -179,6 +173,12 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	new_entry->uaddr = addr_to_save;
 	new_entry->org_medium = org_medium;
 	new_entry->swap_slot = swap_slot;
+
+	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
+			&new_entry->elem);
+	if(returned != NULL){
+		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
+	}
 
 	printf("Begin writing data to swap \n");
 
