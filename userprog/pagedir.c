@@ -44,12 +44,9 @@ void pagedir_destroy (uint32_t *pd){
 				} else {
 					/* if its in the swap we need to "free"
 				     it's swap memory */
-
-
-
-
-
-
+					/* Swap slots are recovered when we free
+					   the swap hash table. Using the hash
+					   do all*/
 				}
 			}
 			palloc_free_page (pt);

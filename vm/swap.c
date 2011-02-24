@@ -38,8 +38,7 @@ void swap_init (void){
 
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
-	//	printf("%u size and %u slots\n", num_sectors*512, num_slots);
-
+	//printf("%u size and %u slots\n", num_sectors*512, num_slots);
 	used_swap_slots = bitmap_create(num_slots);
 
 	ASSERT(used_swap_slots != NULL);
@@ -56,7 +55,7 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	printf("Swap read in %p \n", faulting_addr);
+	//printf("Swap read in %p \n", faulting_addr);
 
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
@@ -73,7 +72,7 @@ bool swap_read_in (void *faulting_addr){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
-		PANIC("See comment");
+		PANIC("Inconsistency, expected inserted hash entry absent");
 		/*return false*/
 	}
 
@@ -152,7 +151,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
 
-	//	printf("lock acquired\n");
+
+	//printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
 
 	/* Flip the first false bit to be true */
@@ -180,19 +180,25 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
-	//	printf("Begin writing data to swap \n");
 
+	//printf("Begin writing data to swap \n");
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
 	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
 
 	ASSERT(kaddr_ptr != NULL);
 
-	//	printf("kvaddr of data this page points to %p\n", kaddr_ptr);
+
+
+	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
+
 
 	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
 
-	//	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
+
+
+	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
+
 
 	uint32_t i;
 
@@ -202,7 +208,9 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	}
 
 	lock_release(&swap_slots_lock);
-	//	printf("Returned from writing block\n");
+
+	//printf("Returned from writing block\n");
+
 
 	/* Force a page fault when we are lookin this virtual address up
 	   clear page preserves all the other bits in the PTE sets the
@@ -211,7 +219,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	pagedir_set_aux(pd, uaddr, addr_to_save);
 
-	//	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
+	//printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
+
 	/* indicate that this is on swap */
 	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
