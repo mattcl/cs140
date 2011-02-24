@@ -29,7 +29,7 @@ static struct lock swap_slots_lock;
 void swap_init (void){
 	swap_device = block_get_role(BLOCK_SWAP);
 	if(swap_device == NULL){
-		PANIC("NO SWAP!!!!");
+		BSOD("NO SWAP!!!!");
 	}
 
 	/* Calculate the number of swap slots supported
@@ -44,7 +44,7 @@ void swap_init (void){
 	ASSERT(used_swap_slots != NULL);
 
 	if(used_swap_slots == NULL){
-		PANIC("Couldn't allocat swap bitmap");
+		BSOD("Couldn't allocat swap bitmap");
 	}
 
 	lock_init(&swap_slots_lock);
@@ -72,7 +72,7 @@ bool swap_read_in (void *faulting_addr){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
-		PANIC("Inconsistency, expected inserted hash entry absent");
+		BSOD("Inconsistency, expected inserted hash entry absent");
 		/*return false*/
 	}
 
@@ -82,7 +82,8 @@ bool swap_read_in (void *faulting_addr){
 	uint32_t swap_slot = entry->swap_slot;
 	medium_t org_medium = entry->org_medium;
 
-	/* May evict a page to swap */
+	/* May evict a page to swap, returns a kernel virtual address so
+	   the dirty bit for this kernel address in the PTE*/
 	uint32_t* free_page = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	lock_acquire(&swap_slots_lock);
@@ -91,7 +92,7 @@ bool swap_read_in (void *faulting_addr){
 	page_ptr = (uint8_t*)free_page;
 
 	/* Read the contents of this swap slot into memory */
-	for(i=0; i<SECTORS_PER_SLOT;
+	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
 	}
@@ -105,7 +106,7 @@ bool swap_read_in (void *faulting_addr){
 			slot_result);
 
 	if(deleted == NULL){
-		PANIC("Element found but then not able to be deleted????");
+		BSOD("Element found but then not able to be deleted????");
 		/*return false;*/
 	}
 
@@ -115,21 +116,21 @@ bool swap_read_in (void *faulting_addr){
 	/* Set the page in our pagetable to point to our new frame
 	   this will set the present bit back to 1*/
 	bool success =
-			pagedir_set_page (cur->pagedir, uaddr, free_page, true);
+			pagedir_set_page (cur->pagedir, (void*)uaddr, free_page, true);
 
 	if(!success){
-		PANIC("MEMORY ALLOCATION FAILURE");
+		BSOD("MEMORY ALLOCATION FAILURE");
 		/*return false*/
 	}
 
 	/* indicate that this is in memorry */
-	pagedir_set_medium(cur->pagedir, uaddr, org_medium);
+	pagedir_set_medium(cur->pagedir, (void*)uaddr, org_medium);
 
-	pagedir_set_dirty(cur->pagedir, uaddr, true);
+	pagedir_set_dirty(cur->pagedir, (void*)uaddr, true);
 
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
-
+	frame_unpin(free_page);
 	return true;
 }
 
@@ -148,7 +149,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 	if(new_entry == NULL){
-		PANIC("KERNEL OUT OF MEMORRY");
+		BSOD("KERNEL OUT OF MEMORRY");
 	}
 
 
@@ -158,7 +159,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
-		PANIC("SWAP IS FULL BABY");
+		BSOD("SWAP IS FULL BABY");
 	}
 
 	/* Set up entry */
@@ -177,13 +178,13 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
-		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
+		BSOD("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
 
 	//printf("Begin writing data to swap \n");
 	/* move the data from kvaddr to the newly allocated swap slot*/
-	/*uint8_t so that incrementing is easy*/
+	/* uint8_t so that incrementing is easy*/
 	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
 
 	ASSERT(kaddr_ptr != NULL);
@@ -212,17 +213,11 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	//printf("Returned from writing block\n");
 
 
-	/* Force a page fault when we are lookin this virtual address up
-	   clear page preserves all the other bits in the PTE sets the
-	   present bit to 0*/
-	pagedir_clear_page(pd, uaddr);
+	/* Tell the process who just got this page evicted that the
+	   can find it on swap*/
+	pagedir_setup_demand_page(pd, uaddr, PTE_AVL_SWAP,
+				addr_to_save, 0);
 
-	pagedir_set_aux(pd, uaddr, addr_to_save);
-
-	//printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
-
-	/* indicate that this is on swap */
-	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
 	return true;
 }

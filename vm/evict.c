@@ -5,14 +5,18 @@
 #include "threads/synch.h"
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
-#include "vm/frame.h"
 #include "vm/swap.h"
 #include "userprog/syscall.h"	/* MMAP */
 #include <debug.h>
 #include <string.h>
 
+/* Both are protected by the frame table hash lock*/
 static size_t evict_hand;
 static size_t clear_hand;
+
+/* Threshold can be set to respond to system
+   conditions */
+
 static size_t threshold;
 static struct lock *clock_lock;
 
@@ -38,34 +42,35 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    page that is occuping the frame. Then returns the pointer to
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
-void *evict_page(void *uaddr){
+void *evict_page(struct frame_table *f_table, void *uaddr,
+		enum palloc_flags flags){
 //	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
-	//	lock_acquire(&clock_lock);
-	while((evict_hand + threshold) % frame_table_size() < clear_hand % frame_table_size()){
- //printf("1 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 
-	        
 
-		/* Our clear hand is still at least theshold bits in front of us */
-		frame= frame_at_position(evict_hand % frame_table_size());
-		
-		evict_hand ++ ;//= (evict_hand + 1) % frame_table_size();;
-		ASSERT(frame != NULL);
-		/*return the first page we find that has not been accesed */
-		if(!pagedir_is_accessed(frame->cur_pagedir,frame->uaddr)
-				&& !frame->pinned_to_frame){
-			/*  evict page from frame moving it to the appropriate
-				location and return the kernel virtual address of the
-				physical page represented by the evict_hand in the bitmap*/
-			return relocate_page(frame, uaddr);
-		}
+	/* A thread may have exited and freed a bunch of frames
+	   between the invocation of this function and here so
+	   recheck to see if there is a free frame*/
+	frame = frame_first_free(flags, uaddr);
+	if(frame != NULL){
+		palloc_kaddr_at_uindex(frame->position_in_bitmap);
+
 	}
+
+	lock_acquire(&f_table->frame_map_lock);
 
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
 	while(true){
+
+		/* All frames are locked as is while the frame_map_lock is held
+		   Now we can find all of the frames without having to worry
+		   about other threads removing their data right now.
+		   If we find one that we want to evict we set the pinned to
+		   frame to true which will make the owning thread wait till
+		   it is fully read out to swap/mmap */
+
 		//printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 		frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
@@ -73,11 +78,15 @@ void *evict_page(void *uaddr){
 		evict_hand++;
 		clear_hand++;
 
-		pagedir_set_accessed(frame_to_clear->cur_pagedir, frame_to_clear->uaddr, false);
+		pagedir_set_accessed(frame->cur_thread->pagedir, frame_to_clear->uaddr, false);
 
-		if(!pagedir_is_accessed(frame->cur_pagedir, frame->uaddr)
+		if(!pagedir_is_accessed(frame->cur_thread->pagedir, frame->uaddr)
 				&& !frame->pinned_to_frame){
-
+			/* Will make sure that the owning thread will
+			   not remove its ish from the frame until we
+			   are done relocating the data*/
+			frame->pinned_to_frame = true;
+			lock_release(&f_table->frame_map_lock);
 			return relocate_page(frame, uaddr);
 		}
 	}
@@ -96,19 +105,20 @@ void clear_until_threshold(void){
 }
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
+
 	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
-	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
+	medium_t medium = pagedir_get_medium(f->cur_thread->pagedir,f->uaddr);
 	//printf("uaddr of frame we are evicting %x\n", f->uaddr);
 
 	ASSERT(medium != PTE_AVL_ERROR);
 
-	void *kaddr = palloc_get_kaddr_user_index(f->position_in_bitmap);
+	void *kaddr = palloc_kaddr_at_uindex(f->position_in_bitmap);
 
 	bool needs_to_be_zeroed = true;
 
-	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_pagedir, f->uaddr), PTE_AVL_SWAP);
+	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr), PTE_AVL_SWAP);
 
-	if(pagedir_is_dirty(f->cur_pagedir, f->uaddr)){
+	if(pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr)){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
@@ -118,29 +128,31 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 			   know where to look*/
 			mmap_write_out(f->cur_thread, f->uaddr);
 		}else{
-			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
+			BSOD("relocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{
 		if(medium == PTE_AVL_STACK){
 			/* User has read a 0'd page they have not written to, delete the
 	   	   	   page, return frame. */
 			needs_to_be_zeroed = false;
-			pagedir_clear_page(f->cur_pagedir, f->uaddr);
+			intr_disable();
+			pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
+			intr_enable();
 		}else if(medium == PTE_AVL_EXEC){
 			/* this one should just set up on demand page again
 			   so that the process will know just to read in from
 			   disk again*/
-			bool writable = pagedir_is_writable(f->cur_pagedir, f->uaddr);
-			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
+			bool writable = pagedir_is_writable(f->cur_thread->pagedir, f->uaddr);
+			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
 						PTE_AVL_EXEC, (uint32_t)f->uaddr, writable);
 		}else if(medium == PTE_AVL_MMAP){
 			/* this should also set up an on demand page
 			   so that when the MMAP is page faulted it will find
 			   it on disk again*/
-			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
+			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
 						PTE_AVL_MMAP, (uint32_t)f->uaddr , true);
 		}else{
-			PANIC("realocate_page called with clean page of medium_t: %x", medium);
+			BSOD("realocate_page called with clean page of medium_t: %x", medium);
 		}
 	}
 	/* return the frame corresponding to evict_hand */
@@ -156,11 +168,12 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   rest of the data, such as position in bitmap as the
 	   same*/
 	f->uaddr = uaddr;
-	f->cur_pagedir = thread_current()->pagedir;
 	f->cur_thread = thread_current();
 
 	//printf("Returned %p\n", kaddr);
-	//lock_release(&clock_lock);
+
+	sema_up(&f->wait);
+
 	return kaddr;
 }
 

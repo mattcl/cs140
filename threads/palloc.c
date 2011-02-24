@@ -91,7 +91,7 @@ void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
 		}
 	}else{
 		if(flags & PAL_ASSERT){
-			PANIC ("palloc_get: out of pages");
+			BSOD ("palloc_get: out of pages");
 		}
 	}
 
@@ -149,7 +149,7 @@ static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *
 
 	size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
 	if(bm_pages > page_cnt){
-		PANIC ("Not enough memory in %s for bitmap.", name);
+		BSOD ("Not enough memory in %s for bitmap.", name);
 	}
 	page_cnt -= bm_pages;
 
@@ -171,20 +171,26 @@ static bool page_from_pool (const struct pool *pool, void *page){
 
 	return page_no >= start_page && page_no < end_page;
 }
-
+/* Returns the number of pages in the user pool*/
 inline size_t palloc_number_user_pages(void){
 	return bitmap_size(user_pool.used_map);
 }
 
+/*Returns the number of pages in the kernel pool*/
 inline size_t palloc_number_kernel_pages(void){
 	return bitmap_size(kernel_pool.used_map);
 }
 
+/* Gets the index in the user poll of the kvaddr that is passed
+   in. The address is not bounds checked so beware of that */
 inline size_t palloc_get_user_page_index(void *kvaddr){
 	return (((uint32_t)kvaddr) - ((uint32_t)user_pool.base))/PGSIZE;
 }
 
-inline void * palloc_get_kaddr_user_index(uint32_t user_index){
+/* GEt the kaddr of the index into the userpool passed in, does
+   no bounds checking beware of that. user_index should be between
+   0 and the max size of the user pool*/
+inline void * palloc_kaddr_at_uindex(uint32_t user_index){
 	return ((uint8_t*)user_pool.base + (user_index * PGSIZE));
 }
 

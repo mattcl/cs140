@@ -102,7 +102,7 @@ static void kill (struct intr_frame *f){
            may cause kernel exceptions--but they shouldn't arrive
            here.)  Panic the kernel to make the point.  */
 		intr_dump_frame (f);
-		PANIC ("Kernel bug - unexpected interrupt in kernel");
+		BSOD ("Kernel bug - unexpected interrupt in kernel");
 
 	default:
 		/* Some other code segment?  Shouldn't happen.  Panic the
@@ -144,7 +144,7 @@ static void page_fault (struct intr_frame *f){
      be assured of reading CR2 before it changed). */
 	intr_enable ();
 
-//	printf("fault\n");
+	//printf("fault\n");
 
 	/* Count page faults. */
 	page_fault_cnt++;
@@ -200,7 +200,7 @@ static void page_fault (struct intr_frame *f){
 			/* read in zero page */
 			/* Get new frame and install it at the faulting addr*/
 			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
-
+			frame_unpin(kaddr);
 			/* it will be set to dirty or accessed on the retry*/
 			pagedir_install_page(uaddr, kaddr, true);
 
@@ -244,7 +244,7 @@ static void page_fault (struct intr_frame *f){
 				f->eax = 0xffffffff;
 			}
 		}else{
-		    PANIC("unrecognized medium in page fault, check exception.c");
+		    BSOD("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
 		/* The page is present and we got a page fault so this means that
@@ -261,5 +261,8 @@ static void page_fault (struct intr_frame *f){
 	}
 	/* Page was read in or the return value was set for kernel code
 	   so the memory access will try again and succeed or we will kill
-	   the process or fail silently from the kernel code that faulted */
+	   the process or fail silently from the kernel code that faulted
+	   Important note, if the memory was paged in then, the data was
+	   written using the kernel address, and not the user's so it will
+	   only dirty/access the bits for the kernel mapping in this pagedir*/
 }

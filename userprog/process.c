@@ -73,7 +73,7 @@ void process_init(void){
 	struct process *global = calloc(1, sizeof(struct process));
 	if(global == NULL){
 		/* We can't allocate the global process, this is bad*/
-		PANIC("We can't Allocate the global process");
+		BSOD("We can't Allocate the global process");
 	}
 	global->pid = 0;
 
@@ -81,7 +81,7 @@ void process_init(void){
 
 	/* Initializes this process with the parent process ID of 0 */
 	if(!initialize_process(global, thread_current())){
-		PANIC("ERROR initialzing the global process");
+		BSOD("ERROR initialzing the global process");
 	}
 }
 
@@ -343,7 +343,6 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
-
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
 	pd = cur->pagedir;
@@ -370,7 +369,7 @@ void process_exit (void){
 
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
-		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
+		BSOD("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
 	struct process *parent = parent_process_from_child(cur_process);
@@ -579,7 +578,7 @@ done:
 
 /* Reads in the appropriate page of the executable for this
    faulting address */
-bool process_exec_read_in(uint32_t *faulting_addr){
+bool process_exec_read_in(void *faulting_addr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -601,7 +600,7 @@ bool process_exec_read_in(uint32_t *faulting_addr){
 		   for it that should have been set in process load
 		   EXEC bit shouldn't be set unless the corresponding
 		   data can be found in the exec_info array*/
-		PANIC("INCONSISTENCY IN EXCEPTION.C");
+		BSOD("INCONSISTENCY IN EXCEPTION.C");
 		/*return false;*/
 	}
 
@@ -680,7 +679,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
 	if(head == NULL){
-		PANIC("KERNEL OUT OF MEMORY");
+		BSOD("KERNEL OUT OF MEMORY");
 	}
 
 	for(i = 0; i < ehdr->e_phnum; i++){
@@ -757,7 +756,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	/* Save all of our infor so that we can handle page_faults */
 	cur_process->exec_info = calloc (k, sizeof(struct exec_page_info));
 	if(cur_process->exec_info == NULL){
-		PANIC("KERNEL OUT OF MEMORY!!!!");
+		BSOD("KERNEL OUT OF MEMORY!!!!");
 	}
 	memcpy (cur_process->exec_info, head, k*sizeof(struct exec_page_info));
 	cur_process->num_exec_pages = k;
@@ -918,6 +917,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(kpage == NULL){
 			lock_release(&filesys_lock);
 			//printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 
@@ -926,6 +926,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			frame_clear_page (kpage);
 			lock_release(&filesys_lock);
 			//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -937,12 +938,15 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			frame_clear_page(kpage);
 			lock_release(&filesys_lock);
 			//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 
 		/* Make sure that if this page is evicted and is readonly that it will
 		   be deleted outright instead of put on swap */
 		pagedir_set_medium(thread_current()->pagedir, upage, PTE_AVL_EXEC);
+
+		frame_unpin(kpage);
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
@@ -969,7 +973,9 @@ static bool setup_stack (void **esp){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
 					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_AVL_STACK);
+			frame_unpin(kpage);
 		}else{
+			frame_unpin(kpage);
 			frame_clear_page (kpage);
 		}
 	}

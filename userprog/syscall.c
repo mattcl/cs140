@@ -15,6 +15,7 @@
 #include "threads/palloc.h"
 #include "threads/init.h"
 #include "vm/frame.h"
+#include <string.h>
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
@@ -209,7 +210,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	default:{
-		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+		BSOD ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
 		break;
 	}
 	}
@@ -235,7 +236,6 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	   of the data from the mmapped files and before we dissable interrupts
 	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
-
 	thread_exit();
 	NOT_REACHED();
 }
@@ -332,7 +332,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		/* We have just tried to put the fd of an identical fd into the hash
 		 Table this is a problem with the hash table and should fail the kernel
 		 Cause our memory has been corrupted somehow */
-		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = fd_entry->fd;
@@ -510,7 +510,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
 				   This Is obviously a huge problem so system KILLLLLLL!!!! */
-			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+			BSOD("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 		}
 
 		free(entry);
@@ -521,7 +521,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 }
 
 static struct mmap_hash_entry *uaddr_to_mmap_entry(
-		struct thread *cur, void *uaddr){
+	struct thread *cur, void *uaddr){
 	struct hash_iterator i;
 	struct hash_elem *e;
 	hash_first (&i, &cur->process->mmap_table);
@@ -548,6 +548,7 @@ static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
+	//printf"map\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
 	   verifies the fd*/
@@ -653,15 +654,17 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 		   Table this is a problem with the hash table and should fail the kernel
 		   Cause our memory has been corrupted somehow. Or our hash function isn't
 		   working appropriately */
-		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = mmap_entry->mmap_id;
+	//printf"mapend\n");
 }
 
 /* Called from process exit because it can never kill and we need to make
    sure all of the changes to the mmapped regions are saved to disk.*/
 static void system_munmap (struct intr_frame *f, mapid_t map_id){
+	//printf"un\n");
 	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
 	if(entry == NULL){
 		f->eax = -1;
@@ -673,7 +676,6 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	uint32_t *pd = cur->pagedir;
 
 	mmap_save_all(entry);
-
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
 	struct hash_elem *returned =
@@ -681,7 +683,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
-		PANIC("ERROR WITH HASH IN munmap!! CLOSE");
+		BSOD("ERROR WITH HASH IN munmap!! CLOSE");
 	}
 
 	free(entry);
@@ -690,6 +692,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 		fd_entry->is_closed = false;
 		system_close(f, fd_entry->fd);
 	}
+	//printf"un end\n");
 }
 
 /* Read in the appropriate file block from disk
@@ -697,6 +700,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
    can call this function, when it was trying to access
    memory*/
 bool mmap_read_in(void *faulting_addr){
+	//printf"readin\n");
 	struct thread *cur = thread_current();
 
 	/* Get the key into the hash, AKA the uaddr of this page*/
@@ -710,7 +714,9 @@ bool mmap_read_in(void *faulting_addr){
 
 	uint32_t offset = uaddr - entry->begin_addr;
 
-	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, (uint32_t*)uaddr);
+	/* Accessed through kernel memory the user PTE will not be
+	   marked as accessed or dirty !!! */
+	uint32_t *kaddr = frame_get_page(PAL_USER, (uint32_t*)uaddr);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(fd_entry != NULL);
@@ -724,7 +730,10 @@ bool mmap_read_in(void *faulting_addr){
 	lock_acquire(&filesys_lock);
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
-	file_read(fd_entry->open_file, kaddr, PGSIZE);
+	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
+	if(amount_read < PGSIZE){
+		memset(kaddr+amount_read, 0, PGSIZE - amount_read);
+	}
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
@@ -735,6 +744,9 @@ bool mmap_read_in(void *faulting_addr){
 	   of memory*/
 	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_AVL_MMAP);
 
+	frame_unpin(kaddr);
+
+	//printf"in end\n");
 	/*"Kernel out of memory! if false;"*/
 	return success;
 }
@@ -742,6 +754,7 @@ bool mmap_read_in(void *faulting_addr){
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
 bool mmap_write_out(struct thread *cur, void *uaddr){
+	//printf"mmap out\n");
 	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
 	if(!pagedir_is_present(cur->pagedir, uaddr)){
 		/* Can't read back to disk if the memory isn't
@@ -776,6 +789,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}
+	//printf"mmap out end\n");
 	return true;
 }
 
@@ -783,6 +797,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 
 /* Saves all of the pages that are dirty for the given mmap_hash_entry */
 static void mmap_save_all(struct mmap_hash_entry *entry){
+	//printf"saveall\n");
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
@@ -808,6 +823,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	}
 	file_seek(fd_entry->open_file, original_position);
 	lock_release(&filesys_lock);
+	//printf"saveall exit\n");
 }
 
 /* Returns the file or NULL if the fd is invalid.
