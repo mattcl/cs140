@@ -35,7 +35,7 @@ bool frame_clear_page (void * kaddr);
 
 size_t frame_table_size (void);
 struct frame_entry  *frame_at_position(size_t bit_num);
-struct frame_hash_entry *frame_first_free (enum palloc_flags flags, void *uaddr);
-
+struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr);
+void frame_unpin (void *kaddr);
 
 #endif /* FRAME_H_ */

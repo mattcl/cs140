@@ -11,6 +11,7 @@
 #include "devices/timer.h"
 #include "userprog/pagedir.h"
 #include <stdint.h>
+#include <string.h>
 
 static struct frame_table f_table;
 
@@ -61,13 +62,13 @@ void  *frame_get_page (enum palloc_flags flags, void *uaddr){
    the map is full*/
 struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr){
 
-	lock_acquire(&f_table->frame_map_lock);
+	lock_acquire(&f_table.frame_map_lock);
 
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 
 	if(frame_idx == BITMAP_ERROR){
 		/* completely full */
-		lock_release(&f_table->frame_map_lock);
+		lock_release(&f_table.frame_map_lock);
 		return NULL;
 	}
 
@@ -117,7 +118,7 @@ struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr){
 	entry->cur_thread = thread_current();
 
 	bitmap_set(f_table.used_frames, frame_idx, true);
-	lock_release(&f_table->frame_map_lock);
+	lock_release(&f_table.frame_map_lock);
 
 	return entry;
 }
@@ -130,7 +131,7 @@ void frame_unpin (void *kaddr){
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kaddr);
 
-	lock_acquire(&f_table->frame_map_lock);
+	lock_acquire(&f_table.frame_map_lock);
 	struct frame_entry *frame = frame_at_position(frame_idx);
 
 	/* If frame was null here but became non null after we
@@ -140,7 +141,7 @@ void frame_unpin (void *kaddr){
 	if(frame != NULL){
 		frame->pinned_to_frame = false;
 	}
-	lock_release(&f_table->frame_map_lock);
+	lock_release(&f_table.frame_map_lock);
 }
 
 /* Clears the frame that the kaddr is currently in,
