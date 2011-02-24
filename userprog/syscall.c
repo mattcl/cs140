@@ -694,8 +694,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 bool mmap_read_in(void *faulting_addr){
 	struct thread *cur = thread_current();
 
-	/* Get the key into the hash, AKA the uaddr of this page
-	   this will be used as a key into our mmapped hash table*/
+	/* Get the key into the hash, AKA the uaddr of this page*/
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 
 	/* Get hash entry if it exists */
@@ -710,7 +709,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, (uint32_t*)uaddr);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
-	ASSERT(entry != NULL);
+	ASSERT(fd_entry != NULL);
 
 	/* The actual reading in from the block always tries to read PGSIZE
 	   bytes even though the last page may have many zeros that don't
