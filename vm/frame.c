@@ -29,7 +29,7 @@ void frame_init(void){
 	lock_init(&f_table.frame_map_lock);
 	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
 	evict_init(COUNT_THRESHOLD);
-	printf("Palloc num pages %lu our slots %u\n", palloc_number_user_pages(), frame_table_size());
+//	printf("Palloc num pages %lu our slots %u\n", palloc_number_user_pages(), frame_table_size());
 }
 
 /* Gets a page which is in a frame, evicts if there are no available frames
@@ -46,7 +46,7 @@ void  *frame_get_page (enum palloc_flags flags, void *uaddr){
 	lock_release (&f_table.frame_map_lock);
 	//printf("Frame idx = %ul\n", frame_idx);
 	if(frame_idx == BITMAP_ERROR){
-		printf("evict\n");
+	//	printf("evict\n");
 		return evict_page(uaddr);
 	}
 
