@@ -37,7 +37,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
 void *evict_page(void *uaddr){
-	printf("Evicting uaddr %p\n", uaddr);
+	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
 	while((evict_hand + threshold) % frame_table_size() < clear_hand % frame_table_size()){
