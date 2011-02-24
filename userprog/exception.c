@@ -102,7 +102,7 @@ static void kill (struct intr_frame *f){
            may cause kernel exceptions--but they shouldn't arrive
            here.)  Panic the kernel to make the point.  */
 		intr_dump_frame (f);
-		PANIC ("Kernel bug - unexpected interrupt in kernel");
+		BSOD ("Kernel bug - unexpected interrupt in kernel");
 
 	default:
 		/* Some other code segment?  Shouldn't happen.  Panic the
@@ -244,7 +244,7 @@ static void page_fault (struct intr_frame *f){
 				f->eax = 0xffffffff;
 			}
 		}else{
-		    PANIC("unrecognized medium in page fault, check exception.c");
+		    BSOD("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
 		/* The page is present and we got a page fault so this means that

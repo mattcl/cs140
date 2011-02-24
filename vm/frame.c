@@ -42,7 +42,7 @@ void frame_init(void){
    to the frame so the user must call unpin when this frame is evictable*/
 void  *frame_get_page (enum palloc_flags flags, void *uaddr){
 	if((flags & PAL_USER) == 0){
-		PANIC("Can not allocate a page for kernel from the user pool");
+		BSOD("Can not allocate a page for kernel from the user pool");
 	}
 
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
@@ -98,7 +98,7 @@ struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr){
 		entry = calloc(1, sizeof(struct frame_entry));
 
 		if(entry == NULL){
-			PANIC("Out of KERNEL MEMORY!!!");
+			BSOD("Out of KERNEL MEMORY!!!");
 		}
 
 		entry->position_in_bitmap = frame_idx;
@@ -110,7 +110,7 @@ struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr){
 			was inserted. Go Figure. If process == NULL all is good
 			otherwise bad times;*/
 		if(frame_entry != NULL){
-			PANIC("INdexing on bitmap index failed");
+			BSOD("INdexing on bitmap index failed");
 		}
 	}
 
@@ -180,7 +180,7 @@ bool frame_clear_page (void *kaddr){
 			bitmap_set(f_table.used_frames, frame_idx, false);
 		}
 	}else{
-		PANIC("INVALID PAGE REMOVED FROM FRAME");
+		BSOD("INVALID PAGE REMOVED FROM FRAME");
 		/* return false;*/
 	}
 

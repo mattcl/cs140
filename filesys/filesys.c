@@ -19,7 +19,7 @@ filesys_init (bool format)
 {
   fs_device = block_get_role (BLOCK_FILESYS);
   if (fs_device == NULL)
-    PANIC ("No file system device found, can't initialize file system.");
+    BSOD ("No file system device found, can't initialize file system.");
 
   inode_init ();
   free_map_init ();
@@ -96,7 +96,7 @@ do_format (void)
   printf ("Formatting file system...");
   free_map_create ();
   if (!dir_create (ROOT_DIR_SECTOR, 16))
-    PANIC ("root directory creation failed");
+    BSOD ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");
 }

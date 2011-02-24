@@ -209,7 +209,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	default:{
-		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+		BSOD ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
 		break;
 	}
 	}
@@ -332,7 +332,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		/* We have just tried to put the fd of an identical fd into the hash
 		 Table this is a problem with the hash table and should fail the kernel
 		 Cause our memory has been corrupted somehow */
-		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = fd_entry->fd;
@@ -510,7 +510,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
 				   This Is obviously a huge problem so system KILLLLLLL!!!! */
-			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+			BSOD("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 		}
 
 		free(entry);
@@ -653,7 +653,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 		   Table this is a problem with the hash table and should fail the kernel
 		   Cause our memory has been corrupted somehow. Or our hash function isn't
 		   working appropriately */
-		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
+		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = mmap_entry->mmap_id;
@@ -680,7 +680,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
-		PANIC("ERROR WITH HASH IN munmap!! CLOSE");
+		BSOD("ERROR WITH HASH IN munmap!! CLOSE");
 	}
 
 	free(entry);

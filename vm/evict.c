@@ -55,7 +55,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		palloc_kaddr_at_uindex(frame->position_in_bitmap);
 	}
 
-	lock_acquire(f_table->frame_map_lock);
+	lock_acquire(&f_table->frame_map_lock);
 
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
@@ -123,7 +123,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 			   know where to look*/
 			mmap_write_out(f->cur_thread, f->uaddr);
 		}else{
-			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
+			BSOD("relocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{
 		if(medium == PTE_AVL_STACK){
@@ -144,10 +144,10 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 			/* this should also set up an on demand page
 			   so that when the MMAP is page faulted it will find
 			   it on disk again*/
-			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
+			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
 						PTE_AVL_MMAP, (uint32_t)f->uaddr , true);
 		}else{
-			PANIC("realocate_page called with clean page of medium_t: %x", medium);
+			BSOD("realocate_page called with clean page of medium_t: %x", medium);
 		}
 	}
 	/* return the frame corresponding to evict_hand */

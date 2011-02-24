@@ -87,7 +87,7 @@ read_partition_table (struct block *block, block_sector_t sector,
   ASSERT (sizeof *pt == BLOCK_SECTOR_SIZE);
   pt = malloc (sizeof *pt);
   if (pt == NULL)
-    PANIC ("Failed to allocate memory for partition table.");
+    BSOD ("Failed to allocate memory for partition table.");
   block_read (block, 0, pt);
 
   /* Check signature. */
@@ -174,7 +174,7 @@ found_partition (struct block *block, uint8_t part_type,
 
       p = malloc (sizeof *p);
       if (p == NULL)
-        PANIC ("Failed to allocate memory for partition descriptor");
+        BSOD ("Failed to allocate memory for partition descriptor");
       p->block = block;
       p->start = start;
 

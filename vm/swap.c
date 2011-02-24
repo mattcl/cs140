@@ -29,7 +29,7 @@ static struct lock swap_slots_lock;
 void swap_init (void){
 	swap_device = block_get_role(BLOCK_SWAP);
 	if(swap_device == NULL){
-		PANIC("NO SWAP!!!!");
+		BSOD("NO SWAP!!!!");
 	}
 
 	/* Calculate the number of swap slots supported
@@ -45,7 +45,7 @@ void swap_init (void){
 	ASSERT(used_swap_slots != NULL);
 
 	if(used_swap_slots == NULL){
-		PANIC("Couldn't allocat swap bitmap");
+		BSOD("Couldn't allocat swap bitmap");
 	}
 
 	lock_init(&swap_slots_lock);
@@ -73,7 +73,7 @@ bool swap_read_in (void *faulting_addr){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
-		PANIC("Inconsistency, expected inserted hash entry absent");
+		BSOD("Inconsistency, expected inserted hash entry absent");
 		/*return false*/
 	}
 
@@ -107,7 +107,7 @@ bool swap_read_in (void *faulting_addr){
 			slot_result);
 
 	if(deleted == NULL){
-		PANIC("Element found but then not able to be deleted????");
+		BSOD("Element found but then not able to be deleted????");
 		/*return false;*/
 	}
 
@@ -120,7 +120,7 @@ bool swap_read_in (void *faulting_addr){
 			pagedir_set_page (cur->pagedir, uaddr, free_page, true);
 
 	if(!success){
-		PANIC("MEMORY ALLOCATION FAILURE");
+		BSOD("MEMORY ALLOCATION FAILURE");
 		/*return false*/
 	}
 
@@ -150,7 +150,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 	if(new_entry == NULL){
-		PANIC("KERNEL OUT OF MEMORRY");
+		BSOD("KERNEL OUT OF MEMORRY");
 	}
 
 	//printf("lock acquired\n");
@@ -159,7 +159,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
-		PANIC("SWAP IS FULL BABY");
+		BSOD("SWAP IS FULL BABY");
 	}
 
 	/* Set up entry */
@@ -178,7 +178,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
-		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
+		BSOD("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
 	//printf("Begin writing data to swap \n");

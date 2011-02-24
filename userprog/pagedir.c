@@ -332,10 +332,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 				medium == PTE_AVL_ERROR){
 			*pte |= medium;
 		}else{
-			PANIC("pagedir_set_medium called with unexpected medium");
+			BSOD("pagedir_set_medium called with unexpected medium");
 		}
 	}else{
-		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
+		BSOD("pagedir_set_medium called on a page table entry that is not initialized");
 	}
 	//PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
@@ -374,7 +374,7 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	if(pte != NULL){
 		*pte |= aux_data;
 	}else{
-		PANIC("pagedir_set_aux called on a page table entry that is not initialized");
+		BSOD("pagedir_set_aux called on a page table entry that is not initialized");
 	}
 }
 
