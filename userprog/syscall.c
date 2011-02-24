@@ -771,7 +771,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
-	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_MMAP,
+	if(!pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_AVL_MMAP,
 			(uint32_t)uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
