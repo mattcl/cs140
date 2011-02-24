@@ -744,6 +744,9 @@ bool mmap_read_in(void *faulting_addr){
 	   of memory*/
 	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_AVL_MMAP);
 
+	/* make sure we know that this page is saved*/
+	pagedir_set_dirty(cur->pagedir, (void*)uaddr, false);
+
 	frame_unpin(kaddr);
 
 	//printf"in end\n");

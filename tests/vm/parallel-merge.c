@@ -131,7 +131,7 @@ verify (void)
 	  printf("hist_idx = %d\n", hist_idx);
       while (histogram[hist_idx]-- > 0) 
         {
-    	  printf(" value %d in byte %zu", buf2[buf_idx], buf_idx);
+    	  //printf(" value %d in byte %zu", buf2[buf_idx], buf_idx);
           if (buf2[buf_idx] != hist_idx)
             fail ("bad value %d in byte %zu", buf2[buf_idx], buf_idx);
           buf_idx++;
