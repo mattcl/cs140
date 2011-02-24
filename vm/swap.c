@@ -148,6 +148,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	medium_t org_medium = pagedir_get_medium(pd, uaddr);
 
+	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
+
 	/* indicate that this is on swap */
 	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
@@ -165,6 +167,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	new_entry->uaddr = addr_to_save;
 	new_entry->org_medium = org_medium;
 
+	printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
 
 	/* Flip the first false bit to be true */
@@ -182,13 +185,22 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
+	printf("Begin writing data to swap \n");
+
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
 	uint8_t *page_ptr = pagedir_get_page(pd, uaddr);
+
+	printf("kvaddr of data this page points to %p\n", page_ptr);
+
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
+
+	print("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
+
 	uint32_t i;
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
+		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
 		block_write(swap_device, start_sector, page_ptr);
 	}
 	lock_release(&swap_slots_lock);
