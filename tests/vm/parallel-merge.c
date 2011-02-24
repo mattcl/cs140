@@ -128,7 +128,7 @@ verify (void)
   for (hist_idx = 0; hist_idx < sizeof histogram / sizeof *histogram;
        hist_idx++)
     {
-	  printf("hist_idx = %d\n", hist_idx);
+	  //printf("hist_idx = %d\n", hist_idx);
       while (histogram[hist_idx]-- > 0) 
         {
     	  //printf(" value %d in byte %zu", buf2[buf_idx], buf_idx);
