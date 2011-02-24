@@ -1,7 +1,6 @@
 #include "evict.h"
 #include <stdbool.h>
 #include "threads/vaddr.h"
-#include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
