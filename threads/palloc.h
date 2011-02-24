@@ -2,6 +2,7 @@
 #define THREADS_PALLOC_H
 
 #include <stddef.h>
+#include <stding.h>
 
 /* How to allocate pages. */
 enum palloc_flags{
