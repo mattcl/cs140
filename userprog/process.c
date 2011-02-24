@@ -918,6 +918,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		if(kpage == NULL){
 			lock_release(&filesys_lock);
 			//printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 
@@ -926,6 +927,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			frame_clear_page (kpage);
 			lock_release(&filesys_lock);
 			//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -937,12 +939,15 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 			frame_clear_page(kpage);
 			lock_release(&filesys_lock);
 			//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+			frame_unpin(kpage);
 			return false;
 		}
 
 		/* Make sure that if this page is evicted and is readonly that it will
 		   be deleted outright instead of put on swap */
 		pagedir_set_medium(thread_current()->pagedir, upage, PTE_AVL_EXEC);
+
+		frame_unpin(kpage);
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
