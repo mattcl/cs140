@@ -740,6 +740,8 @@ bool mmap_read_in(void *faulting_addr){
 	   of memory*/
 	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_AVL_MMAP);
 
+	frame_unpin(kaddr);
+
 	/*"Kernel out of memory! if false;"*/
 	return success;
 }
