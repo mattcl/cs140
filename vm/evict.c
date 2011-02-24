@@ -90,6 +90,7 @@ void clear_until_threshold(void){
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 	printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
+	printf("uaddr of frame we are evicting %x\n", f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
 	void *kaddr = palloc_get_kaddr_user_index(f->position_in_bitmap);
