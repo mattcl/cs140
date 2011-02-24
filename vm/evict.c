@@ -68,7 +68,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		   frame to true which will make the owning thread wait till
 		   it is fully read out to swap/mmap */
 
-		printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
+		//printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 		frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
 		ASSERT(frame != NULL && frame_to_clear != NULL);
@@ -164,7 +164,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   same*/
 	f->uaddr = uaddr;
 	f->cur_thread = thread_current();
-	printf("Returned %p\n", kaddr);
+	//printf("Returned %p\n", kaddr);
 	sema_up(&f->wait);
 	return kaddr;
 }
