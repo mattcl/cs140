@@ -85,11 +85,11 @@ bool frame_clear_page (void *kernel_page_addr){
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kernel_page_addr);
 
-	struct hash_elem *frame_hash_elem = frame_at_position(frame_idx);
+	struct frame_hash_entry *frame = frame_at_position(frame_idx);
 
-	if(frame_hash_elem != NULL){
+	if(frame != NULL){
 		lock_acquire(&f_table.frame_map_lock);
-		hash_delete(&f_table.frame_hash, frame_hash_elem);
+		hash_delete(&f_table.frame_hash, frame);
 		bitmap_set(f_table.used_frames, frame_idx, false);
 		lock_release(&f_table.frame_map_lock);
 	}else{
@@ -101,7 +101,7 @@ bool frame_clear_page (void *kernel_page_addr){
 }
 
 uint32_t frame_table_size (void){
-	return bitmap_size(f_table->used_frames);
+	return bitmap_size(f_table.used_frames);
 }
 
 struct frame_hash_entry *frame_at_position(size_t bit_num){
@@ -110,7 +110,11 @@ struct frame_hash_entry *frame_at_position(size_t bit_num){
 	lock_acquire(&f_table.frame_map_lock);
 	struct hash_elem *frame_hash_elem = hash_find(&f_table.frame_hash, &key.elem);
 	lock_release(&f_table.frame_map_lock);
-	return frame_hash_elem;
+	if(frame_hash_elem != NULL){
+		return hash_entry(frame_hash_elem, struct frame_hash_entry, elem);
+	}else {
+		return NULL;
+	}
 }
 
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
