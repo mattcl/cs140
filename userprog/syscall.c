@@ -528,7 +528,7 @@ static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
 		struct mmap_hash_entry *test =
 				hash_entry(e, struct mmap_hash_entry, elem);
 		if((uint32_t)uaddr < test->end_addr &&
-				(uint32_t)uaddr > test->begin_addr){
+				(uint32_t)uaddr >= test->begin_addr){
 			return test;
 		}
 	}
@@ -698,13 +698,9 @@ bool mmap_read_in(void *faulting_addr){
 	/* Get the key into the hash, AKA the uaddr of this page*/
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 
-
-	printf("uaddr is %x\n", uaddr);
-
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
 	if(entry == NULL){
-		printf("Was NUll \n");
 		return false;
 	}
 

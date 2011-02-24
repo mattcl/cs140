@@ -139,7 +139,7 @@ int main (void){
 #endif
 
 #ifdef VM
- // swap_init();
+  //swap_init();
 #endif
 
   printf ("Boot complete.\n");
