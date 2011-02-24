@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include "threads/vaddr.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
 #include "vm/frame.h"
@@ -13,6 +14,7 @@
 static size_t evict_hand;
 static size_t clear_hand;
 static size_t threshold;
+static struct lock *clock_lock;
 
 static void *relocate_page (struct frame_entry *f, void * uaddr);
 /* returns the key to the frame that is now available, use the entry
@@ -40,11 +42,15 @@ void *evict_page(void *uaddr){
 //	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
+	//	lock_acquire(&clock_lock);
 	while((evict_hand + threshold) % frame_table_size() < clear_hand % frame_table_size()){
  //printf("1 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 
+	        
+
 		/* Our clear hand is still at least theshold bits in front of us */
 		frame= frame_at_position(evict_hand % frame_table_size());
+		
 		evict_hand ++ ;//= (evict_hand + 1) % frame_table_size();;
 		ASSERT(frame != NULL);
 		/*return the first page we find that has not been accesed */
@@ -81,6 +87,7 @@ void evict_init(size_t threshold_set){
 	threshold = threshold_set;
 	evict_hand = 0;
 	clear_hand = evict_hand + threshold;
+	lock_init(&clock_lock);
 }
 
 /* Likely to be called from a timer interrupt*/
@@ -153,7 +160,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	f->cur_thread = thread_current();
 
 	//printf("Returned %p\n", kaddr);
-
+	//lock_release(&clock_lock);
 	return kaddr;
 }
 
