@@ -181,7 +181,7 @@ inline size_t palloc_number_kernel_pages(void){
 }
 
 inline size_t palloc_get_user_page_index(void *kvaddr){
-	return ((uint8_t)kvaddr - (uint8_t)user_pool.base)/PGSIZE;
+	return (((uint8_t)kvaddr) - ((uint8_t)user_pool.base))/PGSIZE;
 }
 
 inline void * palloc_get_kaddr_user_index(uint32_t user_index){

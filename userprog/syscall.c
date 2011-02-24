@@ -711,7 +711,7 @@ bool mmap_read_in(void *faulting_addr){
 
 	uint32_t offset = uaddr - entry->begin_addr;
 
-	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, uaddr);
+	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, (uint32_t*)uaddr);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(entry != NULL);
@@ -743,7 +743,7 @@ bool mmap_read_in(void *faulting_addr){
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
 bool mmap_write_out(uint32_t *pd, void *uaddr){
-	ASSERT(uaddr % PGSIZE == 0);
+	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
 	if(!pagedir_is_present(pd, uaddr)){
 		/* Can't read back to disk if the memory isn't
 		   actually present*/
@@ -775,7 +775,7 @@ bool mmap_write_out(uint32_t *pd, void *uaddr){
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
 	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_MMAP,
-			uaddr, true)){
+			(uint32_t)uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}

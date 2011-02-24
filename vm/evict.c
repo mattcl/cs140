@@ -120,7 +120,7 @@ static void *relocate_page (struct frame_entry *f){
 			   so that when the MMAP is page faulted it will find
 			   it on disk again*/
 			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
-									PTE_AVL_MMAP,f->uaddr , true);
+									PTE_AVL_MMAP, f->uaddr , true);
 		}else{
 			PANIC("realocate_page called with clean page of medium_t: %x", medium);
 		}
