@@ -171,6 +171,7 @@ bool frame_clear_page (void *kaddr){
 			/* Don't continue evicting this memory, we are
 			   putting it on the swap right now */
 			printf("waiting\n");
+			lock_release(&f_table.frame_map_lock);
 			sema_down(&frame->wait);
 		}else if(frame->cur_thread == thread_current()){
 			/*  Check that this page is still in this frame, it
@@ -180,13 +181,14 @@ bool frame_clear_page (void *kaddr){
 			frame->uaddr = NULL;
 			frame->cur_thread = NULL;
 			bitmap_set(f_table.used_frames, frame_idx, false);
+			lock_release(&f_table.frame_map_lock);
+		}else{
+			lock_release(&f_table.frame_map_lock);
 		}
 	}else{
 		BSOD("INVALID PAGE REMOVED FROM FRAME");
 		/* return false;*/
 	}
-
-	lock_release(&f_table.frame_map_lock);
 	printf("clearend\n");
 	return true;
 }
