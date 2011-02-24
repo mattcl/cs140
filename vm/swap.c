@@ -117,7 +117,7 @@ bool swap_read_in (void *faulting_addr){
 	/* Set the page in our pagetable to point to our new frame
 	   this will set the present bit back to 1*/
 	bool success =
-			pagedir_set_page (cur->pagedir, uaddr, free_page, true);
+			pagedir_set_page (cur->pagedir, (void*)uaddr, free_page, true);
 
 	if(!success){
 		BSOD("MEMORY ALLOCATION FAILURE");
@@ -125,9 +125,9 @@ bool swap_read_in (void *faulting_addr){
 	}
 
 	/* indicate that this is in memorry */
-	pagedir_set_medium(cur->pagedir, uaddr, org_medium);
+	pagedir_set_medium(cur->pagedir, (void*)uaddr, org_medium);
 
-	pagedir_set_dirty(cur->pagedir, uaddr, true);
+	pagedir_set_dirty(cur->pagedir, (void*)uaddr, true);
 
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
