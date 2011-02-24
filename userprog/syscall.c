@@ -613,6 +613,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	   memory*/
 	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
 			i ++, temp_ptr += PGSIZE){
+		ASSERT((temp_ptr % PGSIZE) == 0);
 		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP,
 				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
@@ -696,6 +697,9 @@ bool mmap_read_in(void *faulting_addr){
 
 	/* Get the key into the hash, AKA the uaddr of this page*/
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+
+
+	printf("uaddr is %x\n", uaddr);
 
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
