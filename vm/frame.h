@@ -16,11 +16,12 @@ struct frame_table {
 };
 
 struct frame_entry{
-	uint32_t position_in_bitmap; 		/*The key into the hash table*/
-	bool pinned_to_frame;
-	void *cur_pagedir;
-	struct thread *cur_thread;
-	void *uaddr;
+	uint32_t position_in_bitmap;/*The key into the hash table*/
+	bool pinned_to_frame;		/* protected by frame_map_lock*/
+	struct thread *cur_thread;	/* protected by frame_map_lock*/
+	void *uaddr;				/* protected by frame_map_lock*/
+
+	struct semaphore wait;
 	struct hash_elem elem;
 };
 
@@ -29,11 +30,12 @@ void frame_init(void);
 /* Gets a page which is in a frame, evicts if there are no available frames
    Whenever allocated memory for a user process call this function instead of
    palloc*/
-void  *frame_get_page (enum palloc_flags flags, void * uaddr);
-bool frame_clear_page (void *kernel_page_addr);
+void  *frame_get_page (void * uaddr);
+bool frame_clear_page (void * kaddr);
 
 size_t frame_table_size (void);
 struct frame_entry  *frame_at_position(size_t bit_num);
+struct frame_hash_entry *frame_first_free (enum palloc_flags flags, void *uaddr);
 
 
 #endif /* FRAME_H_ */

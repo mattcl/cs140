@@ -619,7 +619,9 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
+			intr_disable();
 			pagedir_clear_pages(pd, uaddr, i);
+			intr_enable();
 			f->eax = -1;
 			return;
 		}
@@ -634,7 +636,9 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	if(mmap_entry == NULL){
 		/* Can't be allocated, KERNEL OUT OF MEMORY
 		   unmap all our PTE's*/
+		intr_disable();
 		pagedir_clear_pages(pd, uaddr, num_pages);
+		intr_enable();
 		f->eax = -1;
 		return;
 	}
@@ -673,8 +677,9 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	uint32_t *pd = cur->pagedir;
 
 	mmap_save_all(entry);
-
+	intr_disable();
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
+	intr_enable();
 
 	struct hash_elem *returned =
 			hash_delete(&cur->process->mmap_table, &entry->elem);
@@ -710,7 +715,9 @@ bool mmap_read_in(void *faulting_addr){
 
 	uint32_t offset = uaddr - entry->begin_addr;
 
-	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, (uint32_t*)uaddr);
+	/* Accessed through kernel memory the user PTE will not be
+	   marked as accessed or dirty !!! */
+	uint32_t *kaddr = frame_get_page(PAL_USER, (uint32_t*)uaddr);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(fd_entry != NULL);
@@ -724,7 +731,10 @@ bool mmap_read_in(void *faulting_addr){
 	lock_acquire(&filesys_lock);
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
-	file_read(fd_entry->open_file, kaddr, PGSIZE);
+	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
+	if(amount_read < PGSIZE){
+		memset(kaddr, 0, PGSIZE - amount_read);
+	}
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 

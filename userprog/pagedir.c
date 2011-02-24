@@ -24,7 +24,7 @@ uint32_t *pagedir_create (void){
 }
 
 /* Destroys page directory PD, freeing all the pages it
-   references. */
+   references. Called with interrupts off*/
 void pagedir_destroy (uint32_t *pd){
 	uint32_t *pde;
 
@@ -412,7 +412,7 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
    The data for the top 20 bits will be passed in as a uint32_t and have the
    lower 12 bits masked off. Also sets the appropriate bits for medium type*/
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
-		uint32_t data, bool writable){
+	uint32_t data, bool writable){
 
 	//printf("setting %p's page to be medium type %u with auxilary data %p  and present bit %u\n", uaddr, medium, data, pagedir_is_present(pd, uaddr));
 
@@ -422,6 +422,8 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	if(pte == NULL){
 		return false;
 	}
+
+	intr_disable();
 
 	/*Set writable bit */
 	*pte |= (writable ? PTE_W : 0);
@@ -435,12 +437,16 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	/*Clear the present bit and clear the TLB*/
 	pagedir_clear_page(pd, uaddr);
 
+	intr_enable();
+
 	return true;
 }
 
 /* Clears all of the PTE's starting at base and going to
    num_pages. Clear means that it will clear its page, set its
-   medium bits to error and set it to not present.*/
+   medium bits to error and set it to not present. Call with interrupts
+   disables so that we know that no other process can evict our pages
+   while we are trying to remove them from the frames.*/
 void pagedir_clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 	uint8_t* rm_ptr = (uint8_t*)base;
 	uint32_t j;

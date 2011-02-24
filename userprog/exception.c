@@ -261,5 +261,8 @@ static void page_fault (struct intr_frame *f){
 	}
 	/* Page was read in or the return value was set for kernel code
 	   so the memory access will try again and succeed or we will kill
-	   the process or fail silently from the kernel code that faulted */
+	   the process or fail silently from the kernel code that faulted
+	   Important note, if the memory was paged in then, the data was
+	   written using the kernel address, and not the user's so it will
+	   only dirty/access the bits for the kernel mapping in this pagedir*/
 }
