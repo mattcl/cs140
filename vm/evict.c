@@ -37,11 +37,13 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
 void *evict_page(void *uaddr){
-  //printf("Evicting uaddr %p\n", uaddr);
+
+	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
 	while((evict_hand + threshold) % frame_table_size() < clear_hand % frame_table_size()){
-	  //printf("evict %u, clear %u\n", evict_hand, clear_hand);
+		printf("1 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
+
 		/* Our clear hand is still at least theshold bits in front of us */
 		frame= frame_at_position(evict_hand % frame_table_size());
 		evict_hand ++ ;//= (evict_hand + 1) % frame_table_size();;
@@ -59,10 +61,10 @@ void *evict_page(void *uaddr){
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
 	while(true){
-	  //		printf("evict %u, clear %u\n", evict_hand, clear_hand);
+		printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 		frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
-
+		ASSERT(frame != NULL && frame_to_clear != NULL);
 		evict_hand++;
 		clear_hand++;
 
@@ -88,8 +90,10 @@ void clear_until_threshold(void){
 }
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
-  //printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand, clear_hand);
+
+
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
+	//	printf("uaddr of frame we are evicting %x\n", f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
 	void *kaddr = palloc_get_kaddr_user_index(f->position_in_bitmap);
