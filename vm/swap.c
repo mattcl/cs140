@@ -77,7 +77,7 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium = entry->org_medium;
 
 	/* May evict a page to swap */
-	uint32_t* free_page = frame_get_page(PAL_USER);
+	uint32_t* free_page = frame_get_page(PAL_USER, uaddr);
 
 	lock_acquire(&swap_slots_lock);
 
@@ -135,7 +135,7 @@ bool swap_read_in (void *faulting_addr){
    You should only allocate a swap slot for this particular frame and virtual
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
-bool swap_read_out (uint32_t *pd, void *uaddr){
+bool swap_write_out (uint32_t *pd, void *uaddr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 

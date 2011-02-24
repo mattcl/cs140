@@ -196,7 +196,7 @@ static void page_fault (struct intr_frame *f){
 		}else if(type == PTE_AVL_STACK){
 			/* read in zero page */
 			/* Get new frame and install it at the faulting addr*/
-			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO);
+			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
 
 			/* it will be set to dirty or accessed on the retry*/
 			pagedir_install_page(uaddr, kaddr, true);

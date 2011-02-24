@@ -520,6 +520,31 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	}
 }
 
+static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
+	struct hash_iterator i;
+	struct hash_elem *e;
+	hash_first (&i, &thread_current()->process->mmap_table);
+	while((e = hash_next(&i)) != NULL){
+		struct mmap_hash_entry *test =
+				hash_entry(e, struct mmap_hash_entry, elem);
+		if((uint32_t)uaddr < test->end_addr &&
+				(uint32_t)uaddr > test->begin_addr){
+			return test;
+		}
+	}
+	return NULL;
+}
+
+static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
+	struct process *process = thread_current()->process;
+	struct mmap_hash_entry key;
+	key.mmap_id = mid;
+	struct hash_elem *map_hash_elem = hash_find(&process->mmap_table, &key.elem);
+	if(map_hash_elem == NULL){
+		return NULL;
+	}
+	return hash_entry(map_hash_elem, struct mmap_hash_entry, elem);
+}
 
 static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
@@ -584,15 +609,10 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	   here, including other mmapped files that this user has so set up
 	   pages.*/
 
-	mapid_t new_id = process->mapid_counter++;
 
-	/* We can only store 20 bits worth of the unsigned int in the
-	   PTE so we know have overflow*/
-	if(process->mapid_counter > (1<<20)){
-		PANIC("map_id overflow");
-	}
-
-	uint32_t aux_data = new_id << 12;
+	/* We know only 20 bits can be set in uaddr so no
+	   bit shifting needs to occur */
+	uint32_t aux_data = (uint32_t)uaddr;
 
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
@@ -625,7 +645,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	mmap_entry->begin_addr = (uint32_t)uaddr;
 	mmap_entry->end_addr  =  (uint32_t)uaddr + (num_pages*PGSIZE);
 	mmap_entry->fd = entry->fd;
-	mmap_entry->mmap_id = new_id;
+	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
 
 	struct hash_elem *returned =
@@ -679,23 +699,19 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 bool mmap_read_in(void *faulting_addr){
 	struct thread *cur = thread_current();
 
-	/* Mask off the lower 12 bits */
-	uint32_t uaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
-
-	uint32_t map_id = pagedir_get_aux(cur->pagedir, faulting_addr);
-
-	/* shift the map_id down by 12 bits */
-	map_id = map_id >> 12;
+	/* Get the key into the hash, AKA the uaddr of this page
+	   this will be used as a key into our mmapped hash table*/
+	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);;
 
 	/* Get hash entry if it exists */
-	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
 	if(entry == NULL){
 		return false;
 	}
 
 	uint32_t offset = uaddr - entry->begin_addr;
 
-	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO);
+	uint32_t *kaddr = frame_get_page(PAL_USER|PAL_ZERO, uaddr);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(entry != NULL);
@@ -724,29 +740,17 @@ bool mmap_read_in(void *faulting_addr){
 	return success;
 }
 
-static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
-	struct hash_iterator i;
-	struct hash_elem *e;
-	hash_first (&i, &thread_current()->process->mmap_table);
-	while((e = hash_next(&i)) != NULL){
-		struct mmap_hash_entry *test =
-				hash_entry(e, struct mmap_hash_entry, elem);
-		if((uint32_t)uaddr < test->end_addr &&
-				(uint32_t)uaddr > test->begin_addr){
-			return test;
-		}
-	}
-	return NULL;
-}
-
-bool mmap_read_out(uint32_t *pd, void *uaddr){
+/* uaddr is expected to be page aligned, pointing to a page
+   that is used for this mmapped file */
+bool mmap_write_out(uint32_t *pd, void *uaddr){
+	ASSERT(uaddr % PGSIZE == 0);
 	if(!pagedir_is_present(pd, uaddr)){
 		/* Can't read back to disk if the memory isn't
 		   actually present*/
 		return false;
 	}
 
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(uaddr);
 	if(entry == NULL){
 		return false;
 	}
@@ -766,14 +770,12 @@ bool mmap_read_out(uint32_t *pd, void *uaddr){
 	file_write(fd_entry->open_file, uaddr, write_bytes);
 	lock_release(&filesys_lock);
 
-	int32_t aux_data = entry->mmap_id << 12;
-
 	frame_clear_page(pagedir_get_page(pd, uaddr));
 
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
 	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_MMAP,
-			aux_data, true)){
+			uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}
@@ -809,17 +811,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	}
 	file_seek(fd_entry->open_file, original_position);
 	lock_release(&filesys_lock);
-}
-
-static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
-	struct process *process = thread_current()->process;
-	struct mmap_hash_entry key;
-	key.mmap_id = mid;
-	struct hash_elem *map_hash_elem = hash_find(&process->mmap_table, &key.elem);
-	if(map_hash_elem == NULL){
-		return NULL;
-	}
-	return hash_entry(map_hash_elem, struct mmap_hash_entry, elem);
 }
 
 /* Returns the file or NULL if the fd is invalid.
