@@ -7,6 +7,7 @@
 #include "userprog/process.h"
 #include "devices/block.h"
 #include "threads/pte.h"
+#include "threads/interrupt.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
@@ -210,6 +211,11 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	block_write(swap_device, 0, w);
 
+	intr_disable();
+
+	uint32_t *save = thread_current()->pagedir;
+	pagedir_activate(NULL);
+
 	if(thread_current()->pagedir == active_pd()){
 		printf("Active pd is the same as the current threads\n");
 	} else {
@@ -217,6 +223,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	}
 
 	memcpy(w, page_ptr, 512);
+	pagedir_activate(save);
+	intr_enable();
 
 	block_write(swap_device, start_sector, page_ptr);
 
