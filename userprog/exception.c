@@ -176,19 +176,19 @@ static void page_fault (struct intr_frame *f){
 		if(type == PTE_AVL_SWAP){
 			/* Data is not present but on swap read it in
 							   then return so that dereference becomes valid*/
-			if(!swap_read_in(fault_addr)){
+			if(!swap_read_in(uaddr)){
 				printf("COULDN't read in from swap!!!!\n");
 				kill(f);
 			}
 		}else if(type == PTE_AVL_EXEC){
 			/* Data is not present but is on disk still so
 			   read it in and then derefernece becomes valid*/
-			if(!process_exec_read_in(fault_addr)){
+			if(!process_exec_read_in(uaddr)){
 				printf("COULDN'T load the executable segment, KILLL\n");
 				kill(f);
 			}
 		}else if(type == PTE_AVL_MMAP){
-			if(!mmap_read_in(fault_addr)){
+			if(!mmap_read_in(uaddr)){
 				printf("Couldn't load page from mmaped file\n");
 				kill(f);
 			}

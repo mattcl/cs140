@@ -35,11 +35,6 @@ void swap_init (void){
 	   by our swap device  */
 	uint32_t num_sectors = block_size(swap_device);
 
-	char stuff [512];
-	memset(stuff, 25, 512);
-
-	block_write(swap_device, 0, stuff);
-
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
 	printf("%u size and %u slots\n", num_sectors*512, num_slots);
@@ -64,7 +59,7 @@ bool swap_read_in (void *faulting_addr){
 
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *page_ptr, i;
 	/* Lookup the corresponding swap slot that is holding this faulting
@@ -88,17 +83,21 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium = entry->org_medium;
 
 	/* May evict a page to swap */
-	uint32_t* free_page = frame_get_page(PAL_USER, (void*)uaddr);
+	uint32_t* free_page = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	lock_acquire(&swap_slots_lock);
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	page_ptr = (uint8_t*)free_page;
 
+	char w [512];
+	memset(w, 4, 512);
+
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT;
 			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
+		block_write(swap_device, 134, w);
 	}
 
 	/* Set this swap slot to usable */
@@ -120,7 +119,7 @@ bool swap_read_in (void *faulting_addr){
 	/* Set the page in our pagetable to point to our new frame
 	   this will set the present bit back to 1*/
 	bool success =
-			pagedir_set_page (cur->pagedir, faulting_addr, free_page, true);
+			pagedir_set_page (cur->pagedir, uaddr, free_page, true);
 
 	if(!success){
 		PANIC("MEMORY ALLOCATION FAILURE");
@@ -128,9 +127,9 @@ bool swap_read_in (void *faulting_addr){
 	}
 
 	/* indicate that this is in memorry */
-	pagedir_set_medium(cur->pagedir, faulting_addr, org_medium);
+	pagedir_set_medium(cur->pagedir, uaddr, org_medium);
 
-	pagedir_set_dirty(cur->pagedir, faulting_addr, true);
+	pagedir_set_dirty(cur->pagedir, uaddr, true);
 
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
@@ -213,12 +212,16 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
+	char w [512];
+	memset(w, 4, 512);
+	block_write(swap_device, 134, w);
+
 	uint32_t i;
 
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
-		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-		block_write(swap_device, start_sector, page_ptr);
+		//printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
+		//block_write(swap_device, start_sector, page_ptr);
 	}
 
 	lock_release(&swap_slots_lock);
