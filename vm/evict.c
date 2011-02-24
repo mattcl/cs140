@@ -37,6 +37,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
 void *evict_page(void *uaddr){
+	printf("Evicting uaddr %p, with evicthand %u and clear_hand %u\n", uaddr, evict_hand, clear_hand);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
 	while((evict_hand + threshold) % frame_table_size() < clear_hand){
@@ -85,6 +86,7 @@ void clear_until_threshold(void){
 }
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
+	printf("Relocate page\n");
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
@@ -142,6 +144,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	f->uaddr = uaddr;
 	f->cur_pagedir = thread_current()->pagedir;
 	f->cur_thread = thread_current();
+	printf("Returned %p\n", kaddr);
 	return kaddr;
 }
 
