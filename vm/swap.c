@@ -207,7 +207,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	char w [512];
-	memcpy(w, page_ptr, 512);
+
 	block_write(swap_device, 0, w);
 
 	if(thread_current()->pagedir == active_pd()){
@@ -215,6 +215,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	} else {
 		printf("no\n");
 	}
+
+	memcpy(w, page_ptr, 512);
 
 	block_write(swap_device, start_sector, page_ptr);
 
