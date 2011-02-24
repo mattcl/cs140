@@ -48,7 +48,7 @@ void  *frame_get_page (enum palloc_flags flags, void *uaddr){
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 
 	if(entry == NULL){
-		printf("evict\n");
+		//printf("evict\n");
 		return evict_page(&f_table, uaddr, flags);
 	}else{
 		return palloc_kaddr_at_uindex(entry->position_in_bitmap);
