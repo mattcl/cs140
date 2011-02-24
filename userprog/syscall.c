@@ -731,9 +731,9 @@ bool mmap_read_in(void *faulting_addr){
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
 	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
-	/*if(amount_read < PGSIZE){
-		memset(kaddr, 0, PGSIZE - amount_read);
-	}*/
+	if(amount_read < PGSIZE){
+		memset(kaddr+amount_read, 0, PGSIZE - amount_read);
+	}
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
