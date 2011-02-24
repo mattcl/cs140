@@ -262,6 +262,7 @@ identify_ata_device (struct ata_disk *d)
   struct channel *c = d->channel;
   char id[BLOCK_SECTOR_SIZE];
   block_sector_t capacity;
+
   char *model, *serial;
   char extra_info[128];
   struct block *block;
@@ -427,7 +428,6 @@ input_sector (struct channel *c, void *sector)
 static void
 output_sector (struct channel *c, const void *sector) 
 {
-  printf("about to call outsw\n");
   outsw (reg_data (c), sector, BLOCK_SECTOR_SIZE / 2);
 }
 
