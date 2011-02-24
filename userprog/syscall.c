@@ -770,8 +770,6 @@ bool mmap_write_out(uint32_t *pd, void *uaddr){
 	file_write(fd_entry->open_file, uaddr, write_bytes);
 	lock_release(&filesys_lock);
 
-	frame_clear_page(pagedir_get_page(pd, uaddr));
-
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
 	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_MMAP,

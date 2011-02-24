@@ -40,7 +40,7 @@ void pagedir_destroy (uint32_t *pd){
 
 			for(pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++){
 				if(*pte & PTE_P){
-					frame_clear_page(pte_get_page (*pte));
+					frame_clear_page(*pte & PTE_ADDR);
 				} else {
 					/* if its in the swap we need to "free"
 				     it's swap memory */

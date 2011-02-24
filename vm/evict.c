@@ -5,14 +5,15 @@
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
+#include "userprog/syscall.h"	/* MMAP */
 #include <debug.h>
 
 static size_t evict_hand;
 static size_t clear_hand;
 static size_t threshold;
 
-static void *relocate_page (struct frame_entry *f);
-
+static void *relocate_page (struct frame_entry *f, void * uaddr);
 /* returns the key to the frame that is now available, use the entry
    to install this page into the pagedir of the evicting thread that
    is asking for memory.   
@@ -82,7 +83,7 @@ void clear_until_threshold(void){
 
 }
 
-static void *relocate_page (struct frame_entry *f){
+static void *relocate_page (struct frame_entry *f, void * uaddr){
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
@@ -133,5 +134,12 @@ static void *relocate_page (struct frame_entry *f){
 	   	   problems*/
 		memset(kaddr, 0, PGSIZE);
 	}
+
+	/* put user address and pgdir in the frame but leave the
+	   rest of the data, such as position in bitmap as the
+	   same*/
+	f->uaddr = uaddr;
+	f->cur_pagedir = thread_current()->pagedir;
+	return kaddr;
 }
 
