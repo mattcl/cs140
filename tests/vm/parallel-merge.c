@@ -124,6 +124,7 @@ verify (void)
   msg ("verify");
 
   buf_idx = 0;
+  printf("array size %d\n", sizeof histogram / sizeof *histogram);
   for (hist_idx = 0; hist_idx < sizeof histogram / sizeof *histogram;
        hist_idx++)
     {
