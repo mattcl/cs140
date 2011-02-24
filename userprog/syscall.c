@@ -619,9 +619,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
-			intr_disable();
 			pagedir_clear_pages(pd, uaddr, i);
-			intr_enable();
 			f->eax = -1;
 			return;
 		}
@@ -636,9 +634,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	if(mmap_entry == NULL){
 		/* Can't be allocated, KERNEL OUT OF MEMORY
 		   unmap all our PTE's*/
-		intr_disable();
 		pagedir_clear_pages(pd, uaddr, num_pages);
-		intr_enable();
 		f->eax = -1;
 		return;
 	}
@@ -677,9 +673,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	uint32_t *pd = cur->pagedir;
 
 	mmap_save_all(entry);
-	intr_disable();
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
-	intr_enable();
 
 	struct hash_elem *returned =
 			hash_delete(&cur->process->mmap_table, &entry->elem);

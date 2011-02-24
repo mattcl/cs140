@@ -30,7 +30,7 @@ void frame_init(void);
 /* Gets a page which is in a frame, evicts if there are no available frames
    Whenever allocated memory for a user process call this function instead of
    palloc*/
-void  *frame_get_page (void * uaddr);
+void  *frame_get_page (enum palloc_flags flags, void * uaddr);
 bool frame_clear_page (void * kaddr);
 
 size_t frame_table_size (void);
