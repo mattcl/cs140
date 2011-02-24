@@ -139,7 +139,7 @@ bool swap_read_in (void *faulting_addr){
    created, or if it is a stack segment that has been accessed*/
 bool swap_write_out (struct thread *cur, void *uaddr){
 	struct process *cur_process = cur->process;
-
+	uint32_t *pd = cur->pagedir;
 	/* Set the auxilary data so that it can index into the swap table
 	   Bit mask makes sure we only overwrite the most significant
 	   20 bits of the PTE*/
