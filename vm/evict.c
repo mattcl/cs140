@@ -62,7 +62,7 @@ void *evict_page(void *uaddr){
 		printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 		frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
-
+		assert(frame != NULL && frame_to_clear != NULL);
 		evict_hand++;
 		clear_hand++;
 
@@ -88,7 +88,7 @@ void clear_until_threshold(void){
 }
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
-	printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand, clear_hand);
+	printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
