@@ -165,7 +165,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	f->uaddr = uaddr;
 	f->cur_thread = thread_current();
 	//printf("Returned %p\n", kaddr);
-
+	sema_up(&f->wait);
 	return kaddr;
 }
 
