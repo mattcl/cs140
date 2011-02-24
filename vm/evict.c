@@ -40,11 +40,11 @@ void *evict_page(void *uaddr){
 	printf("Evicting uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
-	while((evict_hand + threshold) % frame_table_size() < clear_hand){
+	while((evict_hand + threshold) % frame_table_size() < clear_hand % frame_table_size()){
+		printf("evict %u, clear %u\n", evict_hand, clear_hand);
 		/* Our clear hand is still at least theshold bits in front of us */
-		frame= frame_at_position(evict_hand);
-		evict_hand ++;
-
+		frame= frame_at_position(evict_hand % frame_table_size());
+		evict_hand ++ ;//= (evict_hand + 1) % frame_table_size();;
 		ASSERT(frame != NULL);
 		/*return the first page we find that has not been accesed */
 		if(!pagedir_is_accessed(frame->cur_pagedir,frame->uaddr)
@@ -59,8 +59,9 @@ void *evict_page(void *uaddr){
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
 	while(true){
-		frame = frame_at_position(evict_hand);
-		frame_to_clear = frame_at_position(clear_hand);
+		printf("evict %u, clear %u\n", evict_hand, clear_hand);
+		frame = frame_at_position(evict_hand % frame_table_size());
+		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
 
 		evict_hand++;
 		clear_hand++;

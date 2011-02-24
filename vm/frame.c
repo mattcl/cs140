@@ -25,11 +25,11 @@ static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
 /* Initializes the frame table. Setting the bitmap and the
    hash table that represents each frame */
 void frame_init(void){
-	//printf("Palloc num pages %lu\n", palloc_number_user_pages());
 	f_table.used_frames = bitmap_create(palloc_number_user_pages());
 	lock_init(&f_table.frame_map_lock);
 	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
 	evict_init(COUNT_THRESHOLD);
+	printf("Palloc num pages %lu our slots %u\n", palloc_number_user_pages(), frame_table_size());
 }
 
 /* Gets a page which is in a frame, evicts if there are no available frames
