@@ -59,7 +59,6 @@ bool swap_read_in (void *faulting_addr){
 
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	//uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *page_ptr, i;
@@ -213,7 +212,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		//printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-		//block_write(swap_device, start_sector, page_ptr);
+		block_write(swap_device, start_sector, page_ptr);
 	}
 	lock_release(&swap_slots_lock);
 	printf("Returned from writing block\n");
