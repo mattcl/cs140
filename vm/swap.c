@@ -213,15 +213,18 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	char w [512];
-	memset(w, 4, 512);
-	block_write(swap_device, 134, w);
+	memcpy(w, page_ptr, 512);
+	block_write(swap_device, 0, w);
+
+
+	block_write(swap_device, start_sector, page_ptr);
 
 	uint32_t i;
 
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
-		//printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-		//block_write(swap_device, start_sector, page_ptr);
+		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
+
 	}
 
 	lock_release(&swap_slots_lock);
