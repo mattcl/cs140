@@ -214,6 +214,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
+		PANIC("");
 		block_write(swap_device, start_sector, page_ptr);
 	}
 	lock_release(&swap_slots_lock);

@@ -370,12 +370,18 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
   struct channel *c = d->channel;
   printf("ide_write\n");
   lock_acquire (&c->lock);
+  printf("1");
   select_sector (d, sec_no);
+  printf("2");
   issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
+  printf("3");
   if (!wait_while_busy (d))
     PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+  printf("4");
   output_sector (c, buffer);
+  printf("5");'
   sema_down (&c->completion_wait);
+  printf("6");
   lock_release (&c->lock);
   printf("ide_write done\n");
 }
