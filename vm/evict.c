@@ -62,7 +62,7 @@ void *evict_page(void *uaddr){
 		printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 		frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
-		assert(frame != NULL && frame_to_clear != NULL);
+		ASSERT(frame != NULL && frame_to_clear != NULL);
 		evict_hand++;
 		clear_hand++;
 
