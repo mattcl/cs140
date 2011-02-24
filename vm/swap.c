@@ -153,11 +153,6 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* indicate that this is on swap */
 	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
-	/* Force a page fault when we are lookin this virtual address up
-	   clear page preserves all the other bits in the PTE sets the
-	   present bit to 0*/
-	pagedir_clear_page(pd, uaddr);
-
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 
 	if(new_entry == NULL){
@@ -190,6 +185,14 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
 	uint8_t *page_ptr = pagedir_get_page(pd, uaddr);
+
+	/* Force a page fault when we are lookin this virtual address up
+	   clear page preserves all the other bits in the PTE sets the
+	   present bit to 0*/
+	pagedir_clear_page(pd, uaddr);
+
+
+	ASSERT(page_ptr != NULL);
 
 	printf("kvaddr of data this page points to %p\n", page_ptr);
 
