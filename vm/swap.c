@@ -53,6 +53,8 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
+	printf("Swap read in %p \n", faulting_addr);
+
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
@@ -140,6 +142,10 @@ bool swap_read_in (void *faulting_addr){
 bool swap_write_out (struct thread *cur, void *uaddr){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
+
+
+	ASSERT(pagedir_is_present(pd, uaddr));
+
 	/* Set the auxilary data so that it can index into the swap table
 	   Bit mask makes sure we only overwrite the most significant
 	   20 bits of the PTE*/
