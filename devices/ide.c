@@ -355,6 +355,7 @@ ide_read (void *d_, block_sector_t sec_no, void *buffer)
     PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
   input_sector (c, buffer);
   lock_release (&c->lock);
+  printf("ide_read done\n");
 }
 
 /* Write sector SEC_NO to disk D from BUFFER, which must contain
@@ -376,6 +377,7 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
   output_sector (c, buffer);
   sema_down (&c->completion_wait);
   lock_release (&c->lock);
+  printf("ide_write done\n");
 }
 
 static struct block_operations ide_operations =
