@@ -150,30 +150,13 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
 
-
 	ASSERT(pagedir_is_present(pd, uaddr));
-
-	/* Set the auxilary data so that it can index into the swap table
-	   Bit mask makes sure we only overwrite the most significant
-	   20 bits of the PTE*/
-	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
-	pagedir_set_aux(pd, uaddr, addr_to_save);
-
-	medium_t org_medium = pagedir_get_medium(pd, uaddr);
-
-	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
-
-	/* indicate that this is on swap */
-	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 
 	if(new_entry == NULL){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
-
-	new_entry->uaddr = addr_to_save;
-	new_entry->org_medium = org_medium;
 
 	printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
@@ -184,8 +167,6 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	if(swap_slot == BITMAP_ERROR){
 		PANIC("SWAP IS FULL BABY");
 	}
-
-	new_entry->swap_slot = swap_slot;
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
@@ -207,31 +188,11 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
-	char w [512];
-
-	block_write(swap_device, 0, w);
-
-	intr_disable();
-
-	uint32_t *save = thread_current()->pagedir;
-	pagedir_activate(save);
-
-	if(thread_current()->pagedir == active_pd()){
-		printf("Active pd is the same as the current threads\n");
-	} else {
-		printf("no\n");
-	}
-
-	memcpy(w, page_ptr, 512);
-	pagedir_activate(save);
-	intr_enable();
-
-	block_write(swap_device, start_sector, page_ptr);
-
 	uint32_t i;
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
+		block_write(swap_device, start_sector, page_ptr);
 
 	}
 	lock_release(&swap_slots_lock);
@@ -241,6 +202,25 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	   clear page preserves all the other bits in the PTE sets the
 	   present bit to 0*/
 	pagedir_clear_page(pd, uaddr);
+
+	/* Set the auxilary data so that it can index into the swap table
+	   Bit mask makes sure we only overwrite the most significant
+	   20 bits of the PTE*/
+	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
+
+	pagedir_set_aux(pd, uaddr, addr_to_save);
+
+	medium_t org_medium = pagedir_get_medium(pd, uaddr);
+
+	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
+
+	/* indicate that this is on swap */
+	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
+
+	/* Set up the entry */
+	new_entry->uaddr = addr_to_save;
+	new_entry->org_medium = org_medium;
+	new_entry->swap_slot = swap_slot;
 
 	return true;
 }
