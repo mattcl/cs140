@@ -97,7 +97,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	bool needs_to_be_zeroed = true;
 
-	printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_pagedir, f->uaddr), PTE_AVL_SWAP);
+	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_pagedir, f->uaddr), PTE_AVL_SWAP);
 
 	if(pagedir_is_dirty(f->cur_pagedir, f->uaddr)){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
