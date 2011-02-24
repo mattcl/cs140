@@ -148,7 +148,7 @@ void frame_unpin (void *kaddr){
    or does nothing if the kaddr is not mapped to a frame.
    Called */
 bool frame_clear_page (void *kaddr){
-	//printf("clear\n");
+	printf("clear\n");
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kaddr);
 
@@ -189,7 +189,7 @@ bool frame_clear_page (void *kaddr){
 		BSOD("INVALID PAGE REMOVED FROM FRAME");
 		/* return false;*/
 	}
-	//printf("clearend\n");
+	printf("clearend\n");
 	return true;
 }
 
