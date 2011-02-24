@@ -198,12 +198,6 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/*uint8_t so that incrementing is easy*/
 	uint8_t *page_ptr = pagedir_get_page(pd, uaddr);
 
-	/* Force a page fault when we are lookin this virtual address up
-	   clear page preserves all the other bits in the PTE sets the
-	   present bit to 0*/
-	pagedir_clear_page(pd, uaddr);
-
-
 	ASSERT(page_ptr != NULL);
 
 	printf("kvaddr of data this page points to %p\n", page_ptr);
@@ -227,6 +221,12 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	}
 	lock_release(&swap_slots_lock);
 	printf("Returned from writing block\n");
+
+	/* Force a page fault when we are lookin this virtual address up
+	   clear page preserves all the other bits in the PTE sets the
+	   present bit to 0*/
+	pagedir_clear_page(pd, uaddr);
+
 	return true;
 }
 
