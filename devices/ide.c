@@ -336,7 +336,7 @@ descramble_ata_string (char *string, int size)
 
   return string;
 }
-
+
 /* Reads sector SEC_NO from disk D into BUFFER, which must have
    room for BLOCK_SECTOR_SIZE bytes.
    Internally synchronizes accesses to disks, so external
@@ -379,7 +379,7 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
     PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
   printf("4");
   output_sector (c, buffer);
-  printf("5");'
+  printf("5");
   sema_down (&c->completion_wait);
   printf("6");
   lock_release (&c->lock);
