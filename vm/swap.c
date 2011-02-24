@@ -210,6 +210,11 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	memcpy(w, page_ptr, 512);
 	block_write(swap_device, 0, w);
 
+	if(thread_current()->pagedir == active_pd()){
+		pritnf("Active pd is the same as the current threads\n");
+	} else {
+		printf("no\n");
+	}
 
 	block_write(swap_device, start_sector, page_ptr);
 
