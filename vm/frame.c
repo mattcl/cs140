@@ -84,31 +84,33 @@ void  *frame_get_page (enum palloc_flags flags){
 bool frame_clear_page (void *kernel_page_addr){
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kernel_page_addr);
-	struct frame_hash_entry key;
-	key.position_in_bitmap = frame_idx;
-	lock_acquire(&f_table.frame_map_lock);
-	struct hash_elem *frame_hash_elem = hash_find(&f_table.frame_hash, &key.elem);
+
+	struct hash_elem *frame_hash_elem = frame_at_position(frame_idx);
+
 	if(frame_hash_elem != NULL){
+		lock_acquire(&f_table.frame_map_lock);
 		hash_delete(&f_table.frame_hash, frame_hash_elem);
 		bitmap_set(f_table.used_frames, frame_idx, false);
+		lock_release(&f_table.frame_map_lock);
 	}else{
-		//Invalid page to be releasing so.....
 		PANIC("INVALID PAGE REMOVED FROM FRAME");
 		/* return false;*/
 	}
-	lock_release(&f_table.frame_map_lock);
 	palloc_free_page (kernel_page_addr);
 	return true;
 }
 
 uint32_t frame_table_size (void){
-
-	return 0;
+	return bitmap_size(f_table->used_frames);
 }
 
 struct frame_hash_entry *frame_at_position(size_t bit_num){
-
-	return NULL;
+	struct frame_hash_entry key;
+	key.position_in_bitmap = bit_num;
+	lock_acquire(&f_table.frame_map_lock);
+	struct hash_elem *frame_hash_elem = hash_find(&f_table.frame_hash, &key.elem);
+	lock_release(&f_table.frame_map_lock);
+	return frame_hash_elem;
 }
 
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
