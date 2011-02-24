@@ -35,11 +35,6 @@ void swap_init (void){
 	   by our swap device  */
 	uint32_t num_sectors = block_size(swap_device);
 
-	char stuff [512];
-	memset(stuff, 25, 512);
-
-	block_write(swap_device, 0, stuff);
-
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
 	printf("%u size and %u slots\n", num_sectors*512, num_slots);
@@ -217,7 +212,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-		block_write(swap_device, start_sector, page_ptr);
+		//block_write(swap_device, start_sector, page_ptr);
 	}
 	lock_release(&swap_slots_lock);
 	printf("Returned from writing block\n");
