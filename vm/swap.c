@@ -211,7 +211,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	block_write(swap_device, 0, w);
 
 	if(thread_current()->pagedir == active_pd()){
-		pritnf("Active pd is the same as the current threads\n");
+		printf("Active pd is the same as the current threads\n");
 	} else {
 		printf("no\n");
 	}
