@@ -90,10 +90,14 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	page_ptr = (uint8_t*)free_page;
 
+	char w [512];
+	memset(w, 4, 512);
+
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT;
 			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
+		block_write(swap_device, start_sector, w);
 	}
 
 	/* Set this swap slot to usable */
@@ -212,7 +216,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		//printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-		block_write(swap_device, start_sector, page_ptr);
+		//block_write(swap_device, start_sector, page_ptr);
 	}
 	lock_release(&swap_slots_lock);
 	printf("Returned from writing block\n");
