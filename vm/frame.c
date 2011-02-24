@@ -152,7 +152,7 @@ bool frame_clear_page (void *kaddr){
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kaddr);
 
-	lock_acquire(&f_table->frame_map_lock);
+	lock_acquire(&f_table.frame_map_lock);
 
 	struct frame_entry *frame = frame_at_position(frame_idx);
 
