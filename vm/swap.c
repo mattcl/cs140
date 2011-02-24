@@ -31,12 +31,15 @@ void swap_init (void){
 		PANIC("NO SWAP!!!!");
 	}
 
-	block_print_stats();
 	/* Calculate the number of swap slots supported
 	   by our swap device  */
 	uint32_t num_sectors = block_size(swap_device);
 
+
+
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
+
+	printf("%u size and %u slots\n", num_sectors*512, num_slots);
 
 	used_swap_slots = bitmap_create(num_slots);
 
@@ -208,11 +211,13 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	uint32_t i;
+	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
 		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
 		block_write(swap_device, start_sector, page_ptr);
 	}
+	lock_release(&filesys_lock);
 	lock_release(&swap_slots_lock);
 	printf("Returned from writing block\n");
 	return true;
