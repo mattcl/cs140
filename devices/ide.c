@@ -437,6 +437,7 @@ input_sector (struct channel *c, void *sector)
 static void
 output_sector (struct channel *c, const void *sector) 
 {
+  printf("about to call outsw\n");
   outsw (reg_data (c), sector, BLOCK_SECTOR_SIZE / 2);
 }
 

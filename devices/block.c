@@ -142,9 +142,9 @@ void block_print_stats (void){
 	for(i = 0; i < BLOCK_ROLE_CNT; i++){
 		struct block *block = block_by_role[i];
 		if(block != NULL){
-			printf ("%s (%s): %llu reads, %llu writes\n",
+			printf ("%s (%s): %llu reads, %llu writes, size %x\n",
 					block->name, block_type_name (block->type),
-					block->read_cnt, block->write_cnt);
+				block->read_cnt, block->write_cnt, block_size(block));
 		}
 	}
 }
