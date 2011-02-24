@@ -967,6 +967,8 @@ static bool setup_stack (void **esp){
 		success = pagedir_install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
 		if(success){
 			*esp = PHYS_BASE;
+			pagedir_set_medium(thread_current()->pagedir,
+					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_AVL_STACK);
 		}else{
 			frame_clear_page (kpage);
 		}
