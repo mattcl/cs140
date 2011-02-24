@@ -195,7 +195,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
 
-	print("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
+	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	uint32_t i;
 	for(i = 0; i < SECTORS_PER_SLOT;
