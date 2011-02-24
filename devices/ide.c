@@ -344,6 +344,7 @@ descramble_ata_string (char *string, int size)
 static void
 ide_read (void *d_, block_sector_t sec_no, void *buffer)
 {
+	printf("ide_read\n");
   struct ata_disk *d = d_;
   struct channel *c = d->channel;
   lock_acquire (&c->lock);
@@ -366,6 +367,7 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
 {
   struct ata_disk *d = d_;
   struct channel *c = d->channel;
+  printf("ide_write\n");
   lock_acquire (&c->lock);
   select_sector (d, sec_no);
   issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
