@@ -35,7 +35,10 @@ void swap_init (void){
 	   by our swap device  */
 	uint32_t num_sectors = block_size(swap_device);
 
+	char stuff [512];
+	memset(stuff, 25, 512);
 
+	block_write(swap_device, 0, stuff);
 
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
