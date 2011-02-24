@@ -696,11 +696,12 @@ bool mmap_read_in(void *faulting_addr){
 
 	/* Get the key into the hash, AKA the uaddr of this page
 	   this will be used as a key into our mmapped hash table*/
-	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);;
+	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
 	if(entry == NULL){
+		printf("Was NUll \n");
 		return false;
 	}
 
