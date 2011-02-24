@@ -152,9 +152,9 @@ bool frame_clear_page (void *kaddr){
 	/*Error checking needs implementation*/
 	size_t frame_idx = palloc_get_user_page_index(kaddr);
 
-	//printf("try acquire\n");
+	printf("try acquire\n");
 	lock_acquire(&f_table.frame_map_lock);
-	//printf("acquired\n");
+	printf("acquired\n");
 	struct frame_entry *frame = frame_at_position(frame_idx);
 
 	/* If the frame is not null then we need to remove our
@@ -170,7 +170,7 @@ bool frame_clear_page (void *kaddr){
 		if(frame->pinned_to_frame){
 			/* Don't continue evicting this memory, we are
 			   putting it on the swap right now */
-			//printf("waiting\n");
+			printf("waiting\n");
 			lock_release(&f_table.frame_map_lock);
 			sema_down(&frame->wait);
 		}else if(frame->cur_thread == thread_current()){
