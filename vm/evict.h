@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "threads/palloc.h"
+#include "frame.h"
 
 void evict_init(size_t threshold_set);
 void * evict_page(struct frame_table *f_table, void *uaddr,

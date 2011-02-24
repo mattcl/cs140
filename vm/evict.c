@@ -2,9 +2,9 @@
 #include <stdbool.h>
 #include "threads/vaddr.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "userprog/process.h"
 #include "userprog/pagedir.h"
-#include "vm/frame.h"
 #include "vm/swap.h"
 #include "userprog/syscall.h"	/* MMAP */
 #include <debug.h>
