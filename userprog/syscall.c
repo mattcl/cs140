@@ -789,7 +789,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}
-	print("mmap out end\n");
+	printf("mmap out end\n");
 	return true;
 }
 
