@@ -7,6 +7,7 @@
 #include "userprog/process.h"
 #include "devices/block.h"
 #include "threads/pte.h"
+#include "threads/interrupt.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
@@ -90,14 +91,10 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	page_ptr = (uint8_t*)free_page;
 
-	char w [512];
-	memset(w, 4, 512);
-
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT;
 			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
-		block_write(swap_device, 134, w);
 	}
 
 	/* Set this swap slot to usable */
@@ -148,42 +145,33 @@ bool swap_read_in (void *faulting_addr){
 bool swap_write_out (struct thread *cur, void *uaddr){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
-
-
 	ASSERT(pagedir_is_present(pd, uaddr));
 
-	/* Set the auxilary data so that it can index into the swap table
-	   Bit mask makes sure we only overwrite the most significant
-	   20 bits of the PTE*/
-	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
-	pagedir_set_aux(pd, uaddr, addr_to_save);
-
-	medium_t org_medium = pagedir_get_medium(pd, uaddr);
-
-	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
-
-	/* indicate that this is on swap */
-	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
-
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
-
 	if(new_entry == NULL){
 		PANIC("KERNEL OUT OF MEMORRY");
 	}
-
-	new_entry->uaddr = addr_to_save;
-	new_entry->org_medium = org_medium;
 
 	printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
 
 	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
-
 	if(swap_slot == BITMAP_ERROR){
 		PANIC("SWAP IS FULL BABY");
 	}
 
+	/* Set up entry */
+
+	/* Set the auxilary data so that it can index into the swap table
+	   Bit mask makes sure we only overwrite the most significant
+	   20 bits of the PTE*/
+	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
+	medium_t org_medium = pagedir_get_medium(pd, uaddr);
+
+	/* Set up the entry */
+	new_entry->uaddr = addr_to_save;
+	new_entry->org_medium = org_medium;
 	new_entry->swap_slot = swap_slot;
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
@@ -196,49 +184,37 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	/* move the data from kvaddr to the newly allocated swap slot*/
 	/*uint8_t so that incrementing is easy*/
-	uint8_t *page_ptr = pagedir_get_page(pd, uaddr);
+	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
+
+	ASSERT(kaddr_ptr != NULL);
+
+	printf("kvaddr of data this page points to %p\n", kaddr_ptr);
+
+	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
+
+	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
+
+	uint32_t i;
+
+	for(i = 0; i < SECTORS_PER_SLOT;
+			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
+		block_write(swap_device, start_sector, kaddr_ptr);
+	}
+
+	lock_release(&swap_slots_lock);
+	printf("Returned from writing block\n");
 
 	/* Force a page fault when we are lookin this virtual address up
 	   clear page preserves all the other bits in the PTE sets the
 	   present bit to 0*/
 	pagedir_clear_page(pd, uaddr);
 
+	pagedir_set_aux(pd, uaddr, addr_to_save);
 
-	ASSERT(page_ptr != NULL);
+	printf("org medium %x, addr_to_save %x, uaddr %x\n", org_medium, addr_to_save, uaddr);
+	/* indicate that this is on swap */
+	pagedir_set_medium(pd, uaddr, PTE_AVL_SWAP);
 
-	printf("kvaddr of data this page points to %p\n", page_ptr);
-
-	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
-
-	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
-
-	char w [512];
-       
-	printf("deref attempted");
-	*(char*)page_ptr = 'a';
-	printf("deref included");
-	printf("mem copy started 1");
-	memcpy(w, page_ptr, 1);
-	printf("mem cpy done 1");
-	printf("mem copy started 512");
-	memcpy(w, page_ptr, 512);
-	printf("memcpy done 512");
-	block_write(swap_device, 0, w);
-	printf("block_write done");
-
-
-	block_write(swap_device, start_sector, page_ptr);
-
-	uint32_t i;
-
-	for(i = 0; i < SECTORS_PER_SLOT;
-			i++, start_sector++, page_ptr += BLOCK_SECTOR_SIZE){
-		printf("cur sector %u, cur pointer %p\n", start_sector, page_ptr);
-
-	}
-
-	lock_release(&swap_slots_lock);
-	printf("Returned from writing block\n");
 	return true;
 }
 

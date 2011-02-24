@@ -44,6 +44,12 @@ void pagedir_destroy (uint32_t *pd){
 				} else {
 					/* if its in the swap we need to "free"
 				     it's swap memory */
+
+
+
+
+
+
 				}
 			}
 			palloc_free_page (pt);
