@@ -37,7 +37,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
 void *evict_page(void *uaddr){
-	printf("Evicting uaddr %p, with evicthand %u and clear_hand %u\n", uaddr, evict_hand, clear_hand);
+	printf("Evicting uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
 	while((evict_hand + threshold) % frame_table_size() < clear_hand){
@@ -69,6 +69,7 @@ void *evict_page(void *uaddr){
 
 		if(!pagedir_is_accessed(frame->cur_pagedir, frame->uaddr)
 				&& !frame->pinned_to_frame){
+
 			return relocate_page(frame, uaddr);
 		}
 	}
@@ -86,13 +87,15 @@ void clear_until_threshold(void){
 }
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
-	printf("Relocate page\n");
+	printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand, clear_hand);
 	medium_t medium = pagedir_get_medium(f->cur_pagedir,f->uaddr);
 	ASSERT(medium != PTE_AVL_ERROR);
 
 	void *kaddr = palloc_get_kaddr_user_index(f->position_in_bitmap);
 
 	bool needs_to_be_zeroed = true;
+
+	printf("Medium is %x dirty is %u\n", medium, pagedir_is_dirty(f->cur_pagedir, f->uaddr));
 
 	if(pagedir_is_dirty(f->cur_pagedir, f->uaddr)){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
