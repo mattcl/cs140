@@ -77,7 +77,7 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium = entry->org_medium;
 
 	/* May evict a page to swap */
-	uint32_t* free_page = frame_get_page(PAL_USER, uaddr);
+	uint32_t* free_page = frame_get_page(PAL_USER, (void*)uaddr);
 
 	lock_acquire(&swap_slots_lock);
 
