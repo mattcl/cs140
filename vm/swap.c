@@ -65,7 +65,7 @@ bool swap_read_in (void *faulting_addr){
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
-	key.uaddr = uaddr;
+	key.uaddr = faulting_addr;
 	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
 			&key.elem);
 	if(slot_result == NULL){
@@ -83,7 +83,7 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium = entry->org_medium;
 
 	/* May evict a page to swap */
-	uint32_t* free_page = frame_get_page(PAL_USER, (void*)uaddr);
+	uint32_t* free_page = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	lock_acquire(&swap_slots_lock);
 
