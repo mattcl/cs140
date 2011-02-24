@@ -213,8 +213,18 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	char w [512];
+       
+	printf("deref attempted");
+	*(char*)page_ptr = 'a';
+	printf("deref included");
+	printf("mem copy started 1");
+	memcpy(w, page_ptr, 1);
+	printf("mem cpy done 1");
+	printf("mem copy started 512");
 	memcpy(w, page_ptr, 512);
+	printf("memcpy done 512");
 	block_write(swap_device, 0, w);
+	printf("block_write done");
 
 
 	block_write(swap_device, start_sector, page_ptr);
