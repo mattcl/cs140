@@ -67,14 +67,14 @@ void *evict_page(void){
 	}
 }
 
-void evict_init(void){
-	threshold = 1;
+void evict_init(size_t threshold_set){
+	threshold = threshold_set;
 	evict_hand = 0;
 	clear_hand = evict_hand + threshold;
 }
 
 /* Likely to be called from a timer interrupt*/
-void clear_until_threshold(){
+void clear_until_threshold(void){
 
 }
 

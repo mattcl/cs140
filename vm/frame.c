@@ -16,6 +16,8 @@ static struct frame_table f_table;
 #define HASH_ELEM const struct hash_elem
 #define AUX void *aux UNUSED
 
+#define COUNT_THRESHOLD 1
+
 /* HASH table functions*/
 static unsigned frame_hash_func (HASH_ELEM *e, AUX);
 static bool frame_hash_compare (HASH_ELEM *a, HASH_ELEM *b, AUX);
@@ -27,7 +29,7 @@ void frame_init(void){
 	f_table.used_frames = bitmap_create(palloc_number_user_pages());
 	lock_init(&f_table.frame_map_lock);
 	hash_init(&f_table.frame_hash, &frame_hash_func, &frame_hash_compare, NULL);
-	evict_init();
+	evict_init(COUNT_THRESHOLD);
 }
 
 /* Gets a page which is in a frame, evicts if there are no available frames
