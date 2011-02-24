@@ -59,13 +59,14 @@ bool swap_read_in (void *faulting_addr){
 
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+	//uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *page_ptr, i;
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
-	key.uaddr = faulting_addr;
+	key.uaddr = uaddr;
 	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
 			&key.elem);
 	if(slot_result == NULL){
