@@ -8,6 +8,7 @@
 #include "vm/swap.h"
 #include "userprog/syscall.h"	/* MMAP */
 #include <debug.h>
+#include <string.h>
 
 static size_t evict_hand;
 static size_t clear_hand;
@@ -50,7 +51,7 @@ void *evict_page(void *uaddr){
 			/*  evict page from frame moving it to the appropriate
 				location and return the kernel virtual address of the
 				physical page represented by the evict_hand in the bitmap*/
-			return relocate_page(frame);
+			return relocate_page(frame, uaddr);
 		}
 	}
 
@@ -67,7 +68,7 @@ void *evict_page(void *uaddr){
 
 		if(!pagedir_is_accessed(frame->cur_pagedir, frame->uaddr)
 				&& !frame->pinned_to_frame){
-			return relocate_page(frame);
+			return relocate_page(frame, uaddr);
 		}
 	}
 }
@@ -95,11 +96,11 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
-			swap_write_out((uint32_t)f->cur_pagedir, f->uaddr);
+			swap_write_out((uint32_t*)f->cur_pagedir, f->uaddr);
 		}else if(medium == PTE_AVL_MMAP){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
-			mmap_write_out((uint32_t)f->cur_pagedir, f->uaddr);
+			mmap_write_out((uint32_t*)f->cur_pagedir, f->uaddr);
 		}else{
 			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
 		}
@@ -115,13 +116,13 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 			   disk again*/
 			bool writable = pagedir_is_writable(f->cur_pagedir, f->uaddr);
 			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
-						PTE_AVL_EXEC, f->uaddr, writable);
+						PTE_AVL_EXEC, (uint32_t)f->uaddr, writable);
 		}else if(medium == PTE_AVL_MMAP){
 			/* this should also set up an on demand page
 			   so that when the MMAP is page faulted it will find
 			   it on disk again*/
 			pagedir_setup_demand_page(f->cur_pagedir, f->uaddr,
-									PTE_AVL_MMAP, f->uaddr , true);
+									PTE_AVL_MMAP, (uint32_t)f->uaddr , true);
 		}else{
 			PANIC("realocate_page called with clean page of medium_t: %x", medium);
 		}
