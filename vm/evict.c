@@ -96,11 +96,11 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
-			swap_write_out((uint32_t*)f->cur_thread, f->uaddr);
+			swap_write_out(f->cur_thread, f->uaddr);
 		}else if(medium == PTE_AVL_MMAP){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
-			mmap_write_out((uint32_t*)f->cur_thread, f->uaddr);
+			mmap_write_out(f->cur_thread, f->uaddr);
 		}else{
 			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
 		}
