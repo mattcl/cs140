@@ -1,5 +1,4 @@
 #include "evict.h"
-#include <stdint.h>
 #include <stdbool.h>
 #include "threads/vaddr.h"
 #include "threads/thread.h"
