@@ -173,7 +173,6 @@ static void page_fault (struct intr_frame *f){
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-
 		if(type == PTE_AVL_SWAP){
 			/* Data is not present but on swap read it in
 							   then return so that dereference becomes valid*/

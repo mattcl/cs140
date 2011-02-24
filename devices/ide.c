@@ -336,7 +336,7 @@ descramble_ata_string (char *string, int size)
 
   return string;
 }
-
+
 /* Reads sector SEC_NO from disk D into BUFFER, which must have
    room for BLOCK_SECTOR_SIZE bytes.
    Internally synchronizes accesses to disks, so external
@@ -344,6 +344,7 @@ descramble_ata_string (char *string, int size)
 static void
 ide_read (void *d_, block_sector_t sec_no, void *buffer)
 {
+	printf("ide_read\n");
   struct ata_disk *d = d_;
   struct channel *c = d->channel;
   lock_acquire (&c->lock);
@@ -354,6 +355,7 @@ ide_read (void *d_, block_sector_t sec_no, void *buffer)
     PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
   input_sector (c, buffer);
   lock_release (&c->lock);
+  printf("ide_read done\n");
 }
 
 /* Write sector SEC_NO to disk D from BUFFER, which must contain
@@ -366,14 +368,22 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
 {
   struct ata_disk *d = d_;
   struct channel *c = d->channel;
+  printf("ide_write\n");
   lock_acquire (&c->lock);
+  printf("1");
   select_sector (d, sec_no);
+  printf("2");
   issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
+  printf("3");
   if (!wait_while_busy (d))
     PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+  printf("4");
   output_sector (c, buffer);
+  printf("5");
   sema_down (&c->completion_wait);
+  printf("6");
   lock_release (&c->lock);
+  printf("ide_write done\n");
 }
 
 static struct block_operations ide_operations =
