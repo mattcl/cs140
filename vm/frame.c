@@ -84,9 +84,9 @@ void  *frame_get_page (enum palloc_flags flags, void *uaddr){
 /* Clears the frame that the page_addr is currently in,
    or does nothing if the page_addr is not
    currently in a frame. Also frees the palloced page*/
-bool frame_clear_page (void *kernel_page_addr){
+bool frame_clear_page (void *uaddr){
 	/*Error checking needs implementation*/
-	size_t frame_idx = palloc_get_user_page_index(kernel_page_addr);
+	size_t frame_idx = palloc_get_user_page_index(uaddr);
 
 	struct frame_entry *frame = frame_at_position(frame_idx);
 
@@ -99,7 +99,7 @@ bool frame_clear_page (void *kernel_page_addr){
 		PANIC("INVALID PAGE REMOVED FROM FRAME");
 		/* return false;*/
 	}
-	palloc_free_page (kernel_page_addr);
+	palloc_free_page (uaddr);
 	return true;
 }
 
