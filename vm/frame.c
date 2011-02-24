@@ -89,7 +89,7 @@ bool frame_clear_page (void *kernel_page_addr){
 
 	if(frame != NULL){
 		lock_acquire(&f_table.frame_map_lock);
-		hash_delete(&f_table.frame_hash, frame);
+		hash_delete(&f_table.frame_hash, &frame->elem);
 		bitmap_set(f_table.used_frames, frame_idx, false);
 		lock_release(&f_table.frame_map_lock);
 	}else{
