@@ -144,7 +144,6 @@ static void page_fault (struct intr_frame *f){
      be assured of reading CR2 before it changed). */
 	intr_enable ();
 
-	printf("fault\n");
 	/* Count page faults. */
 	page_fault_cnt++;
 

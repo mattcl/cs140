@@ -91,14 +91,10 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	page_ptr = (uint8_t*)free_page;
 
-	char w [512];
-	memset(w, 4, 512);
-
 	/* Read the contents of this swap slot into memory */
 	for(i=0; i<SECTORS_PER_SLOT;
 			i++, start_sector++,page_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, page_ptr );
-		block_write(swap_device, 134, w);
 	}
 
 	/* Set this swap slot to usable */
