@@ -62,7 +62,6 @@ sort_chunks (const char *subprocess, int exit_status)
       CHECK ((children[i] = exec (cmd)) != -1, "exec \"%s\"", cmd);
       quiet = false;
     }
-  printf("second loop\n");
   for (i = 0; i < CHUNK_CNT; i++) 
     {
       char fn[128];
@@ -78,7 +77,6 @@ sort_chunks (const char *subprocess, int exit_status)
       close (handle);
       quiet = false;
     }
-  printf("return from sort chunks\n");
 }
 
 /* Merge the sorted chunks in buf1 into a fully sorted buf2. */
@@ -145,7 +143,6 @@ parallel_merge (const char *child_name, int exit_status)
 {
   init ();
   sort_chunks (child_name, exit_status);
-  printf("Try to merge\n");
   merge ();
   verify ();
 }

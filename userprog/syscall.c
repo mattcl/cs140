@@ -548,7 +548,6 @@ static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
-	printf("map\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
 	   verifies the fd*/
@@ -663,7 +662,6 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 /* Called from process exit because it can never kill and we need to make
    sure all of the changes to the mmapped regions are saved to disk.*/
 static void system_munmap (struct intr_frame *f, mapid_t map_id){
-	printf("unmap\n");
 	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
 	if(entry == NULL){
 		f->eax = -1;
@@ -785,7 +783,6 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 
 /* Saves all of the pages that are dirty for the given mmap_hash_entry */
 static void mmap_save_all(struct mmap_hash_entry *entry){
-	printf("save all dirty to disk\n");
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);

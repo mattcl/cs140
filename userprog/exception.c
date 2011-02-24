@@ -144,6 +144,8 @@ static void page_fault (struct intr_frame *f){
      be assured of reading CR2 before it changed). */
 	intr_enable ();
 
+//	printf("fault\n");
+
 	/* Count page faults. */
 	page_fault_cnt++;
 
@@ -172,6 +174,8 @@ static void page_fault (struct intr_frame *f){
 		   the lower 12 bits and makes it a byte pointer so that
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+
+		//printf("Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_AVL_SWAP, fault_addr);
 
 		if(type == PTE_AVL_SWAP){
 			/* Data is not present but on swap read it in
