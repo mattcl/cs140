@@ -19,6 +19,7 @@ struct frame_entry{
 	uint32_t position_in_bitmap; 		/*The key into the hash table*/
 	bool pinned_to_frame;
 	void *cur_pagedir;
+	struct thread *cur_thread;
 	void *uaddr;
 	struct hash_elem elem;
 };

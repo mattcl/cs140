@@ -137,8 +137,7 @@ bool swap_read_in (void *faulting_addr){
    You should only allocate a swap slot for this particular frame and virtual
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
-bool swap_write_out (uint32_t *pd, void *uaddr){
-	struct thread *cur = thread_current();
+bool swap_write_out (struct thread *cur, void *uaddr){
 	struct process *cur_process = cur->process;
 
 	/* Set the auxilary data so that it can index into the swap table

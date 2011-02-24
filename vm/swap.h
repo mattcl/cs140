@@ -23,6 +23,6 @@ void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED);
 void swap_init (void);
 
 bool swap_read_in (void *faulting_addr);
-bool swap_write_out (uint32_t * pd, void *uaddr);
+bool swap_write_out (struct thread *cur, void *uaddr);
 
 #endif /* SWAP_H_ */

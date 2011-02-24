@@ -520,10 +520,11 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	}
 }
 
-static struct mmap_hash_entry *uaddr_to_mmap_entry(void *uaddr){
+static struct mmap_hash_entry *uaddr_to_mmap_entry(
+		struct thread *cur, void *uaddr){
 	struct hash_iterator i;
 	struct hash_elem *e;
-	hash_first (&i, &thread_current()->process->mmap_table);
+	hash_first (&i, &cur->process->mmap_table);
 	while((e = hash_next(&i)) != NULL){
 		struct mmap_hash_entry *test =
 				hash_entry(e, struct mmap_hash_entry, elem);
@@ -691,7 +692,10 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	}
 }
 
-/* Read in the appropriate file block from disk */
+/* Read in the appropriate file block from disk
+   We know that the current thread is the only one that
+   can call this function, when it was trying to access
+   memory*/
 bool mmap_read_in(void *faulting_addr){
 	struct thread *cur = thread_current();
 
@@ -699,7 +703,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
 
 	/* Get hash entry if it exists */
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry((uint32_t*)uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)uaddr);
 	if(entry == NULL){
 		return false;
 	}
@@ -737,15 +741,15 @@ bool mmap_read_in(void *faulting_addr){
 
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
-bool mmap_write_out(uint32_t *pd, void *uaddr){
+bool mmap_write_out(struct thread *cur, void *uaddr){
 	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
-	if(!pagedir_is_present(pd, uaddr)){
+	if(!pagedir_is_present(cur->pagedir, uaddr)){
 		/* Can't read back to disk if the memory isn't
 		   actually present*/
 		return false;
 	}
 
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, uaddr);
 	if(entry == NULL){
 		return false;
 	}

@@ -65,6 +65,13 @@ void  *frame_get_page (enum palloc_flags flags, void *uaddr){
 	f_hash_entry->cur_pagedir = thread_current()->pagedir;
 	f_hash_entry->uaddr = uaddr;
 
+
+
+	f_hash_entry->cur_thread = thread_current();
+
+
+
+
 	lock_acquire (&f_table.frame_map_lock);
 	bitmap_set(f_table.used_frames, frame_idx, true);
 
