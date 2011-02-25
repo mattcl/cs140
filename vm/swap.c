@@ -81,6 +81,10 @@ bool swap_read_in (void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
 
+	/* May evict a page to swap, returns a kernel virtual address so
+	   the dirty bit for this kernel address in the PTE*/
+	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
+
 	lock_acquire(&swap_slots_lock);
 
 	/* Lookup the corresponding swap slot that is holding this faulting
@@ -102,10 +106,6 @@ bool swap_read_in (void *faulting_addr){
 
 	swap_slot = entry->swap_slot;
 	org_medium = entry->org_medium;
-
-	/* May evict a page to swap, returns a kernel virtual address so
-	   the dirty bit for this kernel address in the PTE*/
-	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	ASSERT(kaddr != NULL);
 
