@@ -96,7 +96,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 			move_to_disk = true;
 		}else{
 			if(medium == PTE_STACK){
-				pagedir_clean_page(pd, entry->uaddr);
+				pagedir_clear_page(pd, entry->uaddr);
 			}else if(medium == PTE_EXEC){
 				bool writable = pagedir_is_writable(pd, entry->uaddr);
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_EXEC,
@@ -187,7 +187,7 @@ void frame_clear_page (void *kaddr){
 
 /* Need to unpin after it is installed
    in the pagedir of your thread */
-void unpin_frame_entry(void kaddr){
+void unpin_frame_entry(void *kaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
