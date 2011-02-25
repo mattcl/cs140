@@ -580,6 +580,7 @@ done:
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
 	intr_enable();
+	printf("Exec in\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -952,6 +953,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		upage += PGSIZE;
 	}
 	lock_release(&filesys_lock);
+
 	return true;
 }
 
