@@ -126,7 +126,9 @@ bool swap_read_in (void *faulting_addr){
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
 		//printf("INserting into %p\n", kaddr_ptr);
+		lock_acquire(&filesys_lock);
 		block_read(swap_device, start_sector, kaddr_ptr );
+		lock_release(&filesys_lock);
 	}
 
 	/* Set this swap slot to usable */
@@ -222,7 +224,9 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		//printf("dereferencing %p\n", kaddr_ptr);
+		lock_acquire(&filesys_lock);
 		block_write(swap_device, start_sector, kaddr_ptr);
+		lock_release(&filesys_lock);
 	}
 
 	//printf("Returned from writing block\n");
