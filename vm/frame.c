@@ -191,9 +191,14 @@ void frame_clear_page (void *kaddr){
 	/* The thread is the same one that is in the frame
      now so it can release this*/
 
+	/* new shit is being put in the frame, moving our shit out
+	   so we need to wait before we can say that this frame
+	   is clear*/
 	while(entry->is_pinned){
 		//printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
+		lock_release(&f_table.frame_table_lock);
+		return;
 	}
 
 	entry->uaddr = NULL;
