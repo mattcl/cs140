@@ -110,7 +110,7 @@ bool swap_read_in (void *faulting_addr){
 	ASSERT(kaddr != NULL);
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-	kaddr_ptr = (uint8_t*)kaddr;
+	kaddr_ptr = (uint8_t*)masked_uaddr; /* was kaddr*/
 
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
@@ -174,8 +174,8 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	ASSERT(kaddr != NULL);
 
 	uint32_t i;
-	uint8_t *kaddr_ptr = kaddr;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
+	uint8_t *kaddr_ptr = (uint8_t*)masked_uaddr;/* was kaddr*/
 	size_t swap_slot, start_sector;
 
 	//printf("lock acquired\n");
