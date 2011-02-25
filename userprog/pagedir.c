@@ -328,15 +328,15 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 		   before manipulating anything */
 		//ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		*pte &= ~(uint32_t)PTE_AVL;
-		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC ||
-				medium == PTE_AVL_MMAP ||medium == PTE_AVL_STACK ||
+		if(medium == PTE_SWAP || medium == PTE_EXEC ||
+				medium == PTE_MMAP ||medium == PTE_STACK ||
 				medium == PTE_AVL_ERROR){
 			*pte |= medium;
 		}else{
-			BSOD("pagedir_set_medium called with unexpected medium");
+			PANIC("pagedir_set_medium called with unexpected medium");
 		}
 	}else{
-		BSOD("pagedir_set_medium called on a page table entry that is not initialized");
+		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
 	}
 	//PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
@@ -351,8 +351,8 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 
 	if(pte != NULL){
 		medium_t medium = (*pte & (uint32_t)PTE_AVL);
-		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC||
-				medium == PTE_AVL_MMAP || medium == PTE_AVL_STACK){
+		if(medium == PTE_SWAP || medium == PTE_EXEC||
+				medium == PTE_MMAP || medium == PTE_STACK){
 			return medium;
 		}
 	}
@@ -375,7 +375,7 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	if(pte != NULL){
 		*pte |= aux_data;
 	}else{
-		BSOD("pagedir_set_aux called on a page table entry that is not initialized");
+		PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 	}
 }
 
@@ -424,7 +424,7 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 		return false;
 	}
 
-	intr_disable();
+	enum intr_level old_level = intr_disable();
 
 	/*Set writable bit */
 	*pte |= (writable ? PTE_W : 0);
@@ -438,7 +438,7 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	/*Clear the present bit and clear the TLB*/
 	pagedir_clear_page(pd, uaddr);
 
-	intr_enable();
+	intr_set_level(old_level);
 
 	return true;
 }

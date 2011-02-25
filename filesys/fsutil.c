@@ -21,7 +21,7 @@ fsutil_ls (char **argv UNUSED)
   printf ("Files in the root directory:\n");
   dir = dir_open_root ();
   if (dir == NULL)
-    BSOD ("root dir open failed");
+    PANIC ("root dir open failed");
   while (dir_readdir (dir, name))
     printf ("%s\n", name);
   printf ("End of listing.\n");
@@ -40,7 +40,7 @@ fsutil_cat (char **argv)
   printf ("Printing '%s' to the console...\n", file_name);
   file = filesys_open (file_name);
   if (file == NULL)
-    BSOD ("%s: open failed", file_name);
+    PANIC ("%s: open failed", file_name);
   buffer = palloc_get_page (PAL_ASSERT);
   for (;;) 
     {
@@ -63,7 +63,7 @@ fsutil_rm (char **argv)
   
   printf ("Deleting '%s'...\n", file_name);
   if (!filesys_remove (file_name))
-    BSOD ("%s: delete failed\n", file_name);
+    PANIC ("%s: delete failed\n", file_name);
 }
 
 /* Extracts a ustar-format tar archive from the scratch block
@@ -80,12 +80,12 @@ fsutil_extract (char **argv UNUSED)
   header = malloc (BLOCK_SECTOR_SIZE);
   data = malloc (BLOCK_SECTOR_SIZE);
   if (header == NULL || data == NULL)
-    BSOD ("couldn't allocate buffers");
+    PANIC ("couldn't allocate buffers");
 
   /* Open source block device. */
   src = block_get_role (BLOCK_SCRATCH);
   if (src == NULL)
-    BSOD ("couldn't open scratch device");
+    PANIC ("couldn't open scratch device");
 
   printf ("Extracting ustar archive from scratch device "
           "into file system...\n");
@@ -101,7 +101,7 @@ fsutil_extract (char **argv UNUSED)
       block_read (src, sector++, header);
       error = ustar_parse_header (header, &file_name, &type, &size);
       if (error != NULL)
-        BSOD ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
+        PANIC ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
 
       if (type == USTAR_EOF)
         {
@@ -118,10 +118,10 @@ fsutil_extract (char **argv UNUSED)
 
           /* Create destination file. */
           if (!filesys_create (file_name, size))
-            BSOD ("%s: create failed", file_name);
+            PANIC ("%s: create failed", file_name);
           dst = filesys_open (file_name);
           if (dst == NULL)
-            BSOD ("%s: open failed", file_name);
+            PANIC ("%s: open failed", file_name);
 
           /* Do copy. */
           while (size > 0)
@@ -131,7 +131,7 @@ fsutil_extract (char **argv UNUSED)
                                 : size);
               block_read (src, sector++, data);
               if (file_write (dst, data, chunk_size) != chunk_size)
-                BSOD ("%s: write failed with %d bytes unwritten",
+                PANIC ("%s: write failed with %d bytes unwritten",
                        file_name, size);
               size -= chunk_size;
             }
@@ -178,22 +178,22 @@ fsutil_append (char **argv)
   /* Allocate buffer. */
   buffer = malloc (BLOCK_SECTOR_SIZE);
   if (buffer == NULL)
-    BSOD ("couldn't allocate buffer");
+    PANIC ("couldn't allocate buffer");
 
   /* Open source file. */
   src = filesys_open (file_name);
   if (src == NULL)
-    BSOD ("%s: open failed", file_name);
+    PANIC ("%s: open failed", file_name);
   size = file_length (src);
 
   /* Open target block device. */
   dst = block_get_role (BLOCK_SCRATCH);
   if (dst == NULL)
-    BSOD ("couldn't open scratch device");
+    PANIC ("couldn't open scratch device");
   
   /* Write ustar header to first sector. */
   if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
-    BSOD ("%s: name too long for ustar format", file_name);
+    PANIC ("%s: name too long for ustar format", file_name);
   block_write (dst, sector++, buffer);
 
   /* Do copy. */
@@ -201,9 +201,9 @@ fsutil_append (char **argv)
     {
       int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
       if (sector >= block_size (dst))
-        BSOD ("%s: out of space on scratch device", file_name);
+        PANIC ("%s: out of space on scratch device", file_name);
       if (file_read (src, buffer, chunk_size) != chunk_size)
-        BSOD ("%s: read failed with %"PROTd" bytes unread", file_name, size);
+        PANIC ("%s: read failed with %"PROTd" bytes unread", file_name, size);
       memset (buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
       block_write (dst, sector++, buffer);
       size -= chunk_size;

@@ -8,6 +8,7 @@
 #include "devices/block.h"
 #include "threads/pte.h"
 #include "threads/interrupt.h"
+#include "devices/ide.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
@@ -29,7 +30,7 @@ static struct lock swap_slots_lock;
 void swap_init (void){
 	swap_device = block_get_role(BLOCK_SWAP);
 	if(swap_device == NULL){
-		BSOD("NO SWAP!!!!");
+		PANIC("NO SWAP!!!!");
 	}
 
 	/* Calculate the number of swap slots supported
@@ -39,13 +40,12 @@ void swap_init (void){
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
 	//printf("%u size and %u slots\n", num_sectors*512, num_slots);
-
 	used_swap_slots = bitmap_create(num_slots);
 
 	ASSERT(used_swap_slots != NULL);
 
 	if(used_swap_slots == NULL){
-		BSOD("Couldn't allocat swap bitmap");
+		PANIC("Couldn't allocat swap bitmap");
 	}
 
 	lock_init(&swap_slots_lock);
@@ -61,6 +61,15 @@ bool swap_read_in (void *faulting_addr){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
+	while(pagedir_get_medium(cur->pagedir, faulting_addr) != PTE_SWAP){
+		/* Wait for write to disk to complete*/
+		intr_disable();
+		timer_msleep (10);
+		intr_enable();
+	}
+
+	intr_disable();
+
 	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *page_ptr, i;
@@ -74,7 +83,7 @@ bool swap_read_in (void *faulting_addr){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
-		BSOD("Inconsistency, expected inserted hash entry absent");
+		PANIC("Inconsistency, expected inserted hash entry absent");
 		/*return false*/
 	}
 
@@ -108,7 +117,7 @@ bool swap_read_in (void *faulting_addr){
 			slot_result);
 
 	if(deleted == NULL){
-		BSOD("Element found but then not able to be deleted????");
+		PANIC("Element found but then not able to be deleted????");
 		/*return false;*/
 	}
 
@@ -121,7 +130,7 @@ bool swap_read_in (void *faulting_addr){
 			pagedir_set_page (cur->pagedir, (void*)uaddr, free_page, true);
 
 	if(!success){
-		BSOD("MEMORY ALLOCATION FAILURE");
+		PANIC("MEMORY ALLOCATION FAILURE");
 		/*return false*/
 	}
 
@@ -146,14 +155,33 @@ bool swap_read_in (void *faulting_addr){
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
 bool swap_write_out (struct thread *cur, void *uaddr){
+
+	ASSERT(pagedir_is_present(pd, uaddr));
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
-	ASSERT(pagedir_is_present(pd, uaddr));
+
+	/* Set the auxilary data so that it can index into the swap table
+	   Bit mask makes sure we only overwrite the most significant
+	   20 bits of the PTE*/
+	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
+	medium_t org_medium = pagedir_get_medium(pd, uaddr);
+
+	/* move the data from kaddr to the newly allocated swap slot*/
+	/* uint8_t so that incrementing is easy*/
+	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
+	ASSERT(kaddr_ptr != NULL);
+
+	/* Set the page dir for the thread that we are pulling the
+	   frame out from underneath*/
+	pagedir_setup_demand_page(pd,uaddr,PTE_SWAP_WAIT,addr_to_save, 0);
+
+	intr_enable();
 
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 	if(new_entry == NULL){
-		BSOD("KERNEL OUT OF MEMORRY");
+		PANIC("KERNEL OUT OF MEMORRY");
 	}
+
 
 	//printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
@@ -161,16 +189,8 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
-		BSOD("SWAP IS FULL BABY");
+		PANIC("SWAP IS FULL BABY");
 	}
-
-	/* Set up entry */
-
-	/* Set the auxilary data so that it can index into the swap table
-	   Bit mask makes sure we only overwrite the most significant
-	   20 bits of the PTE*/
-	uint32_t addr_to_save = (((uint32_t)uaddr & PTE_ADDR));
-	medium_t org_medium = pagedir_get_medium(pd, uaddr);
 
 	/* Set up the entry */
 	new_entry->uaddr = addr_to_save;
@@ -180,37 +200,34 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
-		BSOD("COLLISION USING VADDR AS KEY IN HASH TABLE");
+		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
-
-	//printf("Begin writing data to swap \n");
-
-	/* move the data from kaddr to the newly allocated swap slot*/
-	/* uint8_t so that incrementing is easy*/
-	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
-
-	ASSERT(kaddr_ptr != NULL);
 
 	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
 
-	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
+	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
 
 	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	uint32_t i;
+
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
+
 	lock_release(&swap_slots_lock);
+
 	//printf("Returned from writing block\n");
+
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap*/
-	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_SWAP,
+	if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
 				addr_to_save, 0)){
-		BSOD("Kernel out of memory");
+		PANIC("Kernel out of memory");
 	}
+
 
 	return true;
 }

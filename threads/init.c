@@ -210,7 +210,7 @@ static char ** read_command_line (void){
 	end = p + LOADER_ARGS_LEN;
 	for(i = 0; i < argc; i++){
 		if(p >= end){
-			BSOD ("command line arguments overflow");
+			PANIC ("command line arguments overflow");
 		}
 		argv[i] = p;
 		p += strnlen (p, end - p) + 1;
@@ -271,7 +271,7 @@ static char **parse_options (char **argv){
 			user_page_limit = atoi (value);
 #endif
 		}else{
-			BSOD ("unknown option `%s' (use -h for help)", name);
+			PANIC ("unknown option `%s' (use -h for help)", name);
 		}
 	}
 
@@ -333,7 +333,7 @@ static void run_actions (char **argv){
 		/* Find action name. */
 		for(a = actions; ; a++){
 			if(a->name == NULL){
-				BSOD ("unknown action `%s' (use -h for help)", *argv);
+				PANIC ("unknown action `%s' (use -h for help)", *argv);
 			}else if(!strcmp (*argv, a->name)){
 				break;
 			}
@@ -342,7 +342,7 @@ static void run_actions (char **argv){
 		/* Check for required arguments. */
 		for(i = 1; i < a->argc; i++){
 			if(argv[i] == NULL){
-			  BSOD ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
+			  PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
 			}
 		}
 
@@ -415,7 +415,7 @@ static void locate_block_device (enum block_type role, const char *name){
 	if(name != NULL){
 		block = block_get_by_name (name);
 		if(block == NULL){
-			BSOD ("No such block device \"%s\"", name);
+			PANIC ("No such block device \"%s\"", name);
 		}
 	}else{
 		for(block = block_first (); block != NULL; block = block_next (block)){

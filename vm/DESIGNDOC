@@ -1,0 +1,268 @@
+       	    +---------------------------+
+		    |   		CS 140  		|
+		    | PROJECT 3: VIRTUAL MEMORY	|
+		    |	   DESIGN DOCUMENT  	|
+		    +---------------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Sam Oluwalana <hhwr85@stanford.edu>
+John-Ashton Allen <bglp05@stanford.edu>
+Matt Chun-lum <mchunlum@stanford.edu>
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+			PAGE TABLE MANAGEMENT
+			=====================
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+// pagedir.h
+#define PTE_AVL_ERROR 0       /* 000 */
+#define PTE_AVL_SWAP (1 << 9)  /* 001 */
+#define PTE_AVL_EXEC (1 << 10) /* 010 */
+#define PTE_AVL_MMAP (1 << 11) /* 100 */
+#define PTE_AVL_STACK (3 << 9)  /* 110 */ 
+
+typedef uint32_t medium_t; /* used to represent one of the constants above */
+
+The above defines define the "states" of the AVL bits of a page table entry. Since
+we are using the page table as our supplemental page table as well, we needed the 
+AVL bits to store the additional information.
+//userprog_h
+typedef uint32_t mapid_t;
+//exception.h
+#define MAX_ASM_PUSH 32 /* The maximum amount of data that can be pushed
+						   by a single assembly instruction. This exists
+						   because 80x86 tries to dereference the memory
+						   before actually decrementing the stack....
+						   Which is completely counter intuitive....
+						   Just sayin */
+
+//process.h
+	/* Swap hash. This structure allows us to put pages at virtual
+	   addresses onto the swap device and retrieve them. The swap
+	   table is per process to allow us to use the virtual address
+	   for the process as an index into the table. Only the code in
+	   swap.c will put objects into this table. And we will only
+	   remove things when we read the page back into memory from
+	   swap.*/
+	struct hash swap_table;
+
+	/* The exec_info is a pointer to an array of ELF program
+	   header information this information is used to determine
+	   where on disk the particular missing page is located.
+	   the information that it stores is for the entire header,
+	   each header is an entire segment so the size of this
+	   struct will be less than 5 * sizeof(exec_page_info).
+	   The only loadable segments right now are the code
+	   segment and the data segment with the global and static
+	   data.*/
+	struct exec_page_info *exec_info;
+	uint32_t num_exec_pages;
+
+	/* A hash table that stores the necessary information to
+	   map a file into the address space and to lazily load
+	   the information from the file */
+	struct hash mmap_table;
+	mapid_t mapid_counter;
+};
+/* This is the struct that describes the necessary ELF
+   program header information that is needed to read
+   in the executable on a page fault. It does this by
+   taking the faulting addresses most significant 20
+   bits and seeing if it is in this particular entries
+   bounds (mem_page and end_addr). Then it takes this
+   offset from the faulting address and mem_page and
+   adds it to the file_offset of the elf file and then
+   reads in the appropriate amounts of data by calculating
+   the appropriate read_bytes and zero_bytes.
+   NOTE: the segment is not constrained to be only one page */
+struct exec_page_info{
+	uint32_t mem_page;		/* The starting address in virtual memory
+							   of this segment*/
+	uint32_t end_addr;      /* The address one byte past the end of this
+							   headers segment*/
+	uint32_t file_offset;	/* The offset into the executable file for
+							   this particular segment*/
+	uint32_t read_bytes;    /* The number of bytes to read from this
+							   segment*/
+	uint32_t zero_bytes;    /* The number of bytes that are zero at the
+							   end of this segment. MAY BE MORE THAN ONE
+							   page worth of zero bytes*/
+	bool writable;   		/* Whether this segment is read/write or read only*/
+	/* Is writable can be written in the lower 12 bits of mem_page for efficiency*/
+};
+
+struct mmap_hash_entry{
+	mapid_t mmap_id;     	/* Key into the hash table*/
+	uint32_t begin_addr;	/* start address of this mmapping*/
+	uint32_t end_addr;		/* While we can calculate this from the filesize
+							   accessing the disk in any way is too slow so just
+							   keep it stored in memory*/
+	int fd;					/* FD for this mapping*/
+	uint32_t num_pages;		/* Number of pages so I don't have to think*/
+	struct hash_elem elem;  /* hash elem*/
+};
+
+//swap.h
+---- ALGORITHMS ----
+
+>> A2: In a few paragraphs, describe your code for locating the frame,
+>> if any, that contains the data of a given page.
+
+
+
+>> A3: How does your code coordinate accessed and dirty bits between
+>> kernel and user virtual addresses that alias a single frame, or
+>> alternatively how do you avoid the issue?
+
+
+
+---- SYNCHRONIZATION ----
+
+>> A4: When two user processes both need a new frame at the same time,
+>> how are races avoided?
+
+
+
+---- RATIONALE ----
+
+>> A5: Why did you choose the data structure(s) that you did for
+>> representing virtual-to-physical mappings?
+
+
+		       PAGING TO AND FROM DISK
+		       =======================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> B2: When a frame is required but none is free, some frame must be
+>> evicted.  Describe your code for choosing a frame to evict.
+
+
+
+>> B3: When a process P obtains a frame that was previously used by a
+>> process Q, how do you adjust the page table (and any other data
+>> structures) to reflect the frame Q no longer has?
+
+
+
+>> B4: Explain your heuristic for deciding whether a page fault for an
+>> invalid virtual address should cause the stack to be extended into
+>> the page that faulted.
+
+If the page fault occurs at an address within 32 bytes of the stack pointer, the
+stack is extended into the page that faulted. Due to the way x86 tries to
+dereference memory, this is the maximum overshoot for a fault that needs to grow
+the stack.
+
+---- SYNCHRONIZATION ----
+
+>> B5: Explain the basics of your VM synchronization design.  In
+>> particular, explain how it prevents deadlock.  (Refer to the
+>> textbook for an explanation of the necessary conditions for
+>> deadlock.)
+
+
+
+>> B6: A page fault in process P can cause another process Q's frame
+>> to be evicted.  How do you ensure that Q cannot access or modify
+>> the page during the eviction process?  How do you avoid a race
+>> between P evicting Q's frame and Q faulting the page back in?
+
+
+
+>> B7: Suppose a page fault in process P causes a page to be read from
+>> the file system or swap.  How do you ensure that a second process Q
+>> cannot interfere by e.g. attempting to evict the frame while it is
+>> still being read in?
+
+
+
+>> B8: Explain how you handle access to paged-out pages that occur
+>> during system calls.  Do you use page faults to bring in pages (as
+>> in user programs), or do you have a mechanism for "locking" frames
+>> into physical memory, or do you use some other design?  How do you
+>> gracefully handle attempted accesses to invalid virtual addresses?
+
+
+
+---- RATIONALE ----
+
+>> B9: A single lock for the whole VM system would make
+>> synchronization easy, but limit parallelism.  On the other hand,
+>> using many locks complicates synchronization and raises the
+>> possibility for deadlock but allows for high parallelism.  Explain
+>> where your design falls along this continuum and why you chose to
+>> design it this way.
+
+			 MEMORY MAPPED FILES
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> C1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+---- ALGORITHMS ----
+
+>> C2: Describe how memory mapped files integrate into your virtual
+>> memory subsystem.  Explain how the page fault and eviction
+>> processes differ between swap pages and other pages.
+
+>> C3: Explain how you determine whether a new file mapping overlaps
+>> any existing segment.
+
+---- RATIONALE ----
+
+>> C4: Mappings created with "mmap" have similar semantics to those of
+>> data demand-paged from executables, except that "mmap" mappings are
+>> written back to their original files, not to swap.  This implies
+>> that much of their implementation can be shared.  Explain why your
+>> implementation either does or does not share much of the code for
+>> the two situations.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?

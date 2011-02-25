@@ -262,6 +262,7 @@ identify_ata_device (struct ata_disk *d)
   struct channel *c = d->channel;
   char id[BLOCK_SECTOR_SIZE];
   block_sector_t capacity;
+
   char *model, *serial;
   char extra_info[128];
   struct block *block;
@@ -351,7 +352,7 @@ ide_read (void *d_, block_sector_t sec_no, void *buffer)
   issue_pio_command (c, CMD_READ_SECTOR_RETRY);
   sema_down (&c->completion_wait);
   if (!wait_while_busy (d))
-    BSOD ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
+    PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
   input_sector (c, buffer);
   lock_release (&c->lock);
 }
@@ -370,7 +371,7 @@ ide_write (void *d_, block_sector_t sec_no, const void *buffer)
   select_sector (d, sec_no);
   issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
   if (!wait_while_busy (d))
-    BSOD ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+    PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
   output_sector (c, buffer);
   sema_down (&c->completion_wait);
   lock_release (&c->lock);
