@@ -161,7 +161,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	/* Flip the first false bit to be true */
 	size_t swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
-		BSOD("SWAP IS FULL BABY");
+		BSOD("SWAP IS FULL");
 	}
 
 	/* Set up entry */
@@ -195,7 +195,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
 
 
-	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
+	size_t start_sector = (swap_slot`) * SECTORS_PER_SLOT;
 
 
 
@@ -204,8 +204,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	uint32_t i;
 
-	for(i = 0; i < SECTORS_PER_SLOT;
-			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
+	for(i = 0; i < SECTORS_PER_SLOT; i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
 

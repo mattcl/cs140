@@ -216,7 +216,7 @@ struct frame_entry *choose_frame_to_evict(){
 
 /* clock */
 
-struct frame_entry *choose_frame_to_evict(){
+struct frame_entry *cdhoose_frame_to_evict(){
 	while(true){
 
 		/* All frames are locked as is while the frame_map_lock is held
@@ -252,4 +252,3 @@ struct frame_entry *choose_frame_to_evict(){
 		}
     }
 }
-
