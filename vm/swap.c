@@ -75,6 +75,7 @@ bool swap_read_in (void *faulting_addr){
 		timer_msleep (8); /* The time of a disk write*/
 		intr_disable();
 	}
+
 	intr_enable();
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
