@@ -779,8 +779,8 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 
 	/* We should have set this up atomically before being
 	   called */
-	ASSERT(!pagedir_is_present(pd, masked_uaddr));
-	ASSERT(pagedir_get_medium(pd, masked_uaddr) == PTE_MMAP_WAIT);
+	ASSERT(!pagedir_is_present(pd, (void*)masked_uaddr));
+	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) == PTE_MMAP_WAIT);
 
 	/* Only this thread can access its mmapped files so
 	   no locks are necessary */

@@ -143,6 +143,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
+		printf("frame idx was Bitmap errer %u\n", frame_idx);
 		lock_release(&f_table.frame_table_lock);
 		return NULL;
 	}else{
@@ -156,6 +157,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
+		return entry;
 	}
 }
 
