@@ -55,7 +55,7 @@ void frame_init(void){
 		cond_init(&start->pin_condition);
 	}
 	evict_init();
-	printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(&f_table.used_frames));
+	printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(f_table.used_frames));
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
