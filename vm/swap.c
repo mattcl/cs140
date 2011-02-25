@@ -71,7 +71,6 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium;
 
 	ASSERT(intr_get_level() == INTR_OFF);
-	printf("Swap in \n");
 	lock_acquire(&swap_slots_lock);
 
 	/* Wait while the data finishes moving to swap */
@@ -95,7 +94,7 @@ bool swap_read_in (void *faulting_addr){
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	lock_acquire(&swap_slots_lock);
-
+	printf("Swap in \n");
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
@@ -179,7 +178,7 @@ bool swap_read_in (void *faulting_addr){
 bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medium){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
-	printf("Swap out\n");
+
 	/* We set the page to not present in memory in evict so assert it*/
 	ASSERT(!pagedir_is_present(pd, uaddr));
 	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
@@ -192,7 +191,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	//printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
-
+	printf("Swap out\n");
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
