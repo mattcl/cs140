@@ -199,8 +199,10 @@ static void page_fault (struct intr_frame *f){
 			/* Get new frame and install it at the faulting addr*/
 			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
 			/* it will be set to dirty or accessed on the retry*/
+			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
 			unpin_frame_entry(kaddr);
+			intr_enable();
 
 		}else if(type == PTE_AVL_ERROR){
 			if(user){
@@ -248,11 +250,13 @@ static void page_fault (struct intr_frame *f){
 		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
+		medium_t type = pagedir_get_medium(pd, fault_addr);
+		printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 		/* The page is present and we got a page fault so this means that
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
 		if(user){
-			printf("kill2\n");
+			printf("kill2 %u\n", write);
 			PANIC("killed 3\n");
 			kill(f);
 		}else{
