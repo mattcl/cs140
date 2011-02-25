@@ -708,6 +708,16 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	//printf"un end\n");
 }
 
+static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
+	ASSERT(intr_get_level() = INTR_OFF);
+	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
+		/* Wait for write to disk to complete*/
+		intr_enable();
+		timer_msleep(800);
+		intr_disable();
+	}
+}
+
 /* Read in the appropriate file block from disk
    We know that the current thread is the only one that
    can call this function, when it page faulted
@@ -721,12 +731,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
-	while(pagedir_get_medium(pd, faulting_addr) != PTE_MMAP){
-		/* Wait for write to disk to complete*/
-		intr_enable();
-		timer_msleep(800);
-		intr_disable();
-	}
+	mmap_wait_until_saved(pd, faulting_addr);
 
 	intr_enable();
 
@@ -846,7 +851,8 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 
 /* System call helpers */
 
-/* Saves all of the pages that are dirty for the given mmap_hash_entry */
+/* Saves all of the pages that are dirty for the given mmap_hash_entry
+   and frees their frames. */
 static void mmap_save_all(struct mmap_hash_entry *entry){
 	//printf"saveall\n");
 	struct thread * cur = thread_current();
@@ -861,20 +867,56 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	/* Write all of the files out to disk */
 	uint8_t* pg_ptr = (uint8_t*)entry->begin_addr;
 	uint32_t j;
+	void *kaddr_for_pg;
+
+	off_t offset, original_position, write_bytes;
+
 	lock_acquire(&filesys_lock);
-	uint32_t original_position = file_tell(fd_entry->open_file);
+	original_position = file_tell(fd_entry->open_file);
+	lock_release(&filesys_lock);
+
+	/* Pin all of the frames that we are going to be
+	   removing so they can not be evicted*/
+	intr_disable();
 	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
-		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)&&
+		if(pagedir_get_medium(pd, pg_ptr) == PTE_MMAP_WAIT){
+			/* Being written out to disk now wait till it is done*/
+			mmap_wait_until_saved(pd, pg_ptr);
+			/* Was just saved so continue*/
+			continue;
+		}
+
+		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr) &&
 				pagedir_get_medium(pd, pg_ptr) == PTE_MMAP){
-			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
-			file_seek(fd_entry->open_file, offset);
-			uint32_t write_bytes = (entry->num_pages -1 == j) ?
-					file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-			file_write(fd_entry->open_file, pg_ptr, write_bytes);
+			kaddr_for_pg = pagedir_get_page(pd, pg_ptr);
+			intr_enable();
+
+			if(pin_frame_entry(kaddr_for_pg)){
+				/* It is now pinned so it will not be evicted */
+				lock_acquire(&filesys_lock);
+
+				offset = (uint32_t) pg_ptr - entry->begin_addr;
+				file_seek(fd_entry->open_file, offset);
+				write_bytes = (entry->num_pages -1 == j) ?
+						file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+				file_write(fd_entry->open_file, pg_ptr, write_bytes);
+				lock_release(&filesys_lock);
+				intr_disable();
+			}else{
+				/* Some other thread beat us to it and is now
+				   evicting our page, we need to wait until they
+				   are done before moving onto the next page in
+				   our mmapped file*/
+				intr_disable();
+				mmap_wait_until_saved(pd, pg_ptr);
+			}
 		}
 	}
+
+	lock_acquire(&filesys_lock);
 	file_seek(fd_entry->open_file, original_position);
 	lock_release(&filesys_lock);
+
 	//printf"saveall exit\n");
 }
 
