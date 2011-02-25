@@ -8,7 +8,7 @@
 #include "devices/block.h"
 #include "threads/pte.h"
 #include "threads/interrupt.h"
-#include "devices/ide.h"
+#include "devices/timer.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
@@ -155,10 +155,9 @@ bool swap_read_in (void *faulting_addr){
    address if the PTE says that this page has been modified since it was
    created, or if it is a stack segment that has been accessed*/
 bool swap_write_out (struct thread *cur, void *uaddr){
-
-	ASSERT(pagedir_is_present(pd, uaddr));
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
+	ASSERT(pagedir_is_present(pd, uaddr));
 
 	/* Set the auxilary data so that it can index into the swap table
 	   Bit mask makes sure we only overwrite the most significant

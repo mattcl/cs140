@@ -18,7 +18,6 @@ static size_t clear_hand;
    conditions */
 
 static size_t threshold;
-static struct lock *clock_lock;
 
 static void *relocate_page (struct frame_entry *f, void * uaddr);
 /* returns the key to the frame that is now available, use the entry
@@ -98,7 +97,6 @@ void evict_init(size_t threshold_set){
 	threshold = threshold_set;
 	evict_hand = 0;
 	clear_hand = evict_hand + threshold;
-	lock_init(&clock_lock);
 }
 
 /* Likely to be called from a timer interrupt*/
@@ -159,7 +157,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 		}
 	}
 
-	intr_enable();
+	intr_set_level(old_level);
 	/* return the frame corresponding to evict_hand */
 
 	if(needs_to_be_zeroed){
