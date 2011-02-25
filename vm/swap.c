@@ -153,13 +153,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Set the page in our pagetable to point to our new frame
 	   this will set the present bit back to 1*/
-	bool success =
-			pagedir_set_page (pd, (void*)masked_uaddr, kaddr, true);
-
-	if(!success){
-		PANIC("MEMORY ALLOCATION FAILURE");
-		/*return false*/
-	}
+	ASSERT(pagedir_set_page (pd, (void*)masked_uaddr, kaddr, true));
 
 	/* indicate that this is in memorry */
 	pagedir_set_medium(pd, (void*)masked_uaddr, org_medium);

@@ -237,7 +237,10 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	/* Must be done before destroying the page dir which will lose all
 	   of the data from the mmapped files and before we dissable interrupts
 	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
+
+	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
+	lock_release(&proc->mmap_table_lock);
 	thread_exit();
 	NOT_REACHED();
 }
@@ -648,8 +651,12 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
 
+	lock_acquire(&cur->process->mmap_table_lock);
+
 	struct hash_elem *returned =
 			hash_insert(&process->mmap_table, &mmap_entry->elem);
+
+	lock_release(&cur->process->mmap_table_lock);
 
 	if(returned != NULL){
 		/* We have just tried to put the mmap of an identical mmap into the hash
@@ -677,6 +684,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 
+	lock_acquire(&cur->process->mmap_table_lock);
+
 	mmap_save_all(entry);
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
@@ -690,6 +699,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 
 	free(entry);
 
+	lock_release(&cur->process->mmap_table_lock);
+
 	if(fd_entry->num_mmaps == 0  && fd_entry->is_closed){
 		fd_entry->is_closed = false;
 		system_close(f, fd_entry->fd);
@@ -699,8 +710,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 
 /* Read in the appropriate file block from disk
    We know that the current thread is the only one that
-   can call this function, when it was trying to access
-   memory*/
+   can call this function, when it page faulted
+   trying to access memory*/
 bool mmap_read_in(void *faulting_addr){
 	//printf"readin\n");
 	struct thread *cur = thread_current();
@@ -709,10 +720,11 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t masked_uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	uint32_t offset;
 	void * kaddr;
+
 	while(pagedir_get_medium(pd, faulting_addr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		timer_msleep (8); /* The time of a disk write */
+		timer_msleep(800);
 		intr_disable();
 	}
 
@@ -720,8 +732,12 @@ bool mmap_read_in(void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_MMAP);
 
+	lock_acquire(&cur->process->mmap_table_lock);
+
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)masked_uaddr);
+
+	lock_release(&cur->process->mmap_table_lock);
 
 	/* If this is not true we routed the wrong thing to
 	   mmap read in*/
@@ -749,13 +765,14 @@ bool mmap_read_in(void *faulting_addr){
 	file_seek(fd_entry->open_file, offset);
 	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
 	if(amount_read < PGSIZE){
-		memset(kaddr+amount_read, 0, PGSIZE - amount_read);
+		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
 	file_seek(fd_entry->open_file, original_spot);
 	lock_release(&filesys_lock);
 
-	bool success =
-			pagedir_install_page((void*)masked_uaddr, (void*)kaddr, true);
+	intr_disable();
+
+	ASSERT(pagedir_install_page((void*)masked_uaddr, kaddr, true));
 
 	/* Make sure that we stay consistent with our naming scheme
 	   of memory*/
@@ -764,11 +781,13 @@ bool mmap_read_in(void *faulting_addr){
 	/* make sure we know that this page is saved*/
 	pagedir_set_dirty(pd, (void*)masked_uaddr, false);
 
+	intr_enable();
+
 	unpin_frame_entry(kaddr);
 
 	//printf"in end\n");
 	/*"Kernel out of memory! if false;"*/
-	return success;
+	return true;
 }
 
 /* uaddr is expected to be page aligned, pointing to a page
@@ -781,21 +800,28 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   called */
 	ASSERT(!pagedir_is_present(pd, (void*)masked_uaddr));
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) == PTE_MMAP_WAIT);
+	ASSERT(kaddr != NULL);
 
-	/* Only this thread can access its mmapped files so
-	   no locks are necessary */
+	/* An arbitrary number of threads can call into this code
+	   while the owning thread changes the structure of the mmap
+	   table, so both adding and removing data from the mmap table
+	   and reading it from this function must be locked */
+	lock_acquire(&cur->process->mmap_table_lock);
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (void*)masked_uaddr);
 	if(entry == NULL){
-		return false;
+		/* Process has just deleted this entry meaning that it was
+		   not necessary to keep it. */
+		return true;
 	}
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 
 	/* The file should never be closed as long as there is a
 	   mmapping to it */
-	ASSERT(entry != NULL);
+	ASSERT(fd_entry != NULL);
 
 	lock_acquire(&filesys_lock);
+
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
 	/* If this is the last page only read the appropriate number of bytes*/
@@ -808,13 +834,12 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 	lock_release(&filesys_lock);
 
+	lock_release(&cur->process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
-	if(!pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
-			masked_uaddr, true)){
-		/* This virtual address cannot be allocated so we have an error*/
-		return false;
-	}
+	ASSERT(pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
+			masked_uaddr, true));
+
 	//printf"mmap out end\n");
 	return true;
 }
