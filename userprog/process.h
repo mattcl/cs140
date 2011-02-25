@@ -182,5 +182,5 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 /* Called by exception.c */
-bool process_exec_read_in(uint32_t *faulting_addr);
+bool process_exec_read_in(void *faulting_addr);
 #endif /* userprog/process.h */

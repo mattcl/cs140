@@ -55,7 +55,7 @@ void run_test (const char *name) {
 			return;
 		}
 	}
-	PANIC ("no test named \"%s\"", name);
+	BSOD ("no test named \"%s\"", name);
 }
 
 /* Prints FORMAT as if with printf(),
@@ -88,7 +88,7 @@ fail (const char *format, ...)
   va_end (args);
   putchar ('\n');
 
-  PANIC ("test failed");
+  BSOD ("test failed");
 }
 
 /* Prints a message indicating the current test passed. */
