@@ -63,12 +63,12 @@ bool swap_read_in (void *faulting_addr){
 
 	while(pagedir_get_medium(cur->pagedir, faulting_addr) != PTE_SWAP){
 		/* Wait for write to disk to complete*/
-		intr_disable();
-		timer_msleep (10);
 		intr_enable();
+		timer_msleep (10);
+		intr_disable();
 	}
 
-	intr_disable();
+	intr_enable();
 
 	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;

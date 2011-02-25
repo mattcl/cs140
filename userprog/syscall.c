@@ -710,12 +710,12 @@ bool mmap_read_in(void *faulting_addr){
 
 	while(pagedir_get_medium(cur->pagedir, faulting_addr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
-		intr_disable();
-		timer_msleep (10);
 		intr_enable();
+		timer_msleep (10);
+		intr_disable();
 	}
 
-	intr_disable();
+	intr_enable();
 
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)uaddr);
