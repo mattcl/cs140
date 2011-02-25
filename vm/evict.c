@@ -58,9 +58,11 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		return palloc_kaddr_at_uindex(frame->position_in_bitmap);
 	}
 
-	
+	/* choose a frame to evict, then pin it to frame, so that another
+	   thread does not choose to evict it */
 	lock_acquire(&f_table->frame_map_lock);
 	frame = choose_frame_to_evict();
+	frame->pinned_to_frame = true;
 	lock_release(&f_table->frame_map_lock);
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
@@ -78,6 +80,11 @@ void clear_until_threshold(void){
 
 }
 
+/* john's relocate_page */
+static void *relocate_page (struct frame_entry *f, void *uaddr){
+    d;
+    
+}
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
@@ -151,9 +158,12 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 }
 
 
-/* random */
+/* implementation of choose_frame_to_evict that just choose the next
+   frame that is not pinned.  Because we assume that this should happen
+   when their are no free frames, we assert that, however, we could easily
+   move the check into the if statement if the assertion fails */
 struct frame_entry *choose_frame_to_evict(struct frame_table){
-    
+   
     while(true) {
       frame_entry *frame = frame_at_position(evict_hand++);  
       if(!frame->pinned_to_frame){

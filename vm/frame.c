@@ -144,6 +144,7 @@ void frame_unpin (void *kaddr){
 	lock_release(&f_table.frame_map_lock);
 }
 
+
 /* Clears the frame that the kaddr is currently in,
    or does nothing if the kaddr is not mapped to a frame.
    Called */
