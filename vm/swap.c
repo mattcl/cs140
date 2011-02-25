@@ -70,6 +70,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Wait while the data finishes moving to swap */
 	while(pagedir_get_medium(pd, faulting_addr) != PTE_SWAP){
+		printf("waiting\n");
 		/* Wait for write to disk to complete*/
 		intr_enable();
 		timer_msleep (8); /* The time of a disk write*/
@@ -79,6 +80,8 @@ bool swap_read_in (void *faulting_addr){
 	intr_enable();
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
+
+	lock_acquire(&swap_slots_lock);
 
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
@@ -106,8 +109,6 @@ bool swap_read_in (void *faulting_addr){
 
 	ASSERT(kaddr != NULL);
 
-	lock_acquire(&swap_slots_lock);
-
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
@@ -119,7 +120,6 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
-	lock_release(&swap_slots_lock);
 
 	/* Remove this swap slot from the processes swap table */
 	struct hash_elem *deleted = hash_delete(&cur_process->swap_table,
@@ -132,6 +132,8 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
+
+	lock_release(&swap_slots_lock);
 
 	/*Disable interrupts while setting up memory */
 	intr_disable();
