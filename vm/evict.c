@@ -76,8 +76,8 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		evict_hand++;
 		clear_hand++;
 
-		ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
-		ASSERT(pagedir_is_present(frame_to_clear->cur_thread->pagedir, frame_to_clear->uaddr));
+		//ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
+		//ASSERT(pagedir_is_present(frame_to_clear->cur_thread->pagedir, frame_to_clear->uaddr));
 
 		pagedir_set_accessed(frame->cur_thread->pagedir, frame_to_clear->uaddr, false);
 
@@ -87,8 +87,78 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 			   not remove its ish from the frame until we
 			   are done relocating the data*/
 			frame->pinned_to_frame = true;
+
+
+			/* modifying the pagedir of another thread should be handled
+				   with interrupts off, so that the dirty bit, AVL bits and
+				   upper 20 bits.*/
+			enum intr_level old_level = intr_disable();
+
+			struct frame_entry *f = frame;
+
+			//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
+			medium_t medium = pagedir_get_medium(f->cur_thread->pagedir,f->uaddr);
+			//printf("uaddr of frame we are evicting %x\n", f->uaddr);
+
+			ASSERT(medium != PTE_AVL_ERROR);
+
+			void *kaddr = palloc_kaddr_at_uindex(f->position_in_bitmap);
+
+			bool needs_to_be_zeroed = true;
+
+			if(pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr)){
+				if(medium == PTE_STACK || medium == PTE_EXEC){
+					/* Sets the memroy up for the user, so when it faults will
+						   know where to look*/
+					swap_write_out(f->cur_thread, f->uaddr);
+				}else if(medium == PTE_MMAP){
+					/* Sets the memroy up for the user, so when it faults will
+						   know where to look*/
+					mmap_write_out(f->cur_thread, f->uaddr);
+				}else{
+					PANIC("relocate_page called with dirty page of medium_t: %x", medium);
+				}
+			}else{
+				if(medium == PTE_STACK){
+					/* User has read a 0'd page they have not written to, delete the
+				   	   	   page, return frame. */
+					needs_to_be_zeroed = false;
+					pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
+				}else if(medium == PTE_EXEC){
+					/* this one should just set up on demand page again
+						   so that the process will know just to read in from
+						   disk again*/
+					bool writable = pagedir_is_writable(f->cur_thread->pagedir, f->uaddr);
+					pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
+							PTE_EXEC, (uint32_t)f->uaddr, writable);
+				}else if(medium == PTE_MMAP){
+					/* this should also set up an on demand page
+						   so that when the MMAP is page faulted it will find
+						   it on disk again*/
+					pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
+							PTE_MMAP, (uint32_t)f->uaddr , true);
+				}else{
+					PANIC("realocate_page called with clean page of medium_t: %x", medium);
+				}
+			}
+
+			intr_set_level(old_level);
+			/* return the frame corresponding to evict_hand */
+
+			if(needs_to_be_zeroed){
+				/* Zero out the actual page so that the one returned to the user
+				   	   has no valuable/sensitive/garbage data in it. Prevents security
+				   	   problems*/
+				memset(kaddr, 0, PGSIZE);
+			}
+
+			/* put user address and pgdir in the frame but leave the
+				   rest of the data, such as position in bitmap as the
+				   same*/
+			f->uaddr = uaddr;
+			f->cur_thread = thread_current();
 			lock_release(&f_table->frame_map_lock);
-			return relocate_page(frame, uaddr);
+			return kaddr;
 		}
 	}
 }
@@ -106,73 +176,6 @@ void clear_until_threshold(void){
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 
-	/* modifying the pagedir of another thread should be handled
-	   with interrupts off, so that the dirty bit, AVL bits and
-	   upper 20 bits.*/
-	enum intr_level old_level = intr_disable();
-
-	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
-	medium_t medium = pagedir_get_medium(f->cur_thread->pagedir,f->uaddr);
-	//printf("uaddr of frame we are evicting %x\n", f->uaddr);
-
-	ASSERT(medium != PTE_AVL_ERROR);
-
-	void *kaddr = palloc_kaddr_at_uindex(f->position_in_bitmap);
-
-	bool needs_to_be_zeroed = true;
-
-	if(pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr)){
-		if(medium == PTE_STACK || medium == PTE_EXEC){
-			/* Sets the memroy up for the user, so when it faults will
-			   know where to look*/
-			swap_write_out(f->cur_thread, f->uaddr);
-		}else if(medium == PTE_MMAP){
-			/* Sets the memroy up for the user, so when it faults will
-			   know where to look*/
-			mmap_write_out(f->cur_thread, f->uaddr);
-		}else{
-			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
-		}
-	}else{
-		if(medium == PTE_STACK){
-			/* User has read a 0'd page they have not written to, delete the
-	   	   	   page, return frame. */
-			needs_to_be_zeroed = false;
-			pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
-		}else if(medium == PTE_EXEC){
-			/* this one should just set up on demand page again
-			   so that the process will know just to read in from
-			   disk again*/
-			bool writable = pagedir_is_writable(f->cur_thread->pagedir, f->uaddr);
-			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
-						PTE_EXEC, (uint32_t)f->uaddr, writable);
-		}else if(medium == PTE_MMAP){
-			/* this should also set up an on demand page
-			   so that when the MMAP is page faulted it will find
-			   it on disk again*/
-			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
-						PTE_MMAP, (uint32_t)f->uaddr , true);
-		}else{
-			PANIC("realocate_page called with clean page of medium_t: %x", medium);
-		}
-	}
-
-	intr_set_level(old_level);
-	/* return the frame corresponding to evict_hand */
-
-	if(needs_to_be_zeroed){
-		/* Zero out the actual page so that the one returned to the user
-	   	   has no valuable/sensitive/garbage data in it. Prevents security
-	   	   problems*/
-		memset(kaddr, 0, PGSIZE);
-	}
-
-	/* put user address and pgdir in the frame but leave the
-	   rest of the data, such as position in bitmap as the
-	   same*/
-	f->uaddr = uaddr;
-	f->cur_thread = thread_current();
-
-	return kaddr;
+	return NULL;
 }
 
