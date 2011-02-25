@@ -20,7 +20,7 @@ static inline void *entry_to_kaddr(struct frame_entry *entry){
 }
 
 static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
-	return f_table.entries + (pos * sizeof(struct frame_entry));
+	return (struct frame_entry*)((uint32_t)f_table.entries + (pos * sizeof(struct frame_entry)));
 }
 
 static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
@@ -157,7 +157,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		}
 		printf("new frame: uaddr %p cur_thread %p pinned %u \n base %p entries %p,\n frame idx %u, at_pos %u\n",
 				entry->uaddr, entry->cur_thread, entry->is_pinned, f_table.base, f_table.entries, frame_idx, frame_entry_pos(entry));
-		printf("Other function check entry to\n kaddr %p , frame_entry_at pos %p vs entry %p, vs frame_entry at found kaddr %p\n\n",
+		printf("Other function check entry to\n kaddr %p , frame_entry_at pos %p\n vs entry %p, vs frame_entry at found kaddr %p\n\n",
 				entry_to_kaddr(entry), frame_entry_at_pos(frame_idx), entry, frame_entry_at_kaddr(entry_to_kaddr(entry)));
 		return entry;
 	}
