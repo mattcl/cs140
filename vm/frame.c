@@ -147,6 +147,7 @@ struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
 }
 
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
+	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 	if(entry){
 		return entry_to_kaddr;
