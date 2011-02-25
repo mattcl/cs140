@@ -135,6 +135,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	entry->uaddr = new_uaddr;
 	entry->cur_thread = thread_current();
 	lock_release(&f_table.frame_table_lock);
+
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
