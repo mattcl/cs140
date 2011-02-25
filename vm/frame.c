@@ -58,7 +58,7 @@ void frame_init(void){
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
-	//printf("evict \n");
+	printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -133,7 +133,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-
+	printf("evict return\n");
 	return kaddr;
 }
 
