@@ -126,6 +126,7 @@ bool swap_read_in (void *faulting_addr){
 	/* indicate that this is in memorry */
 	pagedir_set_medium(cur->pagedir, (void*)uaddr, org_medium);
 
+	/* Make sure it is read back out to disk if faulted*/
 	pagedir_set_dirty(cur->pagedir, (void*)uaddr, true);
 
 	/* This page will be set to accessed after the page is read in
