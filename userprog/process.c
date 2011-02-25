@@ -579,7 +579,7 @@ done:
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
-	intr_disable();
+	intr_enable();
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
