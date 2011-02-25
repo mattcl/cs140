@@ -158,7 +158,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		printf("new frame: uaddr %p cur_thread %p pinned %u base %p entries %p, frame idx %u, at_pos %u\n",
 				entry->uaddr, entry->cur_thread, entry->is_pinned, f_table.base, f_table.entries, frame_idx, frame_entry_pos(entry));
 		printf("Other function check entry to kaddr %p , frame_entry_at pos %p vs entry %p, vd frame_entry at found kaddr %p\n",
-				entry_to_kaddr(entry), entry_at_pos(frame_idx), entry, frame_entry_at_kaddr(entry_to_kaddr(entry)));
+				entry_to_kaddr(entry), frame_entry_at_pos(frame_idx), entry, frame_entry_at_kaddr(entry_to_kaddr(entry)));
 		return entry;
 	}
 }
