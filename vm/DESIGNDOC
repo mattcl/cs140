@@ -43,7 +43,8 @@ The above defines define the "states" of the AVL bits of a page table entry. Sin
 we are using the page table as our supplemental page table as well, we needed the 
 AVL bits to store the additional information.
 
-//swap.h
+
+
 ---- ALGORITHMS ----
 
 >> A2: In a few paragraphs, describe your code for locating the frame,
@@ -78,6 +79,27 @@ AVL bits to store the additional information.
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+//swap.h
+
+struct swap_entry{
+	uint32_t uaddr; 		/* Key into the hash table*/
+	uint32_t swap_slot; 	/* The swap slot that this vaddr's page
+							   resides*/
+	medium_t org_medium;
+	struct hash_elem elem;  /* The hash elem */
+};
+
+/* Both are protected by the frame table hash lock*/
+static size_t evict_hand;
+static size_t clear_hand;
+
+/* Threshold can be set to respond to system
+   conditions */
+
+static size_t threshold;
+static struct lock *clock_lock;
+
 
 ---- ALGORITHMS ----
 
