@@ -73,7 +73,7 @@ bool swap_read_in (void *faulting_addr){
 		printf("waiting\n");
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		timer_msleep (8); /* The time of a disk write*/
+		timer_msleep (8000); /* The time of a disk write*/
 		intr_disable();
 	}
 
