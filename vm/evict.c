@@ -153,7 +153,16 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 /* random */
 struct frame_entry *choose_frame_to_evict(struct frame_table){
-
+    
+    while(true) {
+      frame_entry *frame = frame_at_position(evict_hand++);  
+      if(!frame->pinned_to_frame){
+	  break;
+      }
+    }
+ 
+    ASSERT(!frame_is_free(frame->position_in_bitmap));
+    return frame;
 }
 
 

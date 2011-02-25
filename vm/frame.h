@@ -37,5 +37,6 @@ size_t frame_table_size (void);
 struct frame_entry  *frame_at_position(size_t bit_num);
 struct frame_entry *frame_first_free (enum palloc_flags flags, void *uaddr);
 void frame_unpin (void *kaddr);
-
+bool frame_is_free(size_t bit_num);
+bool frame_is_pinned(size_t bit_num);
 #endif /* FRAME_H_ */

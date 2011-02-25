@@ -207,6 +207,11 @@ struct frame_entry *frame_at_position(size_t bit_num){
 	}
 }
 
+bool frame_is_free (size_t bit_num){
+    return bitmap_test(f_table->used_frames), bitnum);
+}
+
+
 static unsigned frame_hash_func (HASH_ELEM *e, AUX){
 	return hash_bytes(&hash_entry(e, struct frame_entry, elem)->position_in_bitmap, sizeof(uint32_t));
 }
