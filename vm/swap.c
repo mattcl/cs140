@@ -167,7 +167,7 @@ bool swap_read_in (void *faulting_addr){
 bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medium){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
-
+	printf("Swap out\n");
 	/* We set the page to not present in memory in evict so assert it*/
 	ASSERT(!pagedir_is_present(pd, uaddr));
 	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
@@ -224,6 +224,8 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 				masked_uaddr, 0)){
 		PANIC("Kernel out of memory");
 	}
+
+	printf("Swap out finished\n");
 
 	return true;
 }
