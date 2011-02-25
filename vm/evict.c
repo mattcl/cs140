@@ -59,13 +59,23 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	}
 
 	/* choose a frame to evict, then pin it to frame, so that another
-	   thread does not choose to evict it */
+	   thread does not choose to evict it, then we mark it as not
+	   present because they no longer own it, and should not be able
+	   to read from or write to it */
 	lock_acquire(&f_table->frame_map_lock);
 	frame = choose_frame_to_evict();
 	frame->pinned_to_frame = true;
 	lock_release(&f_table->frame_map_lock);
-	/* in this case we need to move both hands simultaneously until the
-       evict_hand finds a !accessed page */
+
+	/* once we makr a page as not present, we must also mark it's
+	   location atomically, if we are interuppted after settin it 
+	   as not present the userpage's PTE_ADDR will be interpreted 
+	   before we set it.
+	*/
+	
+	intr_disable();
+	pagedir_clear_page(pd, uaaddr);
+	intr_enable();
 }
 
 void evict_init(size_t threshold_set){
@@ -80,11 +90,54 @@ void clear_until_threshold(void){
 
 }
 
-/* john's relocate_page */
+/* This page has already been marked as not present in the page
+   table entry of the corresponding user thread.  We have also 
+   prevented other threads from messing with us until we are done.
+   However, we must still worry about the user thread faulting
+   on the page while we are still in the eviction process  
+
+   If the page is clean, we do not have to write it to disk.  We 
+   can just zero the bit in the map that says somoene is using this 
+   page.  If the user process page faults on this page before we give
+   zero this bit, we are okay.  They will be given a new page and the data
+   will be read off of the disk.
+ 
+
+*/
+
 static void *relocate_page (struct frame_entry *f, void *uaddr){
     d;
     
+    
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
@@ -147,7 +200,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
    frame that is not pinned.  Because we assume that this should happen
    when their are no free frames, we assert that, however, we could easily
    move the check into the if statement if the assertion fails */
-struct frame_entry *choose_frame_to_evict(struct frame_table){
+struct frame_entry *choose_frame_to_evict(){
    
     while(true) {
       frame_entry *frame = frame_at_position(evict_hand++);  
@@ -163,7 +216,7 @@ struct frame_entry *choose_frame_to_evict(struct frame_table){
 
 /* clock */
 
-struct frame_entry *choose_frame_to_evict(struct frame_table *f_table){
+struct frame_entry *choose_frame_to_evict(){
 	while(true){
 
 		/* All frames are locked as is while the frame_map_lock is held

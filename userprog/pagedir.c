@@ -209,6 +209,8 @@ bool pagedir_is_present (uint32_t *pd, const void *uaddr){
 	return pte != NULL && (*pte & PTE_P) != 0;
 }
 
+
+
 bool pagedir_is_writable (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_W) != 0;
