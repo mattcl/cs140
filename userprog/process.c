@@ -431,7 +431,6 @@ void process_exit (void){
 /* Sets up the CPU for running user code in the current thread.
    This function is called on every context switch. */
 void process_activate (void){
-	printf("activate\n");
 	struct thread *t = thread_current ();
 
 	/* Activate thread's page tables. */
