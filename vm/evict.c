@@ -19,6 +19,7 @@ static size_t clear_hand;
 
 static size_t threshold;
 static struct lock *clock_lock;
+static struct lock *clock_block;
 
 static void *relocate_page (struct frame_entry *f, void * uaddr);
 /* returns the key to the frame that is now available, use the entry
@@ -63,37 +64,6 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	lock_release(&f_table->frame_map_lock);
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
-	//while(true){
-
-		/* All frames are locked as is while the frame_map_lock is held
-		   Now we can find all of the frames without having to worry
-		   about other threads removing their data right now.
-		   If we find one that we want to evict we set the pinned to
-		   frame to true which will make the owning thread wait till
-		   it is fully read out to swap/mmap */
-
-		//printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
-		/*frame = frame_at_position(evict_hand % frame_table_size());
-		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
-		ASSERT(frame != NULL && frame_to_clear != NULL);
-		evict_hand++;
-		clear_hand++;
-
-		ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
-		ASSERT(pagedir_is_present(frame_to_clear->cur_thread->pagedir, frame_to_clear->uaddr));
-
-		pagedir_set_accessed(frame->cur_thread->pagedir, frame_to_clear->uaddr, false);
-
-		if(!frame->pinned_to_frame && !pagedir_is_accessed(
-				frame->cur_thread->pagedir, frame->uaddr)){
-			/* Will make sure that the owning thread will
-			   not remove its ish from the frame until we
-			   are done relocating the data*/
-		/*	/frame->pinned_to_frame = true;
-			lock_release(&f_table->frame_map_lock);
-			return relocate_page(frame, uaddr);
-		}
-		}*/
 }
 
 void evict_init(size_t threshold_set){
@@ -190,6 +160,40 @@ struct frame_entry *choose_frame_to_evict(struct frame_table){
 /* clock */
 
 struct frame_entry *choose_frame_to_evict(struct frame_table *f_table){
+	while(true){
 
+		/* All frames are locked as is while the frame_map_lock is held
+		   Now we can find all of the frames without having to worry
+		   about other threads removing their data right now.
+		   If we find one that we want to evict we set the pinned to
+		   frame to true which will make the owning thread wait till
+		   it is fully read out to swap/mmap */
+
+		//printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
+		frame = frame_at_position(evict_hand % frame_table_size());
+		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
+		
+        /* ensure we're not doing something dumb */
+        ASSERT(frame != NULL && frame_to_clear != NULL);
+		
+        evict_hand++;
+		clear_hand++;
+
+		ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
+		ASSERT(pagedir_is_present(frame_to_clear->cur_thread->pagedir, frame_to_clear->uaddr));
+
+        /* clear the accessed bit for the frame at the clear hand */
+		pagedir_set_accessed(frame->cur_thread->pagedir, frame_to_clear->uaddr, false);
+
+
+		if(!frame->pinned_to_frame && !pagedir_is_accessed(frame->cur_thread->pagedir, frame->uaddr)){
+			/* Will make sure that the owning thread will
+			   not remove its contents from the frame until we
+			   are done relocating the data*/
+		    frame->pinned_to_frame = true;
+			return relocate_page(frame, uaddr);
+		}
+
+        return NULL;
 }
->>>>>>> 42325e92690df9cb6d73a0704e63b0cef8ab5eea:vm/evict.c
+
