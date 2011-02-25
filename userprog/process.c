@@ -902,64 +902,55 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
              uint32_t read_bytes, uint32_t zero_bytes, bool writable){
 
-	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
+	ASSERT ((read_bytes + zero_bytes) == PGSIZE );
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
+
+	/* Get a page of memory. */
+	uint8_t *kpage = frame_get_page(PAL_USER, upage);
+
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
-	/* This loop only executed once per call it isn't changed because
-	   it doesn't need to be changed*/
-	while(read_bytes > 0 || zero_bytes > 0){
-		//printf("upage %p\n", upage);
-		/* Calculate how to fill this page.
+	//printf("upage %p\n", upage);
+	/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
-		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+	size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-		/* Get a page of memory. */
-		uint8_t *kpage = frame_get_page(PAL_USER, upage);
-		if(kpage == NULL){
-			lock_release(&filesys_lock);
-			//printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			unpin_frame_entry(kpage);
-			return false;
-		}
+	if(kpage == NULL){
+		return false;
+	}
 
-		/* Load this page. */
-		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
-			frame_clear_page (kpage);
-			lock_release(&filesys_lock);
-			//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			unpin_frame_entry(kpage);
-			return false;
-		}
-		memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	/* Load this page. */
+	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
+		frame_clear_page (kpage);
+		lock_release(&filesys_lock);
+		//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+		unpin_frame_entry(kpage);
+		return false;
+	}
+	memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-		/* Add the page to the process's address space. But only if that
+	/* Add the page to the process's address space. But only if that
 		   virtual address doesn't already have something mapped to it,
 		   I.E. the present bit is on*/
-		if(!pagedir_install_page (upage, kpage, writable)){
-			frame_clear_page(kpage);
-			lock_release(&filesys_lock);
-			//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			unpin_frame_entry(kpage);
-			return false;
-		}
-
-		/* Make sure that if this page is evicted and is readonly that it will
-		   be deleted outright instead of put on swap*/
-		pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
-
+	if(!pagedir_install_page (upage, kpage, writable)){
+		frame_clear_page(kpage);
+		lock_release(&filesys_lock);
+		//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 		unpin_frame_entry(kpage);
-
-		/* Advance. */
-		read_bytes -= page_read_bytes;
-		zero_bytes -= page_zero_bytes;
-		upage += PGSIZE;
+		return false;
 	}
+
+	/* Make sure that if this page is evicted and is readonly that it will
+		   be deleted outright instead of put on swap*/
+	pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
+
+	unpin_frame_entry(kpage);
+
 	lock_release(&filesys_lock);
 
 	return true;
