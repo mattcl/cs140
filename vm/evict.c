@@ -63,19 +63,32 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	lock_acquire(&f_table->frame_map_lock);
 	frame = choose_frame_to_evict();
 	frame->pinned_to_frame = true;
+	page_dir_clear_page(frame->cur_thread->pagedir, frame->uaddr);
 	lock_release(&f_table->frame_map_lock);
 
 	/* once we make a page as not present, we must also mark it's
 	   location atomically, if we are interuppted after settin it 
 	   as not present the userpage's PTE_ADDR will be interpreted 
 	   before we set it.   */
-	
-	intr_disable();
-	pagedir_clear_page(pd, uaaddr);
-	
-	intr_enable();
+
+	/* should just be an disable and enable, but use set level to be
+	   safe */
+	enum intr_level old_level;
+	old_level = intr_disable();
+	clear_and_set_page_location(frame->cur_thread->pagedir, frame->uaddr);
+	intr_set_level(old_level);
 }
 
+/* this function begins by clearing a page (setting not present).  Once
+   this page is cleared, it may page fault, in which case it will also 
+   intepret it's PTE_AVL and PTE_ADDR fields.  We therefore have to set
+   all this atomically */
+static void clear_and_set_page_location(uint32_t pd, void *upage){
+    page_dir_clear_page(frame->cur_thread->pagedir, frame->uaddr);
+    
+    /* If it's clean, then we assume that it's PTE_AVLresponse/
+}
+	
 void evict_init(size_t threshold_set){
 	threshold = threshold_set;
 	evict_hand = 0;
