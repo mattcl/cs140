@@ -176,6 +176,6 @@ void clear_until_threshold(void){
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 
-	return kaddr;
+	return NULL;
 }
 
