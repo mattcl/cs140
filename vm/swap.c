@@ -168,7 +168,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	/* We set the page to not present in memory in evict so assert it*/
 	ASSERT(!pagedir_is_present(pd, uaddr));
-	ASSERT(!pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
+	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
 	ASSERT(kaddr != NULL);
 
 	uint32_t i;
