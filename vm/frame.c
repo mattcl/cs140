@@ -116,8 +116,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		break;
 	}
 
-	entry->uaddr = new_uaddr;
-	entry->cur_thread = thread_current();
 	lock_release(&f_table.frame_table_lock);
 
 	void *kaddr = entry_to_kaddr(entry);
@@ -133,6 +131,10 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		}
 	}
 
+	lock_acquire(&f_table.frame_table_lock);
+	entry->uaddr = new_uaddr;
+	entry->cur_thread = thread_current();
+	lock_release(&f_table.frame_table_lock);
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
