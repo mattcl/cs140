@@ -84,6 +84,8 @@ bool swap_read_in (void *faulting_addr){
 		intr_disable();
 	}
 
+	intr_enable();
+
 	lock_release(&swap_slots_lock);
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
