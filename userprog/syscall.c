@@ -16,7 +16,7 @@
 #include "threads/init.h"
 #include "vm/frame.h"
 #include <string.h>
-#include "devices/ide.h"
+#include "devices/timer.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
