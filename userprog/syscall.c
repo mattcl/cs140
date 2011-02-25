@@ -758,7 +758,7 @@ bool mmap_read_in(void *faulting_addr){
 	/* make sure we know that this page is saved*/
 	pagedir_set_dirty(cur->pagedir, (void*)uaddr, false);
 
-	frame_unpin(kaddr);
+	unpin_frame_entry(kaddr);
 
 	//printf"in end\n");
 	/*"Kernel out of memory! if false;"*/
