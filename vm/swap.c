@@ -184,7 +184,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	//printf("Begin writing data to swap \n");
 
-	/* move the data from kvaddr to the newly allocated swap slot*/
+	/* move the data from kaddr to the newly allocated swap slot*/
 	/* uint8_t so that incrementing is easy*/
 	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
 
@@ -206,8 +206,10 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap*/
-	pagedir_setup_demand_page(pd, uaddr, PTE_AVL_SWAP,
-				addr_to_save, 0);
+	if(!pagedir_setup_demand_page(pd, uaddr, PTE_AVL_SWAP,
+				addr_to_save, 0)){
+		BSOD("Kernel out of memory");
+	}
 
 	return true;
 }

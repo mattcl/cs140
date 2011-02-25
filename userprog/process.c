@@ -20,7 +20,6 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
-#include "userprog/syscall.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
 
@@ -343,12 +342,6 @@ int process_wait (tid_t child_tid){
 void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
-
-	/* Must be done before destroying the page dir which will lose all
-	   of the data from the mmapped files and before we dissable interrupts
-	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
-	hash_destroy(&cur_process->mmap_table, &mmap_hash_entry_destroy);
-
 	uint32_t *pd;
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
