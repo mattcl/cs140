@@ -37,7 +37,7 @@ static void evict_init(void){
 
 
 void frame_init(void){
-	printf("frame init\n");
+	//printf("frame init\n");
 	f_table.size = palloc_number_user_pages();
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
 	ASSERT(f_table.base != NULL);
@@ -55,11 +55,11 @@ void frame_init(void){
 		cond_init(&start->pin_condition);
 	}
 	evict_init();
-	printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(f_table.used_frames));
+	//printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(f_table.used_frames));
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
-	printf("evict \n");
+	//printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -139,11 +139,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 }
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
-	printf("first free\n");
+	//printf("first free\n");
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		printf("frame idx was Bitmap errer %u\n", frame_idx);
+		//printf("frame idx was Bitmap errer %u\n", frame_idx);
 		lock_release(&f_table.frame_table_lock);
 		return NULL;
 	}else{
@@ -162,18 +162,18 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 }
 
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
-	printf("get\n");
+	//printf("get\n");
 	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 	if(entry){
-		return entry_to_kaddr;
+		return entry_to_kaddr(entry);
 	}else{
 		return evict_page(uaddr, (flags & PAL_ZERO) != 0);
 	}
 }
 
 void frame_clear_page (void *kaddr){
-	printf("clear\n");
+	//printf("clear\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -182,7 +182,7 @@ void frame_clear_page (void *kaddr){
      now so it can release this*/
 
 	while(entry->is_pinned){
-		printf("waiting\n");
+		//printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 	}
 
@@ -197,7 +197,7 @@ void frame_clear_page (void *kaddr){
 /* Need to unpin after it is installed
    in the pagedir of your thread */
 void unpin_frame_entry(void *kaddr){
-	printf("unpin\n");
+	//printf("unpin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
