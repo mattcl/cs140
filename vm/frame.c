@@ -37,6 +37,7 @@ static void evict_init(void){
 
 
 void frame_init(void){
+	printf("frame init\n");
 	f_table.size = palloc_number_user_pages();
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
 	ASSERT(f_table.base != NULL);
@@ -54,6 +55,7 @@ void frame_init(void){
 		cond_init(&start->pin_condition);
 	}
 	evict_init();
+	printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(&f_table.used_frames));
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
