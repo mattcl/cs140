@@ -870,11 +870,14 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	uint32_t j;
 	void *kaddr_for_pg;
 
-	off_t offset, original_position, write_bytes;
+	off_t offset, original_position, write_bytes, f_length, last_page_length;
 
 	lock_acquire(&filesys_lock);
 	original_position = file_tell(fd_entry->open_file);
+	f_length = file_length(fd_entry->open_file);
 	lock_release(&filesys_lock);
+
+	last_page_length = PGSIZE - ((entry->num_pages*PGSIZE) - f_length);
 
 	/* Pin all of the frames that we are going to be
 	   removing so they can not be evicted*/
@@ -898,8 +901,9 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
 				file_seek(fd_entry->open_file, offset);
-				write_bytes = (entry->num_pages -1 == j) ?
-						file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+
+				write_bytes = (entry->num_pages -1 == j)  ? last_page_length : PGSIZE;
+
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
 				lock_release(&filesys_lock);
 				unpin_frame_entry(kaddr_for_pg);
