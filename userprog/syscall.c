@@ -14,6 +14,7 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/init.h"
+#include "threads/pte.h"
 #include "vm/frame.h"
 #include <string.h>
 #include "devices/timer.h"
@@ -33,7 +34,7 @@ static void system_write (struct intr_frame *f, int fd, const void *buffer, unsi
 static void system_seek (struct intr_frame *f, int fd, unsigned int position );
 static void system_tell (struct intr_frame *f, int fd );
 static void system_close (struct intr_frame *f, int fd );
-static void system_mmap (struct intr_frame *f, int fd, void *uaddr);
+static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr);
 static void system_munmap (struct intr_frame *f, mapid_t map_id);
 
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
@@ -41,8 +42,8 @@ static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
-static unsigned int get_user_int(const uint32_t *uaddr, int *error);
-static int get_user(const uint8_t *uaddr);
+static unsigned int get_user_int(const uint32_t *masked_uaddr, int *error);
+static int get_user(const uint8_t *masked_uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
 static struct file *file_for_fd (int fd, bool mmap);
@@ -548,7 +549,7 @@ static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 	return hash_entry(map_hash_elem, struct mmap_hash_entry, elem);
 }
 
-static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
+static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	//printf"map\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
@@ -558,8 +559,8 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 		return;
 	}
 	/* verify the virtual addr */
-	if( ((uint32_t)uaddr % PGSIZE) != 0 || uaddr == NULL
-			|| !is_user_vaddr(uaddr)){
+	if( ((uint32_t)masked_uaddr % PGSIZE) != 0 || masked_uaddr == NULL
+			|| !is_user_vaddr(masked_uaddr)){
 		f->eax = -1;
 		return;
 	}
@@ -585,7 +586,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	   the stack and the mmapped segment. This also means that the user may
 	   actually grow the stack larger than the max size by cleverly mmapping
 	   files*/
-	if((uint32_t)uaddr + (num_pages * PGSIZE) >
+	if((uint32_t)masked_uaddr + (num_pages * PGSIZE) >
 			(uint32_t)PHYS_BASE - (stack_size)){
 		f->eax = -1;
 		return;
@@ -597,7 +598,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	/* Here we passed the simple ish so now we are going to check if
 	   any of the memory requested is already mapped in the virtual
 	   address space*/
-	uint8_t *temp_ptr = (uint8_t*)uaddr;
+	uint8_t *temp_ptr = (uint8_t*)masked_uaddr;
 	uint32_t i;
 	for(i = 0; i < num_pages; i ++, temp_ptr += PGSIZE){
 		if(pagedir_is_mapped(pd, temp_ptr)){
@@ -614,14 +615,14 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 
 	/* Try to setup all of the pages. Will only fail when kernel out of
 	   memory*/
-	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
+	for(i = 0, temp_ptr = (uint8_t*)masked_uaddr; i < num_pages;
 			i ++, temp_ptr += PGSIZE){
 		ASSERT(((uint32_t)temp_ptr % PGSIZE) == 0);
 		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_MMAP,
 				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
-			pagedir_clear_pages(pd, uaddr, i);
+			pagedir_clear_pages(pd, masked_uaddr, i);
 			f->eax = -1;
 			return;
 		}
@@ -636,13 +637,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	if(mmap_entry == NULL){
 		/* Can't be allocated, KERNEL OUT OF MEMORY
 		   unmap all our PTE's*/
-		pagedir_clear_pages(pd, uaddr, num_pages);
+		pagedir_clear_pages(pd, masked_uaddr, num_pages);
 		f->eax = -1;
 		return;
 	}
 
-	mmap_entry->begin_addr = (uint32_t)uaddr;
-	mmap_entry->end_addr  =  (uint32_t)uaddr + (num_pages*PGSIZE);
+	mmap_entry->begin_addr = (uint32_t)masked_uaddr;
+	mmap_entry->end_addr  =  (uint32_t)masked_uaddr + (num_pages*PGSIZE);
 	mmap_entry->fd = entry->fd;
 	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
@@ -703,31 +704,36 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 bool mmap_read_in(void *faulting_addr){
 	//printf"readin\n");
 	struct thread *cur = thread_current();
-
+	uint32_t *pd = cur->pagedir;
 	/* Get the key into the hash, AKA the uaddr of this page*/
-	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
-
-
-	while(pagedir_get_medium(cur->pagedir, faulting_addr) != PTE_MMAP){
+	uint32_t masked_uaddr = (uint32_t)faulting_addr & PTE_ADDR;
+	uint32_t offset;
+	void * kaddr;
+	while(pagedir_get_medium(pd, faulting_addr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		timer_msleep (10);
+		timer_msleep (8); /* The time of a disk write */
 		intr_disable();
 	}
 
 	intr_enable();
 
-	/* Get hash entry if it exists */
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)uaddr);
-	if(entry == NULL){
-		return false;
-	}
+	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_MMAP);
 
-	uint32_t offset = uaddr - entry->begin_addr;
+	/* Get hash entry if it exists */
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)masked_uaddr);
+
+	/* If this is not true we routed the wrong thing to
+	   mmap read in*/
+	ASSERT(entry != NULL);
+
+	offset = masked_uaddr - entry->begin_addr;
 
 	/* Accessed through kernel memory the user PTE will not be
 	   marked as accessed or dirty !!! */
-	uint32_t *kaddr = frame_get_page(PAL_USER, (uint32_t*)uaddr);
+	kaddr = frame_get_page(PAL_USER, (void*)masked_uaddr);
+
+	ASSERT(kaddr != NULL);
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 	ASSERT(fd_entry != NULL);
@@ -749,14 +755,14 @@ bool mmap_read_in(void *faulting_addr){
 	lock_release(&filesys_lock);
 
 	bool success =
-			pagedir_install_page((void*)uaddr, (void*)kaddr, true);
+			pagedir_install_page((void*)masked_uaddr, (void*)kaddr, true);
 
 	/* Make sure that we stay consistent with our naming scheme
 	   of memory*/
-	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_MMAP);
+	pagedir_set_medium(pd, (void*)masked_uaddr, PTE_MMAP);
 
 	/* make sure we know that this page is saved*/
-	pagedir_set_dirty(cur->pagedir, (void*)uaddr, false);
+	pagedir_set_dirty(pd, (void*)masked_uaddr, false);
 
 	unpin_frame_entry(kaddr);
 
@@ -767,17 +773,18 @@ bool mmap_read_in(void *faulting_addr){
 
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
-bool mmap_write_out(struct thread *cur, void *uaddr){
-	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
+bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 
-	ASSERT(pagedir_is_present(cur->pagedir, uaddr));
+	/* We should have set this up atomically before being
+	   called */
+	ASSERT(!pagedir_is_present(cur->pagedir, masked_uaddr));
+	ASSERT(pagedir_get_mediutm(cur->pagedir, masked_uaddr) == PTE_MMAP_WAIT);
 
-	pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_MMAP_WAIT,
-				(uint32_t)uaddr, true);
+	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
 
-	intr_enable();
-
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, uaddr);
+	/* Only this thread can access its mmapped files so
+	   no locks are necessary */
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, masked_uaddr);
 	if(entry == NULL){
 		return false;
 	}
@@ -789,21 +796,21 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 	ASSERT(entry != NULL);
 
 	lock_acquire(&filesys_lock);
-	uint32_t offset = (uint32_t) uaddr - entry->begin_addr;
+	uint32_t offset = (uint32_t) masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
 	/* If this is the last page only read the appropriate number of bytes*/
-	uint32_t write_bytes = (entry->end_addr - (uint32_t)uaddr) / PGSIZE == 1 ?
+	uint32_t write_bytes = (entry->end_addr - (uint32_t)masked_uaddr) / PGSIZE == 1 ?
 			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
 	/* because this frame is pinned we know we can write from the
 	   kernel virtual address */
-	void *kaddr = pagedir_get_page(cur->pagedir, uaddr);
+	void *kaddr = pagedir_get_page(cur->pagedir, masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 	lock_release(&filesys_lock);
 
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
-	if(!pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_MMAP,
-			(uint32_t)uaddr, true)){
+	if(!pagedir_setup_demand_page(cur->pagedir, masked_uaddr, PTE_MMAP,
+			(uint32_t)masked_uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}
@@ -965,7 +972,7 @@ static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){
 
 /* Attempts to get a byte from the user address
    returns -1 on segfault */
-static int get_user(const uint8_t *uaddr){
+static int get_user(const uint8_t *masked_uaddr){
 	int result;
 	asm("movl $1f, %0; movzbl %1, %0; 1:"
 			: "=&a" (result) : "m" (*uaddr));

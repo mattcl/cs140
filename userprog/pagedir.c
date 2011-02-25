@@ -398,7 +398,10 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
    to be loaded when a page fault occurs. This will map the most significant
    top 20 bits to be something that will be useful for the page fault handler.
    The data for the top 20 bits will be passed in as a uint32_t and have the
-   lower 12 bits masked off. Also sets the appropriate bits for medium type*/
+   lower 12 bits masked off. Also sets the appropriate bits for medium type.
+   It does this atomically by disabling interrupts while it sets the fields
+   this is so that we can't get interrupted while we have bits that are
+   inconsistent in the PTE of another thread. That would be all bad/*/
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	uint32_t data, bool writable){
 

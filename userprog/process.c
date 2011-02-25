@@ -896,10 +896,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
-	//bool already_held = lock_held_by_current_thread (&filesys_lock);
-	//if(!already_held){
-	    lock_acquire(&filesys_lock);
-	    //}
+	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
@@ -944,7 +941,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		}
 
 		/* Make sure that if this page is evicted and is readonly that it will
-		   be deleted outright instead of put on swap */
+		   be deleted outright instead of put on swap*/
 		pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
 
 		unpin_frame_entry(kpage);
@@ -954,9 +951,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
 	}
-	//if(!already_held){
-	    lock_release(&filesys_lock);
-	    //}
+	lock_release(&filesys_lock);
 	return true;
 }
 
