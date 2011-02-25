@@ -115,6 +115,8 @@ bool swap_read_in (void *faulting_addr){
 	swap_slot = entry->swap_slot;
 	org_medium = entry->org_medium;
 
+	printf("swap slot %u org_medium %x uaddr %x\n", swap_slot, org_medium, masked_uaddr);
+
 	ASSERT(kaddr != NULL);
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
@@ -170,6 +172,7 @@ bool swap_read_in (void *faulting_addr){
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
 	unpin_frame_entry(kaddr);
+	printf("SWAP READ IN FINISHED\N");
 	return true;
 }
 
@@ -207,6 +210,8 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	new_entry->uaddr = masked_uaddr;
 	new_entry->org_medium = medium;
 	new_entry->swap_slot = swap_slot;
+
+	printf("swap slot %u org_medium %x uaddr %x\n", new_entry->swap_slot, new_entry->org_medium, new_entry->uaddr);
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
