@@ -227,7 +227,8 @@ static void page_fault (struct intr_frame *f){
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/
-					//printf("kill1\n");
+					printf("kill1\n");
+					PANIC("killed\n");
 					kill(f);
 				}
 			}else{
@@ -251,7 +252,8 @@ static void page_fault (struct intr_frame *f){
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
 		if(user){
-			//printf("kill2\n");
+			printf("kill2\n");
+			PANIC("killed 3\n");
 			kill(f);
 		}else{
 			//printf("kernel 2 write %u\n", write);
