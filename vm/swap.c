@@ -71,7 +71,7 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium;
 
 	ASSERT(intr_get_level() == INTR_OFF);
-
+	printf("Swap in \n");
 	lock_acquire(&swap_slots_lock);
 
 	/* Wait while the data finishes moving to swap */
