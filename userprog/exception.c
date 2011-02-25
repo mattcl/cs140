@@ -239,7 +239,7 @@ static void page_fault (struct intr_frame *f){
 				   the pointer for us to read they would have page faulted
 				   and already grown the stack. So it is safe to just return -1
 				   to the kernel code*/
-				//printf("kernel 1 write %u\n", write);
+				printf("kernel 1 write %u\n", write);
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
 				intr_enable();
@@ -256,7 +256,7 @@ static void page_fault (struct intr_frame *f){
 			PANIC("killed 3\n");
 			kill(f);
 		}else{
-			//printf("kernel 2 write %u\n", write);
+			printf("kernel 2 write %u\n", write);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
