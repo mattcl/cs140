@@ -709,7 +709,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 }
 
 static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
-	ASSERT(intr_get_level() = INTR_OFF);
+	ASSERT(intr_get_level() == INTR_OFF);
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
