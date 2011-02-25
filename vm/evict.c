@@ -55,7 +55,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	frame = frame_first_free(flags, uaddr);
 	if(frame != NULL){
 		palloc_kaddr_at_uindex(frame->position_in_bitmap);
-
+		return frame;
 	}
 
 	lock_acquire(&f_table->frame_map_lock);
