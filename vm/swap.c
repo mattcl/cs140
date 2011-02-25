@@ -8,6 +8,7 @@
 #include "devices/block.h"
 #include "threads/pte.h"
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #include "devices/timer.h"
 
 /* This bit map tracks used swap slots, each swap slot is
@@ -21,6 +22,8 @@ static struct block *swap_device;
 
 /* lock for the bitmap and swap to avoid race conditions */
 static struct lock swap_slots_lock;
+
+static struct condition swap_free_condition;
 
 #define SECTORS_PER_SLOT 8
 
@@ -49,6 +52,7 @@ void swap_init (void){
 	}
 
 	lock_init(&swap_slots_lock);
+	cond_init(&swap_free_condition);
 }
 
 /* Takes the faulting addr and then reads the data back into main memory
@@ -68,16 +72,19 @@ bool swap_read_in (void *faulting_addr){
 
 	ASSERT(intr_get_level() == INTR_OFF);
 
+	lock_acquire(&swap_slots_lock);
+
 	/* Wait while the data finishes moving to swap */
 	while(pagedir_get_medium(pd, faulting_addr) != PTE_SWAP){
 		printf("waiting\n");
-		/* Wait for write to disk to complete*/
+		/* Wait for write to disk to complete and then atomically check
+		   our medium to see if our write has completed*/
 		intr_enable();
-		timer_msleep (8000); /* The time of a disk write*/
+		cond_wait(&swap_free_condition, &swap_slots_lock);
 		intr_disable();
 	}
 
-	intr_enable();
+	lock_release(&swap_slots_lock);
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
 
@@ -132,6 +139,8 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Free the malloced swap entry */
 	free(hash_entry(deleted, struct swap_entry, elem));
+
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
 	lock_release(&swap_slots_lock);
 
@@ -214,8 +223,6 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
 
-	lock_release(&swap_slots_lock);
-
 	//printf("Returned from writing block\n");
 
 	/* Tell the process who just got this page evicted that the
@@ -224,6 +231,10 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 				masked_uaddr, 0)){
 		PANIC("Kernel out of memory");
 	}
+
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);
+
+	lock_release(&swap_slots_lock);
 
 	printf("Swap out finished\n");
 
