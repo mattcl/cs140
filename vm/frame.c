@@ -57,6 +57,7 @@ void frame_init(void){
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
+	printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -136,6 +137,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 }
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
+	printf("first free\n");
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
@@ -156,6 +158,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 }
 
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
+	printf("get\n");
 	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 	if(entry){
@@ -166,6 +169,7 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
 }
 
 void frame_clear_page (void *kaddr){
+	printf("clear\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -189,6 +193,7 @@ void frame_clear_page (void *kaddr){
 /* Need to unpin after it is installed
    in the pagedir of your thread */
 void unpin_frame_entry(void *kaddr){
+	printf("unpin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
