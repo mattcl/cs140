@@ -184,7 +184,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
-	uint8_t *kaddr_ptr = (uint8_t*)masked_uaddr;/* was kaddr*/
+	uint8_t *kaddr_ptr = (uint8_t*)kaddr;/* was kaddr*/
 	size_t swap_slot, start_sector;
 
 	//printf("lock acquired\n");
