@@ -198,7 +198,7 @@ static void page_fault (struct intr_frame *f){
 			/* read in zero page */
 			/* Get new frame and install it at the faulting addr*/
 			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
-			frame_unpin(kaddr);
+			unpin_frame_entry(kaddr);
 			/* it will be set to dirty or accessed on the retry*/
 			pagedir_install_page(uaddr, kaddr, true);
 
