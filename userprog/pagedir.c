@@ -326,19 +326,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	if(pte != NULL){
 		/* This function makes sure that these 3 bits are zeroed
 		   before manipulating anything */
-		//ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		*pte &= ~(uint32_t)PTE_AVL;
-		if(medium == PTE_SWAP || medium == PTE_EXEC ||
-				medium == PTE_MMAP ||medium == PTE_STACK ||
-				medium == PTE_AVL_ERROR){
-			*pte |= medium;
-		}else{
-			PANIC("pagedir_set_medium called with unexpected medium");
-		}
-	}else{
-		PANIC("pagedir_set_medium called on a page table entry that is not initialized");
+
+		*pte |= ((uint32_t)medium & PTE_AVL);
 	}
-	//PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
 
 /* Gets the type of medium that this uaddr came from
@@ -350,11 +341,7 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){
-		medium_t medium = (*pte & (uint32_t)PTE_AVL);
-		if(medium == PTE_SWAP || medium == PTE_EXEC||
-				medium == PTE_MMAP || medium == PTE_STACK){
-			return medium;
-		}
+		return (*pte & (uint32_t)PTE_AVL);
 	}
 	/* It is not currently mapped or is an invalid medium so we
 	   can return error*/
