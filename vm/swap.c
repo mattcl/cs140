@@ -184,12 +184,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 	}
 
 
-<<<<<<< HEAD:vm/swap.c
-	//printf("Begin writing data to swap \n");
-	/* move the data from kvaddr to the newly allocated swap slot*/
-=======
-	/* move the data from kaddr to the newly allocated swap slot*/
->>>>>>> c87e42aea7837e5da8ee758a9b53ea3de5de9ed5:vm/swap.c
+
 	/* uint8_t so that incrementing is easy*/
 	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
 
