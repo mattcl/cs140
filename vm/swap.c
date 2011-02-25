@@ -221,7 +221,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
 
-	start_sector = (swap_slot + 1) * SECTORS_PER_SLOT;
+	start_sector = swap_slot * SECTORS_PER_SLOT;
 
 	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 

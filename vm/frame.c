@@ -141,7 +141,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	printf("evict return\n");
+	printf("evict return %p\n", kaddr);
 	return kaddr;
 }
 
