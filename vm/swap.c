@@ -39,7 +39,6 @@ void swap_init (void){
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
 	//printf("%u size and %u slots\n", num_sectors*512, num_slots);
-
 	used_swap_slots = bitmap_create(num_slots);
 
 	ASSERT(used_swap_slots != NULL);
@@ -155,6 +154,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		BSOD("KERNEL OUT OF MEMORRY");
 	}
 
+
 	//printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
 
@@ -183,27 +183,41 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 		BSOD("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
-	//printf("Begin writing data to swap \n");
 
+<<<<<<< HEAD:vm/swap.c
+	//printf("Begin writing data to swap \n");
+	/* move the data from kvaddr to the newly allocated swap slot*/
+=======
 	/* move the data from kaddr to the newly allocated swap slot*/
+>>>>>>> c87e42aea7837e5da8ee758a9b53ea3de5de9ed5:vm/swap.c
 	/* uint8_t so that incrementing is easy*/
 	uint8_t *kaddr_ptr = pagedir_get_page(pd, uaddr);
 
 	ASSERT(kaddr_ptr != NULL);
 
+
+
 	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
 
-	size_t start_sector = swap_slot * SECTORS_PER_SLOT;
+
+	size_t start_sector = (swap_slot+1) * SECTORS_PER_SLOT;
+
+
 
 	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
+
 	uint32_t i;
+
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
+
 	lock_release(&swap_slots_lock);
+
 	//printf("Returned from writing block\n");
+
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap*/
@@ -211,6 +225,7 @@ bool swap_write_out (struct thread *cur, void *uaddr){
 				addr_to_save, 0)){
 		BSOD("Kernel out of memory");
 	}
+
 
 	return true;
 }

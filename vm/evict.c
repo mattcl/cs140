@@ -18,6 +18,7 @@ static size_t clear_hand;
    conditions */
 
 static size_t threshold;
+static struct lock *clock_lock;
 
 static void *relocate_page (struct frame_entry *f, void * uaddr);
 /* returns the key to the frame that is now available, use the entry
@@ -46,6 +47,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 //	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
+
 
 	/* A thread may have exited and freed a bunch of frames
 	   between the invocation of this function and here so
@@ -96,6 +98,7 @@ void evict_init(size_t threshold_set){
 	threshold = threshold_set;
 	evict_hand = 0;
 	clear_hand = evict_hand + threshold;
+	lock_init(&clock_lock);
 }
 
 /* Likely to be called from a timer interrupt*/
@@ -108,6 +111,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 	medium_t medium = pagedir_get_medium(f->cur_thread->pagedir,f->uaddr);
 	//printf("uaddr of frame we are evicting %x\n", f->uaddr);
+
 	ASSERT(medium != PTE_AVL_ERROR);
 
 	void *kaddr = palloc_kaddr_at_uindex(f->position_in_bitmap);
@@ -170,6 +174,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   same*/
 	f->uaddr = uaddr;
 	f->cur_thread = thread_current();
+
 	return kaddr;
 }
 
