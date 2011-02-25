@@ -58,7 +58,7 @@ void frame_init(void){
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
-	printf("evict \n");
+	//printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -84,15 +84,15 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 			entry->is_pinned = true;
 		}
 		pd = entry->cur_thread->pagedir;
-		printf("EVICTING %p which is dirty %u\n", entry->uaddr, pagedir_is_dirty(pd, entry->uaddr));
+		//printf("EVICTING %p which is dirty %u\n", entry->uaddr, pagedir_is_dirty(pd, entry->uaddr));
 		medium = pagedir_get_medium(pd, entry->uaddr);
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
-				printf("med before %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
+				//printf("med before %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
 				move_to_disk = true;
-				printf("med after  %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
+				//printf("med after  %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 			}else if(medium == PTE_MMAP){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_MMAP_WAIT,
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
@@ -141,7 +141,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	printf("evict return %p\n", kaddr);
+	//printf("evict return %p\n", kaddr);
 	return kaddr;
 }
 
