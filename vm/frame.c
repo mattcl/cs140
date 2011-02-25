@@ -8,7 +8,7 @@
 #include "userprog/pagedir.h"
 #include "frame.h"
 #include "swap.h"
-#include "syscall.h"
+#include "userprog/syscall.h"
 
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
@@ -142,13 +142,16 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		lock_release(&f_table.frame_table_lock);
 		return NULL;
 	}else{
-		struct frame_entry *entry = frame_entry_at_position(frame_idx);
+		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
 		ASSERT(entry->uaddr == NULL && entry->cur_thread == NULL);
 		entry->uaddr = new_uaddr;
 		entry->cur_thread = thread_current();
 		entry->is_pinned = true;
 		bitmap_set(f_table.used_frames, frame_idx, true);
 		lock_release(&f_table.frame_table_lock);
+		if((flags&PAL_ZERO) != 0){
+			memset(entry_to_kaddr(entry), 0, PGSIZE);
+		}
 	}
 }
 
