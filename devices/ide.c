@@ -262,6 +262,7 @@ identify_ata_device (struct ata_disk *d)
   struct channel *c = d->channel;
   char id[BLOCK_SECTOR_SIZE];
   block_sector_t capacity;
+
   char *model, *serial;
   char extra_info[128];
   struct block *block;

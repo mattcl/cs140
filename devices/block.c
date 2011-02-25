@@ -112,7 +112,7 @@ void block_read (struct block *block, block_sector_t sector, void *buffer){
    Internally synchronizes accesses to block devices, so external
    per-block device locking is unneeded. */
 void block_write (struct block *block, block_sector_t sector, const void *buffer){
-	check_sector (block, sector);
+        check_sector (block, sector);
 	ASSERT (block->type != BLOCK_FOREIGN);
 	block->ops->write (block->aux, sector, buffer);
 	block->write_cnt++;
@@ -141,8 +141,8 @@ void block_print_stats (void){
 		struct block *block = block_by_role[i];
 		if(block != NULL){
 			printf ("%s (%s): %llu reads, %llu writes\n",
-					block->name, block_type_name (block->type),
-					block->read_cnt, block->write_cnt);
+				block->name, block_type_name (block->type),
+				block->read_cnt, block->write_cnt);
 		}
 	}
 }
@@ -185,4 +185,5 @@ static struct block *list_elem_to_block (struct list_elem *list_elem){
 	return (list_elem != list_end (&all_blocks)
 			? list_entry (list_elem, struct block, list_elem): NULL);
 }
+
 
