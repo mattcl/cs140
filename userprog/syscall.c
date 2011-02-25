@@ -774,17 +774,17 @@ bool mmap_read_in(void *faulting_addr){
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
 bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
+	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
+	uint32_t *pd = cur->pagedir;
 
 	/* We should have set this up atomically before being
 	   called */
-	ASSERT(!pagedir_is_present(cur->pagedir, masked_uaddr));
-	ASSERT(pagedir_get_mediutm(cur->pagedir, masked_uaddr) == PTE_MMAP_WAIT);
-
-	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
+	ASSERT(!pagedir_is_present(pd, masked_uaddr));
+	ASSERT(pagedir_get_mediutm(pd, masked_uaddr) == PTE_MMAP_WAIT);
 
 	/* Only this thread can access its mmapped files so
 	   no locks are necessary */
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, masked_uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (void*)masked_uaddr);
 	if(entry == NULL){
 		return false;
 	}
@@ -796,21 +796,22 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	ASSERT(entry != NULL);
 
 	lock_acquire(&filesys_lock);
-	uint32_t offset = (uint32_t) masked_uaddr - entry->begin_addr;
+	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
 	/* If this is the last page only read the appropriate number of bytes*/
-	uint32_t write_bytes = (entry->end_addr - (uint32_t)masked_uaddr) / PGSIZE == 1 ?
+	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
 			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
 	/* because this frame is pinned we know we can write from the
-	   kernel virtual address */
-	void *kaddr = pagedir_get_page(cur->pagedir, masked_uaddr);
+	   kernel virtual address without worrying about getting
+	   kicked off*/
+	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 	lock_release(&filesys_lock);
 
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
-	if(!pagedir_setup_demand_page(cur->pagedir, masked_uaddr, PTE_MMAP,
-			(uint32_t)masked_uaddr, true)){
+	if(!pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
+			masked_uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;
 	}
@@ -972,7 +973,7 @@ static unsigned int get_user_int(const uint32_t *uaddr_in, int *error){
 
 /* Attempts to get a byte from the user address
    returns -1 on segfault */
-static int get_user(const uint8_t *masked_uaddr){
+static int get_user(const uint8_t *uaddr){
 	int result;
 	asm("movl $1f, %0; movzbl %1, %0; 1:"
 			: "=&a" (result) : "m" (*uaddr));
