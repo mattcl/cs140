@@ -10,5 +10,6 @@ void system_exit (struct intr_frame *f, int status );
 
 bool mmap_read_in(void *faulting_addr);
 bool mmap_write_out(struct thread *cur, void *uaddr);
+void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 #endif /* userprog/syscall.h */

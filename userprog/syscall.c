@@ -232,10 +232,6 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
 	printf("%s: exit(%d)\n", proc->program_name, status);
 	proc->exit_code = status;
-	/* Must be done before destroying the page dir which will lose all
-	   of the data from the mmapped files and before we dissable interrupts
-	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
-	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	thread_exit();
 	NOT_REACHED();
 }
