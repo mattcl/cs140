@@ -75,7 +75,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Wait while the data finishes moving to swap */
 	while(pagedir_get_medium(pd, faulting_addr) != PTE_SWAP){
-		printf("waiting\n");
+		//printf("waiting\n");
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
@@ -94,7 +94,7 @@ bool swap_read_in (void *faulting_addr){
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
 
 	lock_acquire(&swap_slots_lock);
-	printf("Swap in \n");
+	//printf("Swap in \n");
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
@@ -115,7 +115,7 @@ bool swap_read_in (void *faulting_addr){
 	swap_slot = entry->swap_slot;
 	org_medium = entry->org_medium;
 
-	printf("swap slot %u org_medium %x uaddr %x\n", swap_slot, org_medium, masked_uaddr);
+//	printf("swap slot %u org_medium %x uaddr %x\n", swap_slot, org_medium, masked_uaddr);
 
 	ASSERT(kaddr != NULL);
 
@@ -172,7 +172,7 @@ bool swap_read_in (void *faulting_addr){
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
 	unpin_frame_entry(kaddr);
-	printf("SWAP READ IN FINISHED\n");
+	//printf("SWAP READ IN FINISHED\n");
 	return true;
 }
 
@@ -194,7 +194,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	//printf("lock acquired\n");
 	lock_acquire(&swap_slots_lock);
-	printf("Swap out\n");
+//	printf("Swap out\n");
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
@@ -211,7 +211,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	new_entry->org_medium = medium;
 	new_entry->swap_slot = swap_slot;
 
-	printf("swap slot %u org_medium %x uaddr %x\n", new_entry->swap_slot, new_entry->org_medium, new_entry->uaddr);
+	//printf("swap slot %u org_medium %x uaddr %x\n", new_entry->swap_slot, new_entry->org_medium, new_entry->uaddr);
 
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
@@ -244,7 +244,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	lock_release(&swap_slots_lock);
 
-	printf("Swap out finished\n");
+	//printf("Swap out finished\n");
 
 	return true;
 }
