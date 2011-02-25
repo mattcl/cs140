@@ -152,6 +152,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
+	printf("execute\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -200,6 +201,7 @@ tid_t process_execute (const char *file_name){
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_){
+	printf("start\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
@@ -288,6 +290,7 @@ static void start_process (void *file_name_){
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
+	printf("wait\n");
 	struct process *cur = thread_current()->process;
 	/* Find pid and see if the process still exists. I.E.
 	   it hasn't removed itself from the processes hash
@@ -340,6 +343,7 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
+	printf("exit\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -427,6 +431,7 @@ void process_exit (void){
 /* Sets up the CPU for running user code in the current thread.
    This function is called on every context switch. */
 void process_activate (void){
+	printf("activate\n");
 	struct thread *t = thread_current ();
 
 	/* Activate thread's page tables. */
@@ -510,6 +515,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp){
+	printf("load\n");
 	struct thread *t = thread_current ();
 	struct process *cur_process = t->process;
 	struct Elf32_Ehdr ehdr;
