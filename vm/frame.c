@@ -221,3 +221,21 @@ void unpin_frame_entry(void *kaddr){
 	lock_release(&f_table.frame_table_lock);
 }
 
+/* Returns if this frame was pinned, false if the
+   current thread is not in the frame or if the frame
+   is allready pinned */
+bool pin_frame_entry(void *kaddr){
+	lock_acquire(&f_table.frame_table_lock);
+	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
+	if(entry->is_pinned){
+		lock_release(&f_table.frame_table_lock);
+		return false;
+	}
+	if(entry->cur_thread != thread_current()){
+		lock_release(&f_table.frame_table_lock);
+		return false;
+	}
+	entry->is_pinned = true;
+	lock_release(&f_table.frame_table_lock);
+	return true;
+}
