@@ -60,6 +60,7 @@ bool swap_read_in (void *faulting_addr){
 
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
+
 	uint32_t uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *page_ptr, i;
