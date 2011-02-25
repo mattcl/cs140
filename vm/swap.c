@@ -117,7 +117,7 @@ bool swap_read_in (void *faulting_addr){
 	ASSERT(kaddr != NULL);
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-	kaddr_ptr = (uint8_t*)masked_uaddr; /* was kaddr*/
+	kaddr_ptr = (uint8_t*)kaddr;
 
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
