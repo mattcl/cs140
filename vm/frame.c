@@ -24,8 +24,7 @@ static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
 }
 
 static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
-	return frame_entry_at_pos((((uint32_t)kaddr&PTE_ADDR)-
-			(uint32_t)f_table.base)/PGSIZE);
+	return frame_entry_at_pos(((uint32_t)kaddr-(uint32_t)f_table.base)/PGSIZE);
 }
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
@@ -143,7 +142,6 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		//printf("frame idx was Bitmap errer %u\n", frame_idx);
 		lock_release(&f_table.frame_table_lock);
 		return NULL;
 	}else{
@@ -157,6 +155,10 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
+		printf("new frame: uaddr %p cur_thread %p pinned %u base %p entries %p, frame idx %u, at_pos %u\n",
+				entry->uaddr, entry->cur_thread, entry->is_pinned, f_table.base, f_table.entries, frame_idx, frame_entry_pos(entry));
+		printf("Other function check entry to kaddr %p , frame_entry_at pos %p vs entry %p, vd frame_entry at found kaddr %p\n",
+				entry_to_kaddr(entry), entry_at_pos(frame_idx), entry, frame_entry_at_kaddr(entry_to_kaddr(entry)));
 		return entry;
 	}
 }
