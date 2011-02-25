@@ -59,22 +59,20 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	}
 
 	/* choose a frame to evict, then pin it to frame, so that another
-	   thread does not choose to evict it, then we mark it as not
-	   present because they no longer own it, and should not be able
-	   to read from or write to it */
+	   thread does not choose to evict it */
 	lock_acquire(&f_table->frame_map_lock);
 	frame = choose_frame_to_evict();
 	frame->pinned_to_frame = true;
 	lock_release(&f_table->frame_map_lock);
 
-	/* once we makr a page as not present, we must also mark it's
+	/* once we make a page as not present, we must also mark it's
 	   location atomically, if we are interuppted after settin it 
 	   as not present the userpage's PTE_ADDR will be interpreted 
-	   before we set it.
-	*/
+	   before we set it.   */
 	
 	intr_disable();
 	pagedir_clear_page(pd, uaaddr);
+	
 	intr_enable();
 }
 
