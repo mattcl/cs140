@@ -200,9 +200,8 @@ struct frame_entry *choose_frame_to_evict(struct frame_table *f_table){
 			   not remove its contents from the frame until we
 			   are done relocating the data*/
 		    frame->pinned_to_frame = true;
-			return relocate_page(frame, uaddr);
+			return frame;
 		}
-
-        return NULL;
+    }
 }
 
