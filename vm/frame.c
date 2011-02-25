@@ -111,6 +111,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 			}
 		}
 		intr_set_level(old_level);
+		break;
 	}
 
 	entry->uaddr = new_uaddr;
