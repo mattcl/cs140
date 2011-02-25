@@ -2,11 +2,11 @@
 echo $0
 echo creating filesys
 
-pintos-mkdisk build/filesys.dsk --filesys-size=2
+pintos-mkdisk build/filesys.dsk --filesys-size=2 --swap-size=2
 pintos -f -q
 
-echo adding default example echo
-pintos -p ../examples/echo -a echo -- -q
+echo adding merge seq
+pintos -p build/test/vm/page-merge-seq -a page-merge-seq -- -q
 
 while [ -n "$*" ]
 do
