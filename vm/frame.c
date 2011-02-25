@@ -7,6 +7,8 @@
 #include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "frame.h"
+#include "swap.h"
+#include "syscall.h"
 
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
@@ -26,8 +28,10 @@ static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 			(uint32_t)f_table.base)/PGSIZE);
 }
 
+static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
+static void *evict_page(void *new_uaddr, bool zero_out);
 
-void evict_init(){
+static void evict_init(void){
 	/* None yet */
 }
 
@@ -52,7 +56,7 @@ void frame_init(void){
 	evict_init();
 }
 
-void evict_page(void *new_uaddr, bool zero_out){
+static void *evict_page(void *new_uaddr, bool zero_out){
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -131,7 +135,7 @@ void evict_page(void *new_uaddr, bool zero_out){
 	return kaddr;
 }
 
-struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
+static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
