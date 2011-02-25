@@ -174,6 +174,7 @@ void frame_clear_page (void *kaddr){
      now so it can release this*/
 
 	while(entry->is_pinned){
+		printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 	}
 
