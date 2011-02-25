@@ -14,7 +14,7 @@ free_map_init (void)
 {
   free_map = bitmap_create (block_size (fs_device));
   if (free_map == NULL)
-    BSOD ("bitmap creation failed--file system device is too large");
+    PANIC ("bitmap creation failed--file system device is too large");
   bitmap_mark (free_map, FREE_MAP_SECTOR);
   bitmap_mark (free_map, ROOT_DIR_SECTOR);
 }
@@ -55,9 +55,9 @@ free_map_open (void)
 {
   free_map_file = file_open (inode_open (FREE_MAP_SECTOR));
   if (free_map_file == NULL)
-    BSOD ("can't open free map");
+    PANIC ("can't open free map");
   if (!bitmap_read (free_map, free_map_file))
-    BSOD ("can't read free map");
+    PANIC ("can't read free map");
 }
 
 /* Writes the free map to disk and closes the free map file. */
@@ -74,12 +74,12 @@ free_map_create (void)
 {
   /* Create inode. */
   if (!inode_create (FREE_MAP_SECTOR, bitmap_file_size (free_map)))
-    BSOD ("free map creation failed");
+    PANIC ("free map creation failed");
 
   /* Write bitmap to file. */
   free_map_file = file_open (inode_open (FREE_MAP_SECTOR));
   if (free_map_file == NULL)
-    BSOD ("can't open free map");
+    PANIC ("can't open free map");
   if (!bitmap_write (free_map, free_map_file))
-    BSOD ("can't write free map");
+    PANIC ("can't write free map");
 }

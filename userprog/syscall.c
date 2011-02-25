@@ -16,6 +16,7 @@
 #include "threads/init.h"
 #include "vm/frame.h"
 #include <string.h>
+#include "devices/timer.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
@@ -210,7 +211,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	default:{
-		BSOD ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
+		PANIC ("INVALID SYS CALL NUMBER %d\n", sys_call_num);
 		break;
 	}
 	}
@@ -332,7 +333,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		/* We have just tried to put the fd of an identical fd into the hash
 		 Table this is a problem with the hash table and should fail the kernel
 		 Cause our memory has been corrupted somehow */
-		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
+		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = fd_entry->fd;
@@ -510,7 +511,7 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
 				   This Is obviously a huge problem so system KILLLLLLL!!!! */
-			BSOD("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
+			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 		}
 
 		free(entry);
@@ -616,7 +617,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 	for(i = 0, temp_ptr = (uint8_t*)uaddr; i < num_pages;
 			i ++, temp_ptr += PGSIZE){
 		ASSERT(((uint32_t)temp_ptr % PGSIZE) == 0);
-		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_AVL_MMAP,
+		if(!pagedir_setup_demand_page(pd, temp_ptr, PTE_MMAP,
 				(uint32_t)temp_ptr, true)){
 			/* This virtual address cannot be allocated so we have an error...
 			   Clear the addresses that have been set*/
@@ -654,7 +655,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *uaddr){
 		   Table this is a problem with the hash table and should fail the kernel
 		   Cause our memory has been corrupted somehow. Or our hash function isn't
 		   working appropriately */
-		BSOD("ERROR WITH HASH IN PROCESS EXIT!!");
+		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
 	f->eax = mmap_entry->mmap_id;
@@ -683,7 +684,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
-		BSOD("ERROR WITH HASH IN munmap!! CLOSE");
+		PANIC("ERROR WITH HASH IN munmap!! CLOSE");
 	}
 
 	free(entry);
@@ -705,6 +706,16 @@ bool mmap_read_in(void *faulting_addr){
 
 	/* Get the key into the hash, AKA the uaddr of this page*/
 	uint32_t uaddr = pagedir_get_aux(cur->pagedir, faulting_addr);
+
+
+	while(pagedir_get_medium(cur->pagedir, faulting_addr) != PTE_MMAP){
+		/* Wait for write to disk to complete*/
+		intr_enable();
+		timer_msleep (10);
+		intr_disable();
+	}
+
+	intr_enable();
 
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)uaddr);
@@ -742,7 +753,7 @@ bool mmap_read_in(void *faulting_addr){
 
 	/* Make sure that we stay consistent with our naming scheme
 	   of memory*/
-	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_AVL_MMAP);
+	pagedir_set_medium(cur->pagedir, (void*)uaddr, PTE_MMAP);
 
 	/* make sure we know that this page is saved*/
 	pagedir_set_dirty(cur->pagedir, (void*)uaddr, false);
@@ -757,10 +768,14 @@ bool mmap_read_in(void *faulting_addr){
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
 bool mmap_write_out(struct thread *cur, void *uaddr){
-	//printf"mmap out\n");
 	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
 
 	ASSERT(pagedir_is_present(cur->pagedir, uaddr));
+
+	pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_MMAP_WAIT,
+				(uint32_t)uaddr, true);
+
+	intr_enable();
 
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, uaddr);
 	if(entry == NULL){
@@ -787,7 +802,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
-	if(!pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_AVL_MMAP,
+	if(!pagedir_setup_demand_page(cur->pagedir, uaddr, PTE_MMAP,
 			(uint32_t)uaddr, true)){
 		/* This virtual address cannot be allocated so we have an error*/
 		return false;

@@ -73,7 +73,7 @@ void process_init(void){
 	struct process *global = calloc(1, sizeof(struct process));
 	if(global == NULL){
 		/* We can't allocate the global process, this is bad*/
-		BSOD("We can't Allocate the global process");
+		PANIC("We can't Allocate the global process");
 	}
 	global->pid = 0;
 
@@ -81,7 +81,7 @@ void process_init(void){
 
 	/* Initializes this process with the parent process ID of 0 */
 	if(!initialize_process(global, thread_current())){
-		BSOD("ERROR initialzing the global process");
+		PANIC("ERROR initialzing the global process");
 	}
 }
 
@@ -369,7 +369,7 @@ void process_exit (void){
 
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
-		BSOD("WEIRD SHIT WITH HASH TABLE!!!");
+		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
 	struct process *parent = parent_process_from_child(cur_process);
@@ -579,6 +579,7 @@ done:
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
+	intr_enable();
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -600,7 +601,7 @@ bool process_exec_read_in(void *faulting_addr){
 		   for it that should have been set in process load
 		   EXEC bit shouldn't be set unless the corresponding
 		   data can be found in the exec_info array*/
-		BSOD("INCONSISTENCY IN EXCEPTION.C");
+		PANIC("INCONSISTENCY IN EXCEPTION.C");
 		/*return false;*/
 	}
 
@@ -679,7 +680,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
 	if(head == NULL){
-		BSOD("KERNEL OUT OF MEMORY");
+		PANIC("KERNEL OUT OF MEMORY");
 	}
 
 	for(i = 0; i < ehdr->e_phnum; i++){
@@ -742,7 +743,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 					uint8_t* uaddr = ((uint8_t*)head[k].mem_page) + (PGSIZE*j);
 					//printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
-								PTE_AVL_EXEC, (uint32_t)uaddr, head[k].writable);
+								PTE_EXEC, (uint32_t)uaddr, head[k].writable);
 				}
 				//printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes, exec_pages[load_i].zero_bytes, exec_pages[load_i].end_addr);
 				k ++;
@@ -756,7 +757,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	/* Save all of our infor so that we can handle page_faults */
 	cur_process->exec_info = calloc (k, sizeof(struct exec_page_info));
 	if(cur_process->exec_info == NULL){
-		BSOD("KERNEL OUT OF MEMORY!!!!");
+		PANIC("KERNEL OUT OF MEMORY!!!!");
 	}
 	memcpy (cur_process->exec_info, head, k*sizeof(struct exec_page_info));
 	cur_process->num_exec_pages = k;
@@ -944,7 +945,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 		/* Make sure that if this page is evicted and is readonly that it will
 		   be deleted outright instead of put on swap */
-		pagedir_set_medium(thread_current()->pagedir, upage, PTE_AVL_EXEC);
+		pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
 
 		frame_unpin(kpage);
 
@@ -972,7 +973,7 @@ static bool setup_stack (void **esp){
 		if(success){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
-					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_AVL_STACK);
+					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
 			frame_unpin(kpage);
 		}else{
 			frame_unpin(kpage);

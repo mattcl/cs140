@@ -69,7 +69,7 @@ test_sleep (int thread_cnt, int iterations)
   threads = malloc (sizeof *threads * thread_cnt);
   output = malloc (sizeof *output * iterations * thread_cnt * 2);
   if (threads == NULL || output == NULL)
-    BSOD ("couldn't allocate memory for test");
+    PANIC ("couldn't allocate memory for test");
 
   /* Initialize test. */
   test.start = timer_ticks () + 100;
