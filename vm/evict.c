@@ -105,6 +105,11 @@ void clear_until_threshold(void){
 
 static void *relocate_page (struct frame_entry *f, void * uaddr){
 
+	/* modifying the pagedir of another thread should be handled
+	   with interrupts off, so that the dirty bit, AVL bits and
+	   upper 20 bits.*/
+	enum intr_level old_level = intr_disable();
+
 	//printf("Relocate page , with evicthand %u and clear_hand %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
 	medium_t medium = pagedir_get_medium(f->cur_thread->pagedir,f->uaddr);
 	//printf("uaddr of frame we are evicting %x\n", f->uaddr);
@@ -114,44 +119,43 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	bool needs_to_be_zeroed = true;
 
-	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr), PTE_AVL_SWAP);
-
-
 	if(pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr)){
-		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
+		if(medium == PTE_STACK || medium == PTE_EXEC){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
 			swap_write_out(f->cur_thread, f->uaddr);
-		}else if(medium == PTE_AVL_MMAP){
+		}else if(medium == PTE_MMAP){
 			/* Sets the memroy up for the user, so when it faults will
 			   know where to look*/
 			mmap_write_out(f->cur_thread, f->uaddr);
 		}else{
-			BSOD("relocate_page called with dirty page of medium_t: %x", medium);
+			PANIC("relocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{
-		if(medium == PTE_AVL_STACK){
+		if(medium == PTE_STACK){
 			/* User has read a 0'd page they have not written to, delete the
 	   	   	   page, return frame. */
 			needs_to_be_zeroed = false;
 			pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
-		}else if(medium == PTE_AVL_EXEC){
+		}else if(medium == PTE_EXEC){
 			/* this one should just set up on demand page again
 			   so that the process will know just to read in from
 			   disk again*/
 			bool writable = pagedir_is_writable(f->cur_thread->pagedir, f->uaddr);
 			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
-						PTE_AVL_EXEC, (uint32_t)f->uaddr, writable);
-		}else if(medium == PTE_AVL_MMAP){
+						PTE_EXEC, (uint32_t)f->uaddr, writable);
+		}else if(medium == PTE_MMAP){
 			/* this should also set up an on demand page
 			   so that when the MMAP is page faulted it will find
 			   it on disk again*/
 			pagedir_setup_demand_page(f->cur_thread->pagedir, f->uaddr,
-						PTE_AVL_MMAP, (uint32_t)f->uaddr , true);
+						PTE_MMAP, (uint32_t)f->uaddr , true);
 		}else{
-			BSOD("realocate_page called with clean page of medium_t: %x", medium);
+			PANIC("realocate_page called with clean page of medium_t: %x", medium);
 		}
 	}
+
+	intr_enable();
 	/* return the frame corresponding to evict_hand */
 
 	if(needs_to_be_zeroed){
@@ -159,10 +163,6 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   	   has no valuable/sensitive/garbage data in it. Prevents security
 	   	   problems*/
 		memset(kaddr, 0, PGSIZE);
-		/* Don't allow other thread to use this data anymore */
-		intr_disable();
-		pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
-		intr_enable();
 	}
 
 	/* put user address and pgdir in the frame but leave the

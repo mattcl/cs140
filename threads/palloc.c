@@ -91,7 +91,7 @@ void *palloc_get_multiple (enum palloc_flags flags, size_t page_cnt){
 		}
 	}else{
 		if(flags & PAL_ASSERT){
-			BSOD ("palloc_get: out of pages");
+			PANIC ("palloc_get: out of pages");
 		}
 	}
 
@@ -149,7 +149,7 @@ static void init_pool (struct pool *p, void *base, size_t page_cnt, const char *
 
 	size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
 	if(bm_pages > page_cnt){
-		BSOD ("Not enough memory in %s for bitmap.", name);
+		PANIC ("Not enough memory in %s for bitmap.", name);
 	}
 	page_cnt -= bm_pages;
 
