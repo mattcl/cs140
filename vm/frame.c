@@ -17,14 +17,20 @@ static inline void *entry_to_kaddr(struct frame_entry *entry){
 	return f_table.base + frame_entry_pos(entry)*PGSIZE;
 }
 
-static inline struct frame_entry *frame_entry_at_position(uint32_t pos){
+static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
 	return f_table.entries + (pos * sizeof(struct frame_entry));
 }
 
 static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
-	return frame_entry_at_position((((uint32_t)kaddr&PTE_ADDR)-
+	return frame_entry_at_pos((((uint32_t)kaddr&PTE_ADDR)-
 			(uint32_t)f_table.base)/PGSIZE);
 }
+
+
+void evict_init(){
+	/* None yet */
+}
+
 
 void frame_init(void){
 	f_table.size = palloc_number_user_pages();
@@ -46,10 +52,6 @@ void frame_init(void){
 	evict_init();
 }
 
-void evict_init(){
-	/* None yet */
-}
-
 void evict_page(void *new_uaddr, bool zero_out){
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
@@ -61,13 +63,13 @@ void evict_page(void *new_uaddr, bool zero_out){
 	lock_acquire(&f_table.frame_table_lock);
 	while(true){
 		/* Must set the memory of another users page
-       atomically othewise we may have inconsistent
-       data in the PTE and the other process can
-       fault and their ish will fail miserably*/
+       	   atomically othewise we may have inconsistent
+       	   data in the PTE and the other process can
+       	   fault and their ish will fail miserably*/
 		old_level = intr_disable();
 		frame_to_evict = random_ulong()%f_table.size;
-		/*Eviction policy here, should run with interrupts
-      disabled for same reason as above */
+		/* Eviction policy here, should run with interrupts
+      	   disabled for same reason as above */
 		entry = frame_entry_at_pos(frame_to_evict);
 		if(entry->is_pinned) {
 			intr_set_level(old_level);
