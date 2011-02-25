@@ -713,6 +713,7 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
+		//printf("sleepin\n");
 		timer_msleep(800);
 		intr_disable();
 	}
@@ -901,6 +902,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 						file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
 				lock_release(&filesys_lock);
+				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
 			}else{
 				/* Some other thread beat us to it and is now
