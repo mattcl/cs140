@@ -88,9 +88,9 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		medium = pagedir_get_medium(pd, entry->uaddr);
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
+				printf("med before %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
-				printf("med before %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 				move_to_disk = true;
 				printf("med after  %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 			}else if(medium == PTE_MMAP){
