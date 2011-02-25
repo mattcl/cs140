@@ -172,7 +172,7 @@ static void page_fault (struct intr_frame *f){
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-		printf("Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_AVL_SWAP, fault_addr);
+		printf("Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 
 		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in
