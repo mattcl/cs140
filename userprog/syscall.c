@@ -47,7 +47,7 @@ static bool put_user (uint8_t *udst, uint8_t byte);
 static struct file *file_for_fd (int fd, bool mmap);
 static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 static void mmap_save_all(struct mmap_hash_entry *entry);
-static void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
+//static void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
 /* Maximum size of output to to go into the putbuf command*/
 #define MAX_SIZE_PUTBUF 300
