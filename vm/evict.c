@@ -84,9 +84,23 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
    intepret it's PTE_AVL and PTE_ADDR fields.  We therefore have to set
    all this atomically */
 static void clear_and_set_page_location(uint32_t pd, void *upage){
-    page_dir_clear_page(frame->cur_thread->pagedir, frame->uaddr);
+    page_dir_clear_page(pd, upage);
+    medium_t medium = pagedir_get_medium(pd, upage);
     
-    /* If it's clean, then we assume that it's PTE_AVLresponse/
+    if(pagedir_is_dirty(pd,upage)){
+      
+    }else{
+        
+      /* If it's clean, then we assume that it's PTE_AVL says what type 
+       of file it is (i.e. stack, executable, or mmap), and changes 
+       PTE_ADDR to reflect that */
+        switch(medium){
+	case PTE_AVL_SWAP: PANIC("Clean page marked as being on the swap");
+	case PTE_AVL_EXEC: 
+	case PTE_AVL_MMAP:
+	case PTE_AVL_STACK:
+        }
+    }
 }
 	
 void evict_init(size_t threshold_set){
