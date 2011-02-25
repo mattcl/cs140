@@ -77,10 +77,13 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		evict_hand++;
 		clear_hand++;
 
+		ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
+		ASSERT(pagedir_is_present(frame_to_clear->cur_thread->pagedir, frame_to_clear->uaddr));
+
 		pagedir_set_accessed(frame->cur_thread->pagedir, frame_to_clear->uaddr, false);
 
-		if(!pagedir_is_accessed(frame->cur_thread->pagedir, frame->uaddr)
-				&& !frame->pinned_to_frame){
+		if(!frame->pinned_to_frame && !pagedir_is_accessed(
+				frame->cur_thread->pagedir, frame->uaddr)){
 			/* Will make sure that the owning thread will
 			   not remove its ish from the frame until we
 			   are done relocating the data*/
@@ -117,6 +120,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr), PTE_AVL_SWAP);
 
+
 	if(pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr)){
 		if(medium == PTE_AVL_STACK || medium == PTE_AVL_EXEC){
 			/* Sets the memroy up for the user, so when it faults will
@@ -134,9 +138,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 			/* User has read a 0'd page they have not written to, delete the
 	   	   	   page, return frame. */
 			needs_to_be_zeroed = false;
-			intr_disable();
 			pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
-			intr_enable();
 		}else if(medium == PTE_AVL_EXEC){
 			/* this one should just set up on demand page again
 			   so that the process will know just to read in from
@@ -161,6 +163,10 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   	   has no valuable/sensitive/garbage data in it. Prevents security
 	   	   problems*/
 		memset(kaddr, 0, PGSIZE);
+		/* Don't allow other thread to use this data anymore */
+		intr_disable();
+		pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
+		intr_enable();
 	}
 
 	/* put user address and pgdir in the frame but leave the
@@ -168,10 +174,6 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 	   same*/
 	f->uaddr = uaddr;
 	f->cur_thread = thread_current();
-
-	//printf("Returned %p\n", kaddr);
-
-	sema_up(&f->wait);
 
 	return kaddr;
 }

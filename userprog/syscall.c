@@ -759,11 +759,8 @@ bool mmap_read_in(void *faulting_addr){
 bool mmap_write_out(struct thread *cur, void *uaddr){
 	//printf"mmap out\n");
 	ASSERT(((uint32_t)uaddr % PGSIZE) == 0);
-	if(!pagedir_is_present(cur->pagedir, uaddr)){
-		/* Can't read back to disk if the memory isn't
-		   actually present*/
-		return false;
-	}
+
+	ASSERT(pagedir_is_present(cur->pagedir, uaddr));
 
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, uaddr);
 	if(entry == NULL){
@@ -782,7 +779,10 @@ bool mmap_write_out(struct thread *cur, void *uaddr){
 	/* If this is the last page only read the appropriate number of bytes*/
 	uint32_t write_bytes = (entry->end_addr - (uint32_t)uaddr) / PGSIZE == 1 ?
 			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
-	file_write(fd_entry->open_file, uaddr, write_bytes);
+	/* because this frame is pinned we know we can write from the
+	   kernel virtual address */
+	void *kaddr = pagedir_get_page(cur->pagedir, uaddr);
+	file_write(fd_entry->open_file, kaddr, write_bytes);
 	lock_release(&filesys_lock);
 
 	/* Clear this page so that it can be used, and set this PTE

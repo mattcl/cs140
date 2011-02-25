@@ -168,11 +168,7 @@ bool frame_clear_page (void *kaddr){
 	   frame_clear_page is called with an invalid kaddr */
 	if(frame != NULL){
 		if(frame->pinned_to_frame){
-			/* Don't continue evicting this memory, we are
-			   putting it on the swap right now */
-			//printf("waiting\n");
 			lock_release(&f_table.frame_map_lock);
-			sema_down(&frame->wait);
 		}else if(frame->cur_thread == thread_current()){
 			/*  Check that this page is still in this frame, it
 				may have been moved elsewhere in the eviction step
