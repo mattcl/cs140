@@ -95,8 +95,6 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 
 	void *kaddr = palloc_kaddr_at_uindex(f->position_in_bitmap);
 
-	bool needs_to_be_zeroed = true;
-
 	//printf("Medium is %x dirty is %u, swap is %x\n", medium, pagedir_is_dirty(f->cur_thread->pagedir, f->uaddr), PTE_AVL_SWAP);
 
 
@@ -116,7 +114,6 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 		if(medium == PTE_AVL_STACK){
 			/* User has read a 0'd page they have not written to, delete the
 	   	   	   page, return frame. */
-			needs_to_be_zeroed = false;
 			pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
 		}else if(medium == PTE_AVL_EXEC){
 			/* this one should just set up on demand page again
@@ -134,18 +131,6 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 		}else{
 			BSOD("realocate_page called with clean page of medium_t: %x", medium);
 		}
-	}
-	/* return the frame corresponding to evict_hand */
-
-	if(needs_to_be_zeroed){
-		/* Zero out the actual page so that the one returned to the user
-	   	   has no valuable/sensitive/garbage data in it. Prevents security
-	   	   problems*/
-		memset(kaddr, 0, PGSIZE);
-		/* Don't allow other thread to use this data anymore */
-		intr_disable();
-		pagedir_clear_page(f->cur_thread->pagedir, f->uaddr);
-		intr_enable();
 	}
 
 	/* put user address and pgdir in the frame but leave the
