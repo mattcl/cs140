@@ -57,11 +57,13 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		return palloc_kaddr_at_uindex(frame->position_in_bitmap);
 	}
 
+	
 	lock_acquire(&f_table->frame_map_lock);
-
+	frame = choose_frame_to_evict();
+	lock_release(&f_table->frame_map_lock);
 	/* in this case we need to move both hands simultaneously until the
        evict_hand finds a !accessed page */
-	while(true){
+	//while(true){
 
 		/* All frames are locked as is while the frame_map_lock is held
 		   Now we can find all of the frames without having to worry
@@ -71,7 +73,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 		   it is fully read out to swap/mmap */
 
 		//printf("2 evict %u, clear %u\n", evict_hand % frame_table_size(), clear_hand % frame_table_size());
-		frame = frame_at_position(evict_hand % frame_table_size());
+		/*frame = frame_at_position(evict_hand % frame_table_size());
 		frame_to_clear = frame_at_position(clear_hand % frame_table_size());
 		ASSERT(frame != NULL && frame_to_clear != NULL);
 		evict_hand++;
@@ -87,11 +89,11 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 			/* Will make sure that the owning thread will
 			   not remove its ish from the frame until we
 			   are done relocating the data*/
-			frame->pinned_to_frame = true;
+		/*	/frame->pinned_to_frame = true;
 			lock_release(&f_table->frame_map_lock);
 			return relocate_page(frame, uaddr);
 		}
-	}
+		}*/
 }
 
 void evict_init(size_t threshold_set){
@@ -179,3 +181,15 @@ static void *relocate_page (struct frame_entry *f, void * uaddr){
 }
 
 
+/* random */
+struct frame_entry *choose_frame_to_evict(struct frame_table){
+
+}
+
+
+/* clock */
+
+struct frame_entry *choose_frame_to_evict(struct frame_table *f_table){
+
+}
+>>>>>>> 42325e92690df9cb6d73a0704e63b0cef8ab5eea:vm/evict.c
