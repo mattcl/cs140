@@ -125,7 +125,7 @@ bool swap_read_in (void *faulting_addr){
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
-		printf("dereferencing %p\n", kaddr_ptr);
+		printf("INserting into %p\n", kaddr_ptr);
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
 
@@ -172,7 +172,7 @@ bool swap_read_in (void *faulting_addr){
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
 	unpin_frame_entry(kaddr);
-	printf("SWAP READ IN FINISHED\N");
+	printf("SWAP READ IN FINISHED\n");
 	return true;
 }
 
