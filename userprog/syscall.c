@@ -677,8 +677,6 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 
-	lock_acquire(&cur->process->mmap_table_lock);
-
 	mmap_save_all(entry);
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
@@ -691,8 +689,6 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	}
 
 	free(entry);
-
-	lock_release(&cur->process->mmap_table_lock);
 
 	if(fd_entry->num_mmaps == 0  && fd_entry->is_closed){
 		fd_entry->is_closed = false;
@@ -724,8 +720,6 @@ bool mmap_read_in(void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_MMAP);
 
-	lock_acquire(&cur->process->mmap_table_lock);
-
 	/* Get hash entry if it exists */
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)masked_uaddr);
 
@@ -733,7 +727,6 @@ bool mmap_read_in(void *faulting_addr){
 	   mmap read in*/
 	ASSERT(entry != NULL);
 
-	lock_release(&cur->process->mmap_table_lock);
 	offset = masked_uaddr - entry->begin_addr;
 
 	/* Accessed through kernel memory the user PTE will not be
@@ -800,7 +793,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 
 	/* The file should never be closed as long as there is a
 	   mmapping to it */
-	ASSERT(fd_entry != NULL);
+	ASSERT(entry != NULL);
 
 	lock_acquire(&filesys_lock);
 	uint32_t offset = masked_uaddr - entry->begin_addr;
@@ -846,7 +839,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	lock_acquire(&filesys_lock);
 	uint32_t original_position = file_tell(fd_entry->open_file);
 	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
-		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr) &&
+		if(pagedir_is_present(pd, pg_ptr) && pagedir_is_dirty(pd, pg_ptr)&&
 				pagedir_get_medium(pd, pg_ptr) == PTE_MMAP){
 			uint32_t offset = (uint32_t) pg_ptr - entry->begin_addr;
 			file_seek(fd_entry->open_file, offset);
