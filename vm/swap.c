@@ -201,7 +201,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	new_entry->swap_slot = swap_slot;
 
 	/* Insert this into the swap map for the process. */
-	//printf("faluting address? %p %p %p\n", &cur_process->swap_table, &new_entry->elem, cur);
+	printf("faluting address? %p %p %p\n", &cur_process->swap_table, &new_entry->elem, cur);
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
