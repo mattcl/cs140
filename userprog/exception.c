@@ -156,7 +156,7 @@ static void page_fault (struct intr_frame *f){
 	uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 
-	//printf("Page fault medium %x, faulting address %p\n", pagedir_get_medium(pd, fault_addr), fault_addr);
+	printf("Page fault medium %x, faulting address %p\n", pagedir_get_medium(pd, fault_addr), fault_addr);
 
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
