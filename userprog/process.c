@@ -448,8 +448,8 @@ void process_exit (void){
 
 /* Sets up the CPU for running user code in the current thread.
    This function is called on every context switch. */
-void process_activate (void){
-	struct thread *t = thread_current ();
+void process_activate (struct thread *t){
+	//struct thread *t = thread_current ();
 
 	/* Activate thread's page tables. */
 	pagedir_activate (t->pagedir);
@@ -564,7 +564,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	if(t->pagedir == NULL){
 		goto done;
 	}
-	process_activate ();
+	process_activate (t);
 
 	/* Acquire the lock so we can read in file info */
 	lock_acquire(&filesys_lock);
