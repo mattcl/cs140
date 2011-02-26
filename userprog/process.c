@@ -202,7 +202,7 @@ tid_t process_execute (const char *file_name){
 	lock_release(&cur_process->child_pid_tid_lock);
 
 	lock_release(&processes_hash_lock);
-
+	printf("started\n");
 	return tid;
 }
 
