@@ -356,23 +356,7 @@ void process_exit (void){
 	printf("Process exit\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
-	uint32_t *pd;
-	/* Destroy the current process's page directory and switch back
-       to the kernel-only page directory. */
-	pd = cur->pagedir;
-	if(pd != NULL){
-		/* Correct ordering here is crucial.  We must set
-           cur->pagedir to NULL before switching page directories,
-           so that a timer interrupt can't switch back to the
-           process page directory.  We must activate the base page
-           directory before destroying the process's page
-           directory, or our active page directory will be one
-           that's been freed (and cleared). */
-		cur->pagedir = NULL;
-		pagedir_activate (NULL);
-		pagedir_destroy (pd);
-	}
-	printf("Pagedir destroyed\n");
+
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
