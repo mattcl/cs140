@@ -224,7 +224,11 @@ void frame_clear_page (void *kaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
-	ASSERT(thread_current() == entry->cur_thread);
+	if(thread_current() != entry->cur_thread){
+		lock_release(&f_table.frame_table_lock);
+		return;
+	}
+
 	/* The thread is the same one that is in the frame
      now so it can release this*/
 
