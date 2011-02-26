@@ -320,6 +320,7 @@ int process_wait (tid_t child_tid){
 	if(child != NULL){
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
+		printf("sema_down");
 		sema_down(&cur->waiting_semaphore);
 	}else{
 		lock_release(&processes_hash_lock);
