@@ -12,11 +12,11 @@
 
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
-			/sizeof(struct frame_entry));
+			/ sizeof(struct frame_entry));
 }
 
 static inline void *entry_to_kaddr(struct frame_entry *entry){
-	return f_table.base + frame_entry_pos(entry)*PGSIZE;
+	return (uint8_t*)f_table.base + frame_entry_pos(entry)*PGSIZE;
 }
 
 static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
@@ -58,7 +58,7 @@ void frame_init(void){
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
-	printf("evict \n");
+	//printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;

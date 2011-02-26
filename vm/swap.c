@@ -60,7 +60,7 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	printf("Swap read in %p \n", faulting_addr);
+	//printf("Swap read in %p \n", faulting_addr);
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
@@ -170,7 +170,7 @@ bool swap_read_in (void *faulting_addr){
 	/* This page will be set to accessed after the page is read in
 	   from swap so it is unnecessary to set it here*/
 	unpin_frame_entry(kaddr);
-	printf("SWAP READ IN FINISHED\n");
+	//printf("SWAP READ IN FINISHED\n");
 	return true;
 }
 
@@ -191,7 +191,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	size_t swap_slot, start_sector;
 
 	lock_acquire(&swap_slots_lock);
-	printf("Swap out\n");
+	//printf("Swap out\n");
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
@@ -238,7 +238,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	}
 
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
-	printf("Swap out finished\n");
+	//printf("Swap out finished\n");
 
 	lock_release(&swap_slots_lock);
 
