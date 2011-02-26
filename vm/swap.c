@@ -1,6 +1,7 @@
 #include "swap.h"
 #include "frame.h"
 #include <bitmap.h>
+#include <string.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
@@ -183,7 +184,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
 
-	if((uint32_t)cur_process->swap_table == 0){
+	if(cur_process->swap_table == 0){
 		/* Process has just died and doesn't need
 		   to save any data on the swap so we will
 		   just return instead of doing any work*/
