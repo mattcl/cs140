@@ -241,7 +241,6 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
-	printf("about to call thread exit\n");
 	thread_exit();
 	NOT_REACHED();
 }
