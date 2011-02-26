@@ -23,7 +23,8 @@ static inline void *entry_to_kaddr(struct frame_entry *entry){
 	return (uint8_t*)f_table.base + (frame_entry_pos(entry)*PGSIZE);
 }
 
-/* Given a position returns the frame_entry that it corresponds to*/
+/* Given a position returns the frame_entry that it corresponds to
+   utilizes pointer arithmetic*/
 static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
 	return f_table.entries + pos ;
 }
@@ -102,7 +103,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		old_level = intr_disable();
 
 
-		frame_to_evict = random_ulong()%f_table.size;
+		frame_to_evict = random_ulong() % f_table.size;
 		entry = frame_entry_at_pos(frame_to_evict);
 		if(entry->is_pinned) {
 			intr_set_level(old_level);
