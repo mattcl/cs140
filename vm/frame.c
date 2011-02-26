@@ -172,7 +172,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	entry->uaddr = new_uaddr;
 	entry->cur_thread = thread_current();
 	lock_release(&f_table.frame_table_lock);
-
+	printf("ousted %p\n", entry);
 	/* Clear out the page if PAL_ZERO was specified*/
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
@@ -230,11 +230,14 @@ void frame_clear_page (void *kaddr){
 	/* The thread is the same one that is in the frame
      now so it can release this*/
 	printf("clearing %p\n", entry);
-	while(entry->is_pinned || entry->cur_thread == thread_current()){
-		printf("waiting won't clear\n");
+	while(entry->is_pinned ){
+		printf("waiting won't clear %p \n", entry);
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
+		/* it is possible that between the time that we were signaled
+		   and we woke up another process has pinned down this frame.
+		   In this case, howe		 */
 		if(!entry->is_pinned || entry->cur_thread != thread_current()){
 			printf("finally clearing %p\n", entry);
 			lock_release(&f_table.frame_table_lock);
@@ -257,6 +260,7 @@ void unpin_frame_entry(void *kaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
+	printf("Unpinned %p\n");
 	entry->is_pinned = false;
 	cond_signal(&entry->pin_condition, &f_table.frame_table_lock);
 	lock_release(&f_table.frame_table_lock);
