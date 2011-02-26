@@ -155,6 +155,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+bool thread_is_alive(tid_t tid);
 void thread_check_sleeping(int64_t current_tick);
 void thread_sleep(int64_t wake_time);
 void recalculate_priorities (void);
