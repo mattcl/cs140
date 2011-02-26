@@ -58,7 +58,7 @@ void frame_init(void){
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
-	//printf("evict \n");
+	printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
@@ -83,6 +83,9 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		}else{
 			entry->is_pinned = true;
 		}
+
+		ASSERT(entry->is_pinned);
+
 		pd = entry->cur_thread->pagedir;
 		//printf("EVICTING %p which is dirty %u\n", entry->uaddr, pagedir_is_dirty(pd, entry->uaddr));
 		medium = pagedir_get_medium(pd, entry->uaddr);
@@ -98,7 +101,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
 				move_to_disk = true;
 			}else{
-				PANIC("realocate_page called with clean page of medium_t: %x", medium);
+				PANIC("realocate_page called with dirty page of medium_t: %x", medium);
 			}
 		}else{
 			if(medium == PTE_STACK){
@@ -141,7 +144,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	//printf("evict return %p\n", kaddr);
+	printf("evict return %p\n", kaddr);
 	return kaddr;
 }
 
@@ -195,7 +198,7 @@ void frame_clear_page (void *kaddr){
 	   so we need to wait before we can say that this frame
 	   is clear*/
 	while(entry->is_pinned){
-		//printf("waiting\n");
+		printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		lock_release(&f_table.frame_table_lock);
 		return;
