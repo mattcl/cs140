@@ -120,6 +120,8 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		kaddr = entry_to_kaddr(entry);
 		ASSERT(entry->is_pinned);
 
+		printf("frame %p chosen\n", entry);
+
 		/* Atomically set the pagedir of the passed in uaddr
 		   to point to where it can find its memory and set
 		   it's present bit to 0 */
