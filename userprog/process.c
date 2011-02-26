@@ -921,7 +921,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	printf("got page\n");
+	printf("got page %p\n", kpage);
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
@@ -964,6 +964,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	unpin_frame_entry(kpage);
 
+	printf("load seg done\n");
 	lock_release(&filesys_lock);
 
 	return true;
