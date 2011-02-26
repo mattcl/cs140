@@ -16,6 +16,10 @@
 typedef int32_t pid_t;
 #define PID_ERROR ((pid_t)-1)          /* Error value for tid_t. */
 
+/* You can not acquire this lock and acquire memory
+   using frame_get_page (user memory) because frame_get_page
+   may try to evict a page to disk and also try to acquire
+   this lock */
 struct lock filesys_lock;
 
 typedef uint32_t mapid_t;

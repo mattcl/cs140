@@ -524,8 +524,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	struct file *file = NULL;
 	bool success = false;
 
-	/* Acquire the lock in advance just incase we need to break */
-	lock_acquire(&filesys_lock);
 
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
@@ -554,16 +552,24 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 	process_activate ();
 
+	/* Acquire the lock so we can read in file info */
+	lock_acquire(&filesys_lock);
+
+
 	/* Open executable file. */
 	file = filesys_open (f_name);
 	if(file == NULL){
 		printf ("load: %s: open failed\n", file_name);
+		lock_release(&filesys_lock);
 		goto done;
 	}
 
 	if(!read_elf_headers(file, &ehdr, cur_process, t)){
+		lock_release(&filesys_lock);
 		goto done;
 	}
+
+	lock_release(&filesys_lock);
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
@@ -579,8 +585,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	lock_release(&filesys_lock);
-	
 	return success;
 }
 
