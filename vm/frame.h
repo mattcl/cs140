@@ -21,13 +21,13 @@ struct frame_entry{
 	struct condition pin_condition;
 };
 
-
-
 void frame_init(void);
 void *frame_get_page(enum palloc_flags flags, void *uaddr);
 void frame_clear_page (void *kaddr);
 void unpin_frame_entry(void *kaddr);
 bool pin_frame_entry(void *kaddr);
+
+void evict_increment_clear_hand(void);
 
 
 #endif /* FRAME_H_ */

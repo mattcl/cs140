@@ -10,6 +10,10 @@
 #include "swap.h"
 #include "userprog/syscall.h"
 
+static uint32_t clear_threshold;
+static uint32_t clear_hand;
+static uint32_t clock_hand;
+
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
 			/ sizeof(struct frame_entry));
@@ -29,12 +33,18 @@ static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 }
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
+
+static void evict_init(void);
 static void *evict_page(void *new_uaddr, bool zero_out);
+static struct frame_entry *get_frame_to_evict(void);
+
 
 static void evict_init(void){
 	/* None yet */
+    clear_hand = 0;
+    clock_hand = 0;
+    evict_increment_clear_hand();
 }
-
 
 void frame_init(void){
 	//printf("frame init\n");
@@ -54,8 +64,37 @@ void frame_init(void){
 	for(i = 0; i < f_table.size; start ++, i++){
 		cond_init(&start->pin_condition);
 	}
-	evict_init();
+    evict_init();
 	//printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(f_table.used_frames));
+}
+
+void evict_increment_clear_hand() {
+    struct frame_entry *frame;
+    clear_hand %= f_table.size;
+    uint32_t end = (clock_hand + (f_table.size - clear_threshold)) % f_table.size;
+    for(; clear_hand < end; clear_hand++){
+        frame = frame_entry_at_pos(clear_hand % f_table.size);
+        ASSERT(frame != NULL);
+        ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
+        pagedir_set_accessed(frame->cur_thread->pagedir, frame->uaddr, false);
+    }
+}
+
+static struct frame_entry *get_frame_to_evict(){
+    struct frame_entry *frame;
+    while(true){
+        frame = frame_entry_at_pos(clock_hand % f_table.size);
+        ASSERT(frame != NULL);
+        clock_hand++;
+        if(clock_hand == clear_hand){
+            evict_increment_clear_hand();
+        }
+        ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
+        if(!frame->is_pinned && !pagedir_is_accessed(frame->cur_thread->pagedir, frame->uaddr)){
+            frame->is_pinned = true;
+            return frame;
+        }
+    }
 }
 
 static void *evict_page(void *new_uaddr, bool zero_out){
@@ -74,7 +113,8 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        	   data in the PTE and the other process can
        	   fault and their ish will fail miserably*/
 		old_level = intr_disable();
-		frame_to_evict = random_ulong()%f_table.size;
+		//frame_to_evict = random_ulong()%f_table.size;
+        frame_to_evict = get_frame_to_evict;
 		/* Eviction policy here, should run with interrupts
       	   disabled for same reason as above */
 		entry = frame_entry_at_pos(frame_to_evict);

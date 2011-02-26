@@ -172,6 +172,7 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 		}
 
 	}
+    evict_increment_clear_hand();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
