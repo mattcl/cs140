@@ -126,11 +126,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
-						kaddr, true);
+						(uint32_t)kaddr, true);
 				move_to_disk = true;
 			}else if(medium == PTE_MMAP){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_MMAP_WAIT,
-						kaddr, true);
+						(uint32_t)kaddr, true);
 				move_to_disk = true;
 			}else{
 				PANIC("realocate_page called with dirty page of medium_t: %x", medium);
@@ -188,7 +188,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		return evict_page(uaddr, (flags & PAL_ZERO) != 0);
+		return evict_page(new_uaddr, (flags & PAL_ZERO) != 0);
 	}else{
 		/* Setup frame entry */
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
