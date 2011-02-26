@@ -358,8 +358,6 @@ void process_exit (void){
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
 
-	printf("thread %d is dying ------------------\n");
-
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
 	pd = cur->pagedir;
@@ -439,7 +437,6 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
-	//printf("exited\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.

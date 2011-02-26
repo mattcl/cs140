@@ -164,7 +164,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	entry->cur_owner = thread_current();
 
 	lock_release(&f_table.frame_table_lock);
-	printf("evictrel\n");
+	//printf("evictrel\n");
 	/* We set the user to fault and wait until the move
 	   to disk operation is complete, now we actually start
        moving the data from this frame out. Any attempt to access
@@ -190,7 +190,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
    is full then it will return NULL, in which case you should evict
    something */
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
-	printf("frame/evict\n");
+	//printf("frame/evict\n");
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
@@ -204,7 +204,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		entry->is_pinned = true;
 		bitmap_set(f_table.used_frames, frame_idx, true);
 		lock_release(&f_table.frame_table_lock);
-		printf("framerel\n");
+		//printf("framerel\n");
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
@@ -232,8 +232,8 @@ void frame_clear_page (void *kaddr){
 		PANIC("kaddr %p, base %p end %u size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
-	printf("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
-			((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
+	//printf("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
+			//((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -241,7 +241,7 @@ void frame_clear_page (void *kaddr){
      now so it can release this*/
 	//printf("clearing %p, pos %u, entry %p kaddr %p\n", entry, frame_entry_pos(entry), frame_entry_at_pos(frame_entry_pos(entry)), kaddr);
 	if(entry->is_pinned ){
-		printf("waiting won't clear %p \n", entry);
+		//printf("waiting won't clear %p \n", entry);
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
 		//cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
@@ -260,7 +260,7 @@ void frame_clear_page (void *kaddr){
 		return;
 		//}
 	}
-	printf("cleared %p\n", entry);
+	//printf("cleared %p\n", entry);
 	/* Clear the entry */
 	entry->uaddr = NULL;
 	entry->cur_owner = NULL;
@@ -283,7 +283,7 @@ void acquire_frame_lock(){
 void unpin_frame_entry(void *kaddr){
 	ASSERT(kaddr >= f_table.base &&
 			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
-	printf("unpin\n");
+	//printf("unpin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
@@ -291,7 +291,7 @@ void unpin_frame_entry(void *kaddr){
 	entry->is_pinned = false;
 	cond_signal(&entry->pin_condition, &f_table.frame_table_lock);
 	lock_release(&f_table.frame_table_lock);
-	printf("Unpinned %p\n", entry);
+	//printf("Unpinned %p\n", entry);
 }
 
 /* Returns if this frame was pinned, false if the
@@ -300,21 +300,21 @@ void unpin_frame_entry(void *kaddr){
 bool pin_frame_entry(void *kaddr){
 	ASSERT(kaddr >= f_table.base &&
 			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
-	printf("pin\n");
+	//printf("pin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){
-		printf("done pinned\n");
+		//printf("done pinned\n");
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
 	if(entry->cur_owner != thread_current()){
-		printf("done pinned\n");
+	//	printf("done pinned\n");
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
 	entry->is_pinned = true;
 	lock_release(&f_table.frame_table_lock);
-	printf("done pinned\n");
+	//printf("done pinned\n");
 	return true;
 }
