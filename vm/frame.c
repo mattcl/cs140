@@ -16,14 +16,15 @@ static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 }
 
 static inline void *entry_to_kaddr(struct frame_entry *entry){
-	return (uint8_t*)f_table.base + frame_entry_pos(entry)*PGSIZE;
+	return (uint8_t*)f_table.base + (frame_entry_pos(entry)*PGSIZE);
 }
 
 static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
-	return (struct frame_entry*)((uint32_t)f_table.entries + (pos * sizeof(struct frame_entry)));
+	return f_table.entries +pos ;
 }
 
 static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
+	ASSERT(((uint32_t)kaddr % PGSIZE) == 0);
 	return frame_entry_at_pos(((uint32_t)kaddr-(uint32_t)f_table.base)/PGSIZE);
 }
 
@@ -200,8 +201,10 @@ void frame_clear_page (void *kaddr){
 	while(entry->is_pinned){
 		printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
-		lock_release(&f_table.frame_table_lock);
-		return;
+		if(!entry->is_pinned){
+			lock_release(&f_table.frame_table_lock);
+			return;
+		}
 	}
 
 	entry->uaddr = NULL;
