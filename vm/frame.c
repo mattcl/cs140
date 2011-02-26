@@ -123,7 +123,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		/* Atomically set the pagedir of the passed in uaddr
 		   to point to where it can find its memory and set
 		   it's present bit to 0 */
-		pd = entry->cur_thread->pagedir;
+		pd = entry->cur_owner->pagedir;
 		medium = pagedir_get_medium(pd, entry->uaddr);
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
@@ -155,21 +155,23 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		break;
 	}
 
+	void * old_uaddr =  entry->uaddr;
+	void * old_frame_thread = entry->cur_owner;
+	entry->uaddr = new_uaddr;
+	entry->cur_owner = thread_current();
+
+	lock_release(&f_table.frame_table_lock);
+
 	/* We set the user to fault and wait until the move
 	   to disk operation is complete, now we actually start
        moving the data from this frame out. Any attempt to access
        it from the original owners thread will fault and wait */
 	if(move_to_disk){
-		lock_release(&f_table.frame_table_lock);
 		if(medium == PTE_STACK || medium == PTE_EXEC){
-			swap_write_out(entry->cur_thread, entry->uaddr, kaddr, medium);
+			swap_write_out(old_frame_thread, old_uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
-			mmap_write_out(entry->cur_thread, entry->uaddr, kaddr);
+			mmap_write_out(old_frame_thread, old_uaddr, kaddr);
 		}
-	}else{
-		entry->uaddr = new_uaddr;
-		entry->cur_thread = thread_current();
-		lock_release(&f_table.frame_table_lock);
 	}
 
 	//printf("ousted %p\n", entry);
@@ -192,9 +194,9 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	}else{
 		/* Setup frame entry */
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
-		ASSERT(entry->uaddr == NULL && entry->cur_thread == NULL);
+		ASSERT(entry->uaddr == NULL && entry->cur_owner == NULL);
 		entry->uaddr = new_uaddr;
-		entry->cur_thread = thread_current();
+		entry->cur_owner = thread_current();
 		entry->is_pinned = true;
 		bitmap_set(f_table.used_frames, frame_idx, true);
 		lock_release(&f_table.frame_table_lock);
@@ -241,7 +243,7 @@ void frame_clear_page (void *kaddr){
 		/* it is possible that between the time that we were signaled
 		   and we woke up another process has pinned down this frame.
 		   In this case, howe		 */
-		if(!entry->is_pinned || entry->cur_thread != thread_current()){
+		if(!entry->is_pinned || entry->cur_owner != thread_current()){
 			//printf("finally clearing %p\n", entry);
 			lock_release(&f_table.frame_table_lock);
 			return;
@@ -250,7 +252,7 @@ void frame_clear_page (void *kaddr){
 	printf("cleared %p\n", entry);
 	/* Clear the entry */
 	entry->uaddr = NULL;
-	entry->cur_thread = NULL;
+	entry->cur_owner = NULL;
 	entry->is_pinned = false;
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
@@ -283,7 +285,7 @@ bool pin_frame_entry(void *kaddr){
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
-	if(entry->cur_thread != thread_current()){
+	if(entry->cur_owner != thread_current()){
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
