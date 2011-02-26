@@ -42,7 +42,8 @@ void pagedir_destroy (uint32_t *pd){
 			for(pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++){
 				if(*pte & PTE_P){
 					frame_clear_page(pte_get_page(*pte));
-				}else if(*pte & PTE_SWAP_WAIT || *pte & PTE_MMAP_WAIT){
+				}else if(*pte & (uint32_t)PTE_AVL == PTE_SWAP_WAIT ||
+						*pte & (uint32_t)PTE_AVL == PTE_MMAP_WAIT){
 					frame_clear_page(*pte & PTE_ADDR);
 				}
 			}
