@@ -224,8 +224,8 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    frame is currently pinned then we can not return from this
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
-	if((uint32_t)kaddr >= (uint32_t)f_table.base &&
-			(uint32_t)kaddr  < ((uint32_t)f_table.base + (f_table.size * PGSIZE))){
+	if((uint32_t)kaddr < (uint32_t)f_table.base &&
+			(uint32_t)kaddr > ((uint32_t)f_table.base + (f_table.size * (PGSIZE-1)))){
 		PANIC("kaddr %p, base %p end %p %size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
