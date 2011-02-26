@@ -136,9 +136,8 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	our_thread->process = p;
 	p->exit_code = -1;
 
-	lock_acquire(&processes_hash_lock);
+
 	struct hash_elem *process = hash_insert(&processes, &p->elem);
-	lock_release(&processes_hash_lock);
 
 	/* returns something if it wasn't inserted of NULL if it
 	   was inserted. Go Figure. If process == NULL all is good
@@ -169,6 +168,8 @@ tid_t process_execute (const char *file_name){
 
 	struct process *cur_process = thread_current()->process;
 
+	lock_acquire(&processes_hash_lock);
+
 	/* make sure that the new process signals us that it has set up */
 	lock_acquire(&cur_process->child_pid_tid_lock);
 
@@ -178,6 +179,7 @@ tid_t process_execute (const char *file_name){
 	if(tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
+		lock_release(&processes_hash_lock);
 		return TID_ERROR;
 	}
 
@@ -190,6 +192,7 @@ tid_t process_execute (const char *file_name){
 	/* Check to see if it set up correcly */
 	if(cur_process->child_pid_created == false){
 		lock_release(&cur_process->child_pid_tid_lock);
+		lock_release(&processes_hash_lock);
 		return TID_ERROR;
 	}
 
@@ -197,6 +200,8 @@ tid_t process_execute (const char *file_name){
 	   of children for this thread */
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
+
+	lock_release(&processes_hash_lock);
 
 	return tid;
 }
