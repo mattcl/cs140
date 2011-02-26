@@ -400,6 +400,8 @@ void process_exit (void){
 	}
 	lock_release(&processes_hash_lock);
 
+	printf("before fd destroy\n");
+
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
