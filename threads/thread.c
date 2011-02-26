@@ -367,6 +367,7 @@ void thread_exit (void){
 	list_remove (&thread_current()->allelem);
 	
 	thread_current ()->status = THREAD_DYING;
+	printf("schedule\n");
 	schedule ();
 	NOT_REACHED ();
 }
@@ -687,10 +688,10 @@ static void schedule (void){
 	ASSERT (cur->status != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 
+	printf("switch!\n");
 	if(cur != next){
 		prev = switch_threads (cur, next);
 	}
-
 	thread_schedule_tail (prev);
 }
 
