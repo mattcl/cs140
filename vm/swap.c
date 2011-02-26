@@ -122,7 +122,9 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
+	printf("filesys try acquire\n");
 	lock_acquire(&filesys_lock);
+	printf("filesys acquired\n");
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
@@ -130,6 +132,7 @@ bool swap_read_in (void *faulting_addr){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
 	lock_release(&filesys_lock);
+	printf("released\n");
 
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
