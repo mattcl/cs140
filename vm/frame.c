@@ -225,7 +225,7 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
 	if(kaddr >= f_table.base &&
-			(uint8_t*)kaddr  < ((uint8_t*)f_table.base + (f_table.size * PGSIZE))){
+			(uint32_t)kaddr  < ((uint32_t)f_table.base + (f_table.size * PGSIZE))){
 		PANIC("kaddr %p, base %p size %u\n", kaddr, f_table.base, f_table.size);
 	}
 	lock_acquire(&f_table.frame_table_lock);
