@@ -191,7 +191,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		return evict_page(new_uaddr, (flags & PAL_ZERO) != 0);
+		return frame_entry_at_kaddr(evict_page(new_uaddr, (flags & PAL_ZERO) != 0));
 	}else{
 		/* Setup frame entry */
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
