@@ -159,7 +159,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 	void * old_uaddr =  entry->uaddr;
 	void * old_frame_thread = entry->cur_owner;
-	tid_t old_thread_id;
+	tid_t old_thread_id = entry->cur_owner->tid;
 	entry->uaddr = new_uaddr;
 	entry->cur_owner = thread_current();
 
