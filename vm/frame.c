@@ -225,7 +225,7 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
 	ASSERT(kaddr >= f_table.base &&
-			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+		(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -260,7 +260,7 @@ void frame_clear_page (void *kaddr){
    will unpin the frame*/
 void unpin_frame_entry(void *kaddr){
 	ASSERT(kaddr >= f_table.base &&
-			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
@@ -275,7 +275,7 @@ void unpin_frame_entry(void *kaddr){
    is allready pinned */
 bool pin_frame_entry(void *kaddr){
 	ASSERT(kaddr >= f_table.base &&
-			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){
