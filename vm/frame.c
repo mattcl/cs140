@@ -93,6 +93,9 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	medium_t medium;
 	uint32_t *pd;
 	bool move_to_disk = false;
+
+	void *kaddr;
+
 	/* Select page and evict it */
 	lock_acquire(&f_table.frame_table_lock);
 	while(true){
@@ -111,6 +114,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 			entry->is_pinned = true;
 		}
 
+		kaddr = entry_to_kaddr(entry);
 		ASSERT(entry->is_pinned);
 
 		/* Atomically set the pagedir of the passed in uaddr
@@ -121,11 +125,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
-						pagedir_get_page(pd, entry->uaddr), true);
+						kaddr, true);
 				move_to_disk = true;
 			}else if(medium == PTE_MMAP){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_MMAP_WAIT,
-						pagedir_get_page(pd, entry->uaddr), true);
+						kaddr, true);
 				move_to_disk = true;
 			}else{
 				PANIC("realocate_page called with dirty page of medium_t: %x", medium);
@@ -151,10 +155,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	printf("ousting %p\n", entry);
 
 	lock_release(&f_table.frame_table_lock);
-
-
-
-	void *kaddr = entry_to_kaddr(entry);
 
 	/* We set the user to fault and wait until the move
 	   to disk operation is complete, now we actually start
