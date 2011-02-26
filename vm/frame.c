@@ -155,26 +155,23 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		break;
 	}
 
-	//printf("ousting %p\n", entry);
-
-	lock_release(&f_table.frame_table_lock);
-
 	/* We set the user to fault and wait until the move
 	   to disk operation is complete, now we actually start
        moving the data from this frame out. Any attempt to access
        it from the original owners thread will fault and wait */
 	if(move_to_disk){
+		lock_release(&f_table.frame_table_lock);
 		if(medium == PTE_STACK || medium == PTE_EXEC){
 			swap_write_out(entry->cur_thread, entry->uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
 			mmap_write_out(entry->cur_thread, entry->uaddr, kaddr);
 		}
+	}else{
+		entry->uaddr = new_uaddr;
+		entry->cur_thread = thread_current();
+		lock_release(&f_table.frame_table_lock);
 	}
 
-	lock_acquire(&f_table.frame_table_lock);
-	entry->uaddr = new_uaddr;
-	entry->cur_thread = thread_current();
-	lock_release(&f_table.frame_table_lock);
 	//printf("ousted %p\n", entry);
 	/* Clear out the page if PAL_ZERO was specified*/
 	if(zero_out){
