@@ -172,8 +172,6 @@ static void page_fault (struct intr_frame *f){
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-		printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
-
 		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in
 							   then return so that dereference becomes valid*/
@@ -241,6 +239,7 @@ static void page_fault (struct intr_frame *f){
 				   the pointer for us to read they would have page faulted
 				   and already grown the stack. So it is safe to just return -1
 				   to the kernel code*/
+				printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 				//printf("kernel 1 write %u\n", write);
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
@@ -261,6 +260,7 @@ static void page_fault (struct intr_frame *f){
 			kill(f);
 		}else{
 			//printf("kernel 2 write %u\n", write);
+			printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
