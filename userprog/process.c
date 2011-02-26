@@ -372,7 +372,7 @@ void process_exit (void){
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
-	printf("Pagedir destroyed %p\n", cur);
+	//printf("Pagedir destroyed %p\n", cur);
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent

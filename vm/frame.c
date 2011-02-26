@@ -152,7 +152,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		break;
 	}
 
-	printf("ousting %p\n", entry);
+	//printf("ousting %p\n", entry);
 
 	lock_release(&f_table.frame_table_lock);
 
@@ -172,7 +172,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	entry->uaddr = new_uaddr;
 	entry->cur_thread = thread_current();
 	lock_release(&f_table.frame_table_lock);
-	printf("ousted %p\n", entry);
+	//printf("ousted %p\n", entry);
 	/* Clear out the page if PAL_ZERO was specified*/
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
@@ -229,16 +229,16 @@ void frame_clear_page (void *kaddr){
 		PANIC("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
-	printf("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
-			((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
+	//printf("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
+	//		((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
 	/* The thread is the same one that is in the frame
      now so it can release this*/
-	printf("clearing %p, pos %u, entry %p kaddr %p\n", entry, frame_entry_pos(entry), frame_entry_at_pos(frame_entry_pos(entry)), kaddr);
+	//printf("clearing %p, pos %u, entry %p kaddr %p\n", entry, frame_entry_pos(entry), frame_entry_at_pos(frame_entry_pos(entry)), kaddr);
 	while(entry->is_pinned ){
-		printf("waiting won't clear %p \n", entry);
+		//printf("waiting won't clear %p \n", entry);
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
@@ -246,12 +246,12 @@ void frame_clear_page (void *kaddr){
 		   and we woke up another process has pinned down this frame.
 		   In this case, howe		 */
 		if(!entry->is_pinned || entry->cur_thread != thread_current()){
-			printf("finally clearing %p\n", entry);
+			//printf("finally clearing %p\n", entry);
 			lock_release(&f_table.frame_table_lock);
 			return;
 		}
 	}
-	printf("cleared %p\n", entry);
+	//printf("cleared %p\n", entry);
 	/* Clear the entry */
 	entry->uaddr = NULL;
 	entry->cur_thread = NULL;
@@ -269,7 +269,7 @@ void unpin_frame_entry(void *kaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
-	printf("Unpinned %p\n", entry);
+	//printf("Unpinned %p\n", entry);
 	entry->is_pinned = false;
 	cond_signal(&entry->pin_condition, &f_table.frame_table_lock);
 	lock_release(&f_table.frame_table_lock);
