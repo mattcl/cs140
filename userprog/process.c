@@ -376,6 +376,8 @@ void process_exit (void){
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
+	printf("process removed\n");
+
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
@@ -387,6 +389,7 @@ void process_exit (void){
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+		printf("trying to lock parent tid lock\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
@@ -395,8 +398,10 @@ void process_exit (void){
 		}
 
 		lock_release(&parent->child_pid_tid_lock);
+		printf("releasing parent tid lock\n");
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
+			printf("sema up \n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
