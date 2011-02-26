@@ -239,11 +239,11 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	   and before thread exit because freeing the mmap table
 	   may require I.O. that will wait and can't be done with
 	   interrupts off*/
-	printf("Destroying the mmap\n");
+	//printf("Destroying the mmap\n");
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
-	printf("destroyed\n");
+	//printf("destroyed\n");
 	thread_exit();
 	NOT_REACHED();
 }
