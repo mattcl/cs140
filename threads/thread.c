@@ -365,7 +365,6 @@ void thread_exit (void){
 	   and schedule another process.  That process will destroy us
 	   when it calls thread_schedule_tail(). */
 	list_remove (&thread_current()->allelem);
-	printf("schedule\n");
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();
@@ -685,7 +684,9 @@ static void schedule (void){
 	ASSERT (is_thread (next));
 
 	/* Activate the next threads pagedir so that we
-	   won't page fault like a mofo */
+	   won't page fault on thread_schedule_tail on
+	   returning from switch threads in the new
+	   thread */
 #ifdef USERPROG
 	pagedir_activate (next->pagedir);
 #endif
