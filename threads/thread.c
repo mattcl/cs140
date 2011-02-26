@@ -688,7 +688,6 @@ static void schedule (void){
 	ASSERT (cur->status != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 
-	printf("switch!\n");
 	if(cur != next){
 		prev = switch_threads (cur, next);
 	}
