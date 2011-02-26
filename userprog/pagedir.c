@@ -44,7 +44,7 @@ void pagedir_destroy (uint32_t *pd){
 					frame_clear_page(pte_get_page(*pte));
 				}else if((*pte & (uint32_t)PTE_AVL) == PTE_SWAP_WAIT ||
 						 (*pte & (uint32_t)PTE_AVL) == PTE_MMAP_WAIT){
-					frame_clear_page(*pte & PTE_ADDR);
+					frame_clear_page((void*)(*pte & PTE_ADDR));
 				}
 			}
 			palloc_free_page (pt);
