@@ -702,7 +702,6 @@ static void schedule (void){
 		pagedir_activate (next_pd);
 		pagedir_destroy (cur_pd);
 	}
-	printf("Pagedir destroyed\n");
 #endif
 
 	if(cur != next){
