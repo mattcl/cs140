@@ -366,6 +366,8 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
+	printf("pagedir is destroyed\n");
+
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
