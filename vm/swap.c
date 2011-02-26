@@ -194,7 +194,7 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 		/* Signal that the swap is free to be used to those waiting on
 		   PTE_SWAP_WAIT in read in.*/
 		cond_broadcast(&swap_free_condition, &swap_slots_lock);
-		pritnf("swap rel\n");
+		printf("swap rel\n");
 		lock_release(&swap_slots_lock);
 		return true;
 	}
