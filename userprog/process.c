@@ -209,7 +209,7 @@ tid_t process_execute (const char *file_name){
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_){
-	//printf("start\n");
+	printf("start\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
@@ -218,7 +218,7 @@ static void start_process (void *file_name_){
 	lock_acquire(&processes_hash_lock);
 	struct process *parent = parent_process_from_child(cur_process);
 	lock_release(&processes_hash_lock);
-
+	printf("start2\n");
 	/* Parent hasn't exited yet so we can grab their lock
 	   so that they wait until set up is done and so we can
 	   signal them when set up is finished
