@@ -148,7 +148,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		break;
 	}
 
+	printf("ousting %p\n", entry);
+
 	lock_release(&f_table.frame_table_lock);
+
+
 
 	void *kaddr = entry_to_kaddr(entry);
 
@@ -223,20 +227,15 @@ void frame_clear_page (void *kaddr){
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
-	if(thread_current() != entry->cur_thread){
-		lock_release(&f_table.frame_table_lock);
-		return;
-	}
-
 	/* The thread is the same one that is in the frame
      now so it can release this*/
-
-	while(entry->is_pinned){
-		//printf("waiting won't clearf\n");
+	printf("clearing %p\n", entry);
+	while(entry->is_pinned || entry->cur_thread == thread_current()){
+		printf("waiting won't clearf\n");
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
-		if(!entry->is_pinned){
+		if(!entry->is_pinned || entry->cur_thread != thread_current()){
 
 			lock_release(&f_table.frame_table_lock);
 			return;
