@@ -17,6 +17,8 @@ test_main (void)
            "exec \"child-linear\"");
 
   printf("----------------- started waiting-------------------------------------------\n");
-  for (i = 0; i < CHILD_CNT; i++) 
-    CHECK (wait (children[i]) == 0x42, "wait for child %d", i);
+  for (i = 0; i < CHILD_CNT; i++){
+	  printf("wait child %d", i);
+      CHECK (wait (children[i]) == 0x42, "wait for child %d", i);
+  }
 }
