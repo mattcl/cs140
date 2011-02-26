@@ -30,27 +30,8 @@ Matt Chun-lum <mchunlum@stanford.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-// pagedir.h
-#define PTE_AVL_ERROR 0       /* 000 */
-#define PTE_AVL_SWAP (1 << 9)  /* 001 */
-#define PTE_AVL_EXEC (1 << 10) /* 010 */
-#define PTE_AVL_MMAP (1 << 11) /* 100 */
-#define PTE_AVL_STACK (3 << 9)  /* 110 */ 
 
-typedef uint32_t medium_t; /* used to represent one of the constants above */
 
-The above defines define the "states" of the AVL bits of a page table entry. Since
-we are using the page table as our supplemental page table as well, we needed the 
-AVL bits to store the additional information.
-//userprog_h
-typedef uint32_t mapid_t;
-//exception.h
-#define MAX_ASM_PUSH 32 /* The maximum amount of data that can be pushed
-						   by a single assembly instruction. This exists
-						   because 80x86 tries to dereference the memory
-						   before actually decrementing the stack....
-						   Which is completely counter intuitive....
-						   Just sayin */
 
 //process.h
 	/* Swap hash. This structure allows us to put pages at virtual
@@ -123,26 +104,37 @@ struct mmap_hash_entry{
 
 >> A2: In a few paragraphs, describe your code for locating the frame,
 >> if any, that contains the data of a given page.
-
+When a userthread tries to access memory that belongs to them it's present
+bit is 1 in it's page table.  In this case, the address of the frame is 
+written in PTE_ADDR.
 
 
 >> A3: How does your code coordinate accessed and dirty bits between
 >> kernel and user virtual addresses that alias a single frame, or
 >> alternatively how do you avoid the issue?
-
-
+WTF????????? Bitmap which only user pages?  Only use kernel address
+in eviction code, in which case we have already set the present bit 
+to zero.
 
 ---- SYNCHRONIZATION ----
 
 >> A4: When two user processes both need a new frame at the same time,
->> how are races avoided?
+>> how are races avoided? 
+When a user process requires a new frame it searches a bit map.  Every
+bit map bit is matched to one frame in the frame table.  In order to
+search this bit map must acquire a lock.
 
+In the case that eviction is neccesary we pin the page to the frame
+while we are evicting it, so that another user process cannot decide
+to evict from that frame that we are evicting from until we are done.
+We control access to this boolean using the free frame bitmap lock.
 
 
 ---- RATIONALE ----
 
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
+We use a map.  Efficency shit?????????
 
 
 		       PAGING TO AND FROM DISK
@@ -153,6 +145,49 @@ struct mmap_hash_entry{
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+
+// pagedir.h
+#define PTE_AVL_ERROR 0       /* 000 */
+#define PTE_AVL_SWAP (1 << 9)  /* 001 */
+#define PTE_AVL_EXEC (1 << 10) /* 010 */
+#define PTE_AVL_MMAP (1 << 11) /* 100 */
+#define PTE_AVL_STACK (3 << 9)  /* 110 */ 
+
+typedef uint32_t medium_t; /* used to represent one of the constants above */
+
+The above defines define the "states" of the AVL bits of a page table entry. Since
+we are using the page table as our supplemental page table as well, we needed the 
+AVL bits to store the additional information.
+
+
+//userprog_h
+typedef uint32_t mapid_t;
+
+//exception.h
+#define MAX_ASM_PUSH 32 /* The maximum amount of data that can be pushed
+						   by a single assembly instruction. This exists
+						   because 80x86 tries to dereference the memory
+						   before actually decrementing the stack....
+						   Which is completely counter intuitive....
+						   Just sayin */
+
+struct frame_table {
+	struct bitmap *used_frames;		/*   The bitmap that tracks used/free
+		 	 	 	 	 	 	 	 	 frames*/
+	struct lock frame_map_lock;		/*	 Lock to the frame bitmap  */
+	struct hash frame_hash;			/*   */
+};
+
+struct frame_entry{
+	uint32_t position_in_bitmap;/*The key into the hash table*/
+	bool pinned_to_frame;		/* protected by frame_map_lock*/
+	struct thread *cur_thread;	/* protected by frame_map_lock*/
+	void *uaddr;				/* protected by frame_map_lock*/
+
+	struct semaphore wait;
+	struct hash_elem elem;
+};
 
 ---- ALGORITHMS ----
 
@@ -171,10 +206,19 @@ struct mmap_hash_entry{
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 
-If the page fault occurs at an address within 32 bytes of the stack pointer, the
-stack is extended into the page that faulted. Due to the way x86 tries to
-dereference memory, this is the maximum overshoot for a fault that needs to grow
-the stack.
+The idea is that you must decrement your stack pointer before you place
+something on the stack (with the exceptoin of pushal) so we check if their
+address is between PHYS_BASE and esp (including esp but not including
+PHYS_BASE).
+
+However, because pushal dereferences memory before decrementing the stack
+pointer we must also allow for stack growth if the faulting address is 
+MAX_ASM_PUSH bytes below the currenty address (it is defined as 32 bytes
+to allow the 4 interger registers to be pushed).
+
+Finally, in order to avoid the stack being grown beyond it's limit, we 
+make sure that growing the stack would not cause the user to exceed the 
+limit of their stack size.
 
 ---- SYNCHRONIZATION ----
 
@@ -182,7 +226,7 @@ the stack.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
-
+?????????
 
 
 >> B6: A page fault in process P can cause another process Q's frame
@@ -190,13 +234,19 @@ the stack.
 >> the page during the eviction process?  How do you avoid a race
 >> between P evicting Q's frame and Q faulting the page back in?
 
+Before we begin eviction we set PTE_P to not present for Q's page
+table entry corresponding to the frame.  This way any accesses to 
+virtual address after we begin eviction will page fault instead of 
+accessing the frame.
+
+???
 
 
 >> B7: Suppose a page fault in process P causes a page to be read from
 >> the file system or swap.  How do you ensure that a second process Q
 >> cannot interfere by e.g. attempting to evict the frame while it is
 >> still being read in?
-
+In our frame_entry their is a bool pin_to_frame
 
 
 >> B8: Explain how you handle access to paged-out pages that occur
