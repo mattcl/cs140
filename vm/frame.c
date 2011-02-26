@@ -245,7 +245,7 @@ void frame_clear_page (void *kaddr){
 		/* it is possible that between the time that we were signaled
 		   and we woke up another process has pinned down this frame.
 		   In this case, howe		 */
-		if(!entry->is_pinned || entry->cur_owner != thread_current()){
+		if(!entry->is_pinned ){
 			//printf("finally clearing %p\n", entry);
 			lock_release(&f_table.frame_table_lock);
 			return;
