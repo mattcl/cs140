@@ -102,7 +102,6 @@ static pid_t allocate_pid(void){
    Initializes the process and sets the process pointer
    In the thread that is being created */
 bool initialize_process (struct process *p, struct thread *our_thread){
-	ASSERT(lock_held_by_current_thread(&processes_hash_lock));
 	p->pid = allocate_pid();
 	p->parent_id = thread_current()->process->pid;
 	p->fd_count = 2;
@@ -148,7 +147,9 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		hash_destroy(&p->open_files, NULL);
 		return false;
 	}
-	lock_release(&processes_hash_lock);
+	if(lock_held_by_current_thread(&processes_hash_lock)){
+		lock_release(&processes_hash_lock);
+	}
 	return true;
 }
 
