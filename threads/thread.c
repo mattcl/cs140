@@ -355,17 +355,16 @@ tid_t thread_tid (void){
 void thread_exit (void){
 	ASSERT (!intr_context ());
 	intr_disable();
-	/* Remove thread from all threads list, set our status to dying,
-	   and schedule another process.  That process will destroy us
-	   when it calls thread_schedule_tail(). */
-	list_remove (&thread_current()->allelem);
 	
 #ifdef USERPROG
 	process_exit ();
 #endif
 
 	release_locks();
-
+	/* Remove thread from all threads list, set our status to dying,
+	   and schedule another process.  That process will destroy us
+	   when it calls thread_schedule_tail(). */
+	list_remove (&thread_current()->allelem);
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();
@@ -705,14 +704,12 @@ static tid_t allocate_tid (void){
 
 bool thread_is_alive(tid_t tid){
 	struct list_elem *e;
-	enum intr_level old_level = intr_disable();
 	for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
 		struct thread *t = list_entry(e, struct thread, allelem);
 		if(t->tid == tid){
 			return true;
 		}
 	}
-	intr_set_level(old_level);
 	return false;
 }
 
