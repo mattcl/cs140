@@ -102,7 +102,7 @@ bool swap_read_in (void *faulting_addr){
 	key.uaddr = masked_uaddr;
 	struct hash_elem *slot_result = hash_delete(&cur_process->swap_table,
 			&key.elem);
-	if(slot_result != NULL){
+	if(slot_result == NULL){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
