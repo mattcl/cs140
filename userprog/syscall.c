@@ -918,6 +918,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 			}
 		}
 	}
+	intr_enable();
 
 	lock_acquire(&filesys_lock);
 	file_seek(fd_entry->open_file, original_position);
