@@ -271,9 +271,11 @@ unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 void destroy_swap_table(struct hash *to_destroy){
 	/* Free all of the swap slots that are currently occupied
 	   by this process */
+	printf("swap d acq\n");
 	lock_acquire(&swap_slots_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
 	lock_release(&swap_slots_lock);
+	printf("swap d rel\n");
 }
 
 /* Function to compare the individual swap hash table elements
