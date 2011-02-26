@@ -159,7 +159,7 @@ static void page_fault (struct intr_frame *f){
 
 	printf("Page fault medium %x, faulting address %p\n", pagedir_get_medium(pd, fault_addr), fault_addr);
 
-	if(fault_addr == 0xffffffff){
+	if(fault_addr == (void*)0xffffffff){
 		PANIC("Infinite page faults detected");
 	}
 	/* This section implements virtual memory from the fault
