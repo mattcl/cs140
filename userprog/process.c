@@ -383,9 +383,12 @@ void process_exit (void){
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
+	printf("getting parent\n");
 	struct process *parent = parent_process_from_child(cur_process);
+	printf("got parent\n");
 
 	if(parent != NULL){
+		printf("parent not null\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
