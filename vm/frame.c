@@ -229,12 +229,14 @@ void frame_clear_page (void *kaddr){
 		PANIC("kaddr %p, base %p end %p %size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
+	printf("kaddr %p, base %p end %p %size %u\n", kaddr, f_table.base,
+			((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
 	/* The thread is the same one that is in the frame
      now so it can release this*/
-	printf("clearing %p\n", entry);
+	printf("clearing %p, pos %u, entry %p kaddr %p\n", entry, frame_entry_pos(entry), frame_entry_at_pos(frame_entry_pos(entry)), kaddr);
 	while(entry->is_pinned ){
 		printf("waiting won't clear %p \n", entry);
 		/* new shit is being put in the frame, moving our shit out
