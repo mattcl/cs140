@@ -645,7 +645,7 @@ void thread_schedule_tail (struct thread *prev){
 	cur->status = THREAD_RUNNING;
 #ifdef USERPROG
 	/* Activate the new address space. */
-	process_activate ();
+	//process_activate ();
 #endif
 	/* prev and cur can't be the same and dying or we will
 	 * reach Non-reachable code as a thread that is dying
