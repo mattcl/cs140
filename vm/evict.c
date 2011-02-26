@@ -43,8 +43,7 @@ static void *relocate_page (struct frame_entry *f, void * uaddr);
    page that is occuping the frame. Then returns the pointer to
    the kernel virtual address so that the user can install this
    kernel virtual address into its pagedirectory */
-void *evict_page(struct frame_table *f_table, void *uaddr,
-		enum palloc_flags flags){
+void *evict_page(struct frame_table *f_table, void *uaddr, enum palloc_flags flags){
 //	printf("Evicting For uaddr %p\n", uaddr);
 	struct frame_entry *frame ;
 	struct frame_entry *frame_to_clear;
@@ -63,7 +62,7 @@ void *evict_page(struct frame_table *f_table, void *uaddr,
 	lock_acquire(&f_table->frame_map_lock);
 	frame = choose_frame_to_evict();
 	frame->pinned_to_frame = true;
-	page_dir_clear_page(frame->cur_thread->pagedir, frame->uaddr);
+	//	page_dir_clear_page(frame->cur_thread->pagedir, frame->uaddr);
 	lock_release(&f_table->frame_map_lock);
 
 	/* once we make a page as not present, we must also mark it's
