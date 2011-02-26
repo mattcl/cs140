@@ -247,7 +247,6 @@ static void page_fault (struct intr_frame *f){
 		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
-		medium_t type = pagedir_get_medium(pd, fault_addr);
 		/* The page is present and we got a page fault so this means that
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/

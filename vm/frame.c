@@ -224,6 +224,8 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    frame is currently pinned then we can not return from this
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
+	ASSERT(kaddr >= f_table.base &&
+			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -257,10 +259,12 @@ void frame_clear_page (void *kaddr){
 /* Need to unpin after it is installed in the pagedir of your thread
    will unpin the frame*/
 void unpin_frame_entry(void *kaddr){
+	ASSERT(kaddr >= f_table.base &&
+			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
-	printf("Unpinned %p\n");
+	printf("Unpinned %p\n", entry);
 	entry->is_pinned = false;
 	cond_signal(&entry->pin_condition, &f_table.frame_table_lock);
 	lock_release(&f_table.frame_table_lock);
@@ -270,6 +274,8 @@ void unpin_frame_entry(void *kaddr){
    current thread is not in the frame or if the frame
    is allready pinned */
 bool pin_frame_entry(void *kaddr){
+	ASSERT(kaddr >= f_table.base &&
+			kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){
