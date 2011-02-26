@@ -102,7 +102,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        	   fault and their ish will fail miserably*/
 		old_level = intr_disable();
 
-
 		frame_to_evict = random_ulong() % f_table.size;
 		entry = frame_entry_at_pos(frame_to_evict);
 		if(entry->is_pinned) {
