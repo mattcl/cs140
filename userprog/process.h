@@ -83,14 +83,7 @@ struct process {
 	   addresses onto the swap device and retrieve them. The swap
 	   table is per process to allow us to use the virtual address
 	   for the process as an index into the table. .*/
-	struct hash swap_table;
-
-	/* Because any process can evict any other processes frames
-	   the per process swap table needs to be locked. Otherwise
-	   inserting things into the swap table from multiple processes
-	   simultaneously will fail miserably*/
-	struct lock swap_table_lock;
-
+	struct hash swap_table; /* Protected by the overarching swap lock*/
 
 	/* The exec_info is a pointer to an array of ELF program
 	   header information this information is used to determine

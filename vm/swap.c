@@ -29,7 +29,9 @@ static struct condition swap_free_condition;
 
 /* Note: Swap hash tables are in the individual processes */
 
-/* Initializes the swap */
+/* Initializes the swap, Allocating all of the user memory
+   and setting up the bit map so that we can partition it
+   as we so desire*/
 void swap_init (void){
 	swap_device = block_get_role(BLOCK_SWAP);
 	if(swap_device == NULL){
@@ -42,7 +44,6 @@ void swap_init (void){
 
 	uint32_t num_slots = num_sectors / SECTORS_PER_SLOT;
 
-	//printf("%u size and %u slots\n", num_sectors*512, num_slots);
 	used_swap_slots = bitmap_create(num_slots);
 
 	ASSERT(used_swap_slots != NULL);
@@ -56,11 +57,10 @@ void swap_init (void){
 }
 
 /* Takes the faulting addr and then reads the data back into main memory
-   setting the pagedir to point to the new location, obtained using frame.h's
+   setting the PTE to point to the new location, obtained using frame.h's
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	//printf("Swap read in %p \n", faulting_addr);
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
@@ -73,9 +73,9 @@ bool swap_read_in (void *faulting_addr){
 	ASSERT(intr_get_level() == INTR_OFF);
 	lock_acquire(&swap_slots_lock);
 
-	/* Wait while the data finishes moving to swap */
+	/* Wait while the data finishes moving to swap atomically
+	   check our medium bits */
 	while(pagedir_get_medium(pd, faulting_addr) != PTE_SWAP){
-		//printf("waiting\n");
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
@@ -85,17 +85,18 @@ bool swap_read_in (void *faulting_addr){
 
 	intr_enable();
 
+	/* Frame get page may read something out to swap so we must
+	   release this lock*/
 	lock_release(&swap_slots_lock);
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
 
-	/* May evict a page to swap, returns a kernel virtual address so
-	   the dirty bit for this kernel address in the PTE*/
+	/* May evict a page to swap, returns a kernel virtual address*/
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
 	ASSERT(kaddr != NULL);
 
 	lock_acquire(&swap_slots_lock);
-	//printf("Swap in \n");
+
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
 	struct swap_entry key;
@@ -117,11 +118,12 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
+
+	/* Filesys lock needed to prevent race with syscall write*/
 	lock_acquire(&filesys_lock);
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
-		//printf("INserting into %p\n", kaddr_ptr);
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
 	lock_release(&filesys_lock);
@@ -132,33 +134,38 @@ bool swap_read_in (void *faulting_addr){
 	/* Free the malloced swap entry */
 	free(hash_entry(slot_result, struct swap_entry, elem));
 
+	/* Signal that the swap is free to be used to those waiting on
+	   PTE_SWAP_WAIT in read in.*/
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
 	lock_release(&swap_slots_lock);
 
-	/*Disable interrupts while setting up memory */
+	/* Disable interrupts while atomically setting medium
+	   dirty and clear bits*/
 	intr_disable();
 
 	/* Set the page in our pagetable to point to our new frame
 	   this will set the present bit back to 1*/
 	ASSERT(pagedir_set_page (pd, (void*)masked_uaddr, kaddr, true));
 
-	/* indicate that this is in memorry */
+	/* indicate that this is in memory to the owning process*/
 	pagedir_set_medium(pd, (void*)masked_uaddr, org_medium);
 
-	/* Make sure it is read back out to disk if faulted*/
+	/* Make sure it is read back out to swap if faulted*/
 	pagedir_set_dirty(pd, (void*)masked_uaddr, true);
 
 	intr_enable();
 
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
 
+	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
+
 	return true;
 }
 
-/* Its not going anywhere, the underlying frame will be here until
-   the frame is no longer pinned*/
+/* Writes the data for the kaddr to the swap device, then saves the uaddr,
+   medium and swap slot for the frame entry. */
 bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medium){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
@@ -173,14 +180,16 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	uint8_t *kaddr_ptr = (uint8_t*)kaddr;
 	size_t swap_slot, start_sector;
 
+	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
-	//printf("Swap out\n");
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
 		PANIC("SWAP IS FULL BABY");
 	}
 
+	/* make a new frame entry to store the relevant data to this
+	   swap slot*/
 	struct swap_entry *new_entry = calloc(1, sizeof(struct swap_entry));
 	if(new_entry == NULL){
 		PANIC("KERNEL OUT OF MEMORRY");
@@ -191,32 +200,34 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	new_entry->org_medium = medium;
 	new_entry->swap_slot = swap_slot;
 
-	//printf("swap slot %u org_medium %x uaddr %x\n", new_entry->swap_slot, new_entry->org_medium, new_entry->uaddr);
-
+	/* Insert this into the swap map for the process. */
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
-	start_sector = swap_slot * SECTORS_PER_SLOT;
 
+	/* Write this out to disk now so that it is saved */
+	start_sector = swap_slot * SECTORS_PER_SLOT;
 	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
-		//printf("dereferencing %p\n", kaddr_ptr);
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
 	lock_release(&filesys_lock);
 
 	/* Tell the process who just got this page evicted that the
-	   can find it on swap*/
+	   can find it on swap, pagedir_setup_demand_page does this
+	   atomically*/
 	if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
 				masked_uaddr, true)){
 		PANIC("Kernel out of memory");
 	}
 
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);
+	/* Signal that the swap is free to be used to those waiting on
+	   PTE_SWAP_WAIT in read in.*/
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);;
 
 	lock_release(&swap_slots_lock);
 
@@ -246,7 +257,6 @@ bool swap_slot_compare (const struct hash_elem *a,
 
 /* call all destructor for hash_destroy */
 void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED){
-	/*File close needs to be called here */
 	struct swap_entry *entry = hash_entry(e, struct swap_entry, elem);
 
 	lock_acquire(&swap_slots_lock);

@@ -158,7 +158,6 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
-	//printf("execute\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -215,7 +214,6 @@ tid_t process_execute (const char *file_name){
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_){
-	//printf("start\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
@@ -304,7 +302,6 @@ static void start_process (void *file_name_){
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
-	//printf("wait\n");
 	struct process *cur = thread_current()->process;
 	/* Find pid and see if the process still exists. I.E.
 	   it hasn't removed itself from the processes hash
@@ -331,7 +328,6 @@ int process_wait (tid_t child_tid){
 	if(child != NULL){
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
-		//printf("sema_down");
 		sema_down(&cur->waiting_semaphore);
 	}else{
 		lock_release(&processes_hash_lock);
@@ -358,7 +354,6 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
-	//printf(" process exit called\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -388,23 +383,20 @@ void process_exit (void){
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
-	//printf("process removed\n");
 
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
-	//printf("getting parent\n");
 	struct process *parent = parent_process_from_child(cur_process);
-	//printf("got parent\n");
 
 	if(parent != NULL){
-		//printf("parent not null\n");
+		printf("parent not null\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		//printf("trying to lock parent tid lock\n");
+		printf("trying to lock parent tid lock\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
@@ -413,16 +405,12 @@ void process_exit (void){
 		}
 
 		lock_release(&parent->child_pid_tid_lock);
-		//printf("releasing parent tid lock\n");
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			//printf("sema up \n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
 	lock_release(&processes_hash_lock);
-
-	//printf("before fd destroy\n");
 
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
@@ -453,7 +441,6 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
-	//printf"process exited\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
@@ -542,7 +529,6 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp){
-	//printf("load\n");
 	struct thread *t = thread_current ();
 	struct process *cur_process = t->process;
 	struct Elf32_Ehdr ehdr;
@@ -617,17 +603,18 @@ done:
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
 	intr_enable();
-	//printf"Exec in\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
-	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
+	uint32_t uaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
 	struct exec_page_info *info = NULL;
 	uint32_t i;
 
+	/* Find the corresponding information for this executable
+	   to do so we know that faulting address is between the start
+	   mem_page and end_addr */
 	for(i = 0; i < cur_process->num_exec_pages; i++){
-		//printf("beginning %p end %p vaddr %p\n",  cur_process->exec_info[i].mem_page, cur_process->exec_info[i].end_addr, vaddr);
-		if(vaddr >= cur_process->exec_info[i].mem_page &&
-		   vaddr < cur_process->exec_info[i].end_addr){
+		if(uaddr >= cur_process->exec_info[i].mem_page &&
+		   uaddr < cur_process->exec_info[i].end_addr){
 			info = &cur_process->exec_info[i];
 			break;
 		}
@@ -640,7 +627,6 @@ bool process_exec_read_in(void *faulting_addr){
 		   EXEC bit shouldn't be set unless the corresponding
 		   data can be found in the exec_info array*/
 		PANIC("INCONSISTENCY IN EXCEPTION.C");
-		/*return false;*/
 	}
 
 	/* The way this works is it calculates the number of bytes that need to be
@@ -655,7 +641,7 @@ bool process_exec_read_in(void *faulting_addr){
 	   This can also be calcultated using thu number of empty pages and
 	   doing the opposite.*/
 	uint32_t full_pages = info->read_bytes / PGSIZE;
-	uint32_t offset_seg_start = ((uint32_t)vaddr) - ((uint32_t)info->mem_page);
+	uint32_t offset_seg_start = ((uint32_t)uaddr) - ((uint32_t)info->mem_page);
 	uint32_t entry = (offset_seg_start) / PGSIZE;
 	uint32_t zero_bytes;
 	if(entry == full_pages){
@@ -676,11 +662,8 @@ bool process_exec_read_in(void *faulting_addr){
 	   into memory one page */
 	uint32_t file_page = info->file_offset + offset_seg_start;
 
-
-	//printf("File page after converting to single %u, read_bytes %u zero_bytes %u\n", file_page, read_bytes, zero_bytes);
-
 	return load_segment(cur_process->executable_file,
-			file_page, (uint8_t*)vaddr, read_bytes,
+			file_page, (uint8_t*)uaddr, read_bytes,
 			zero_bytes, info->writable);
 }
 
@@ -698,8 +681,6 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 			|| ehdr->e_version != 1
 			|| ehdr->e_phentsize != sizeof (struct Elf32_Phdr)
 			|| ehdr->e_phnum > 1024){
-
-		//printf ("load: %s: error loading executable\n", file_name);
 		return false;
 
 	}
@@ -714,8 +695,6 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	   will eventually only store the number of loadable
 	   headers in it and be malloced */
 	struct exec_page_info head[ehdr->e_phnum];
-
-	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
 	if(head == NULL){
 		PANIC("KERNEL OUT OF MEMORY");
@@ -751,7 +730,6 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 		case PT_LOAD:
 			if(validate_segment (&phdr, file)){
 				uint32_t page_offset = phdr.p_vaddr & PGMASK;
-				//printf("page offset %u\n", page_offset);
 				head[k].file_offset = phdr.p_offset & ~PGMASK;
 				head[k].mem_page = phdr.p_vaddr & ~PGMASK;
 				head[k].writable = (phdr.p_flags & PF_W) != 0;
@@ -779,11 +757,11 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 
 				for(j = 0; j < num_pages; j ++){
 					uint8_t* uaddr = ((uint8_t*)head[k].mem_page) + (PGSIZE*j);
-					//printf("user address %p\n", uaddr);
+					/* Setup the correct, bindings for this uaddr so that it
+					   will fault in the appropriate executable page */
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
 								PTE_EXEC, (uint32_t)uaddr, head[k].writable);
 				}
-				//printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes, exec_pages[load_i].zero_bytes, exec_pages[load_i].end_addr);
 				k ++;
 			}else{
 				return false;
@@ -792,7 +770,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 		}
 	}
 
-	/* Save all of our infor so that we can handle page_faults */
+	/* Save all of our info so that we can handle page_faults */
 	cur_process->exec_info = calloc (k, sizeof(struct exec_page_info));
 	if(cur_process->exec_info == NULL){
 		PANIC("KERNEL OUT OF MEMORY!!!!");
@@ -938,16 +916,13 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	//printf"try acquire filesys lock\n");
-
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
-	//printf"upage %p\n", upage);
 	/* Calculate how to fill this page.
-           We will read PAGE_READ_BYTES bytes from FILE
-           and zero the final PAGE_ZERO_BYTES bytes. */
+       We will read PAGE_READ_BYTES bytes from FILE
+       and zero the final PAGE_ZERO_BYTES bytes. */
 	size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
@@ -957,34 +932,34 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	/* Load this page. */
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
-		frame_clear_page (kpage);
+		/* remove this frame cause we failed*/
 		lock_release(&filesys_lock);
-		//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
 		unpin_frame_entry(kpage);
+		frame_clear_page (kpage);
 		return false;
 	}
 	memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
 	/* Add the page to the process's address space. But only if that
-		   virtual address doesn't already have something mapped to it,
-		   I.E. the present bit is on*/
+	   virtual address doesn't already have something mapped to it,
+	   I.E. the present bit is on. */
 	if(!pagedir_install_page (upage, kpage, writable)){
-		frame_clear_page(kpage);
 		lock_release(&filesys_lock);
-		//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+		/* remove this frame cause we failed*/
 		unpin_frame_entry(kpage);
+		frame_clear_page(kpage);
 		return false;
 	}
 
-	/* Make sure that if this page is evicted and is readonly that it will
-		   be deleted outright instead of put on swap*/
+	/* Make sure that the page fault handler knows how to store
+	   this file. Put it on swap if dirty or delete it out right
+	   if it is still clean*/
 	pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
 
 	unpin_frame_entry(kpage);
 
 	lock_release(&filesys_lock);
 
-	//printf"EXEC FILE READ IN\n");
 	return true;
 }
 
@@ -1004,6 +979,7 @@ static bool setup_stack (void **esp){
 					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
 			unpin_frame_entry(kpage);
 		}else{
+			/* remove this frame cause we failed*/
 			unpin_frame_entry(kpage);
 			frame_clear_page (kpage);
 		}
@@ -1043,9 +1019,7 @@ static struct process *process_lookup (pid_t pid){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 
-	//printf"try acquire\n");
 	lock_acquire(&process->child_pid_tid_lock);
-	//printf"acquired\n");
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while((h = list_next(h)) != list_end(&process->children_list)){
@@ -1139,11 +1113,13 @@ static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	return hash_bytes(&pid, (sizeof(pid_t)));
 }
 
+/* mmap hash function */
 static unsigned mmap_hash_func (HASH_ELEM *a, AUX){
 	mapid_t mapid = hash_entry(a, struct mmap_hash_entry, elem)->mmap_id;
 	return hash_bytes(&mapid, (sizeof(mapid_t)));
 }
 
+/* mmap hash compare function */
 static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);

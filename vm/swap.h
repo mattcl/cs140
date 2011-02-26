@@ -12,7 +12,8 @@ struct swap_entry{
 	uint32_t uaddr; 		/* Key into the hash table*/
 	uint32_t swap_slot; 	/* The swap slot that this vaddr's page
 							   resides*/
-	medium_t org_medium;
+	medium_t org_medium;	/* The original medium of the thing now on
+							   disk */
 	struct hash_elem elem;  /* The hash elem */
 };
 

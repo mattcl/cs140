@@ -234,13 +234,15 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
 	printf("%s: exit(%d)\n", proc->program_name, status);
 	proc->exit_code = status;
-	/* Must be done before destroying the page dir which will lose all
-	   of the data from the mmapped files and before we dissable interrupts
-	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
 
+	/* We Need to clear out the mmap table before exiting
+	   and before thread exit because freeing the mmap table
+	   may require I.O. that will wait and can't be done with
+	   interrupts off*/
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
+
 	thread_exit();
 	NOT_REACHED();
 }
@@ -505,8 +507,8 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	   If this fd is not mmapped then we can actually delete
 	   it and remove it from the hash, otherwise we will mark
 	   it as closed but not really close it. This will be called
-	   again on system munmap, which will set both flags to false
-	   so that it will actually remove the file.*/
+	   again on system munmap, which will decrement the reference
+	   count to this fd and then call system close if it is 0.*/
 	if(entry->num_mmaps == 0){
 		lock_acquire(&filesys_lock);
 		file_close(entry->open_file);
@@ -514,17 +516,21 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
-				   This Is obviously a huge problem so system KILLLLLLL!!!! */
+			   This Is obviously a huge problem so system KILLLLLLL!!!! */
 			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 		}
 
 		free(entry);
 
 	}else{
+		/* Will tell munmap to actually close this file*/
 		entry->is_closed = true;
 	}
 }
 
+/* Converts a user address to a mmap_hash_entry, or NULL
+   Will look through the hash table to see if uaddr
+   is between the bounds of the given mmaped region*/
 static struct mmap_hash_entry *uaddr_to_mmap_entry(
 	struct thread *cur, void *uaddr){
 	struct hash_iterator i;
@@ -541,6 +547,9 @@ static struct mmap_hash_entry *uaddr_to_mmap_entry(
 	return NULL;
 }
 
+/* Given the map id looks up the mmap_hash_entry using the
+   mid as the key. And either returns the entry or it will
+   return NULL*/
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 	struct process *process = thread_current()->process;
 	struct mmap_hash_entry key;
