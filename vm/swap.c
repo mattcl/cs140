@@ -182,6 +182,23 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
+
+	if(cur_process->swap_table == NULL){
+		/* Process has just died and doesn't need
+		   to save any data on the swap so we will
+		   just return instead of doing any work*/
+
+		/* Signal that the swap is free to be used to those waiting on
+		   PTE_SWAP_WAIT in read in.*/
+		cond_broadcast(&swap_free_condition, &swap_slots_lock);
+		lock_release(&swap_slots_lock);
+		return true;
+	}
+
+	/* If we get here we know that the swap table still
+	   exists for this process because destroying it needs
+	   the swap lock so we can continue as usual */
+
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
@@ -228,7 +245,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	/* Signal that the swap is free to be used to those waiting on
 	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);;
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
 	lock_release(&swap_slots_lock);
 
@@ -242,6 +259,15 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 	return hash_bytes(&hash_entry(a, struct swap_entry, elem)->uaddr,
 			sizeof (int));
+}
+
+/* Atomically destroyes the hash table*/
+void destroy_swap_table(struct hash *to_destroy){
+	/* Free all of the swap slots that are currently occupied
+	   by this process */
+	lock_acquire(&swap_slots_lock);
+	hash_destroy(to_destroy, &swap_slot_destroy);
+	lock_release(&swap_slots_lock);
 }
 
 /* Function to compare the individual swap hash table elements
@@ -259,12 +285,8 @@ bool swap_slot_compare (const struct hash_elem *a,
 /* call all destructor for hash_destroy */
 void swap_slot_destroy (struct hash_elem *e, void *aux UNUSED){
 	struct swap_entry *entry = hash_entry(e, struct swap_entry, elem);
-
-	lock_acquire(&swap_slots_lock);
 	/* Set this swap slot to usable*/
 	bitmap_set(used_swap_slots, entry->swap_slot, false);
-	lock_release(&swap_slots_lock);
-
 	free(entry);
 }
 

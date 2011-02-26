@@ -17,6 +17,7 @@ struct swap_entry{
 	struct hash_elem elem;  /* The hash elem */
 };
 
+void destroy_swap_table(struct hash *to_destroy);
 unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED);
 bool swap_slot_compare (const struct hash_elem *a, const struct hash_elem *b,
 															void *aux UNUSED);
