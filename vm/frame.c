@@ -10,19 +10,26 @@
 #include "swap.h"
 #include "userprog/syscall.h"
 
+/* Given the frame entry pointer, returns its position in the
+   frame table*/
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
 			/ sizeof(struct frame_entry));
 }
 
+/* Given the frame_entry pointer, returns the corresponding kernel
+   virtual address that it corresponds to*/
 static inline void *entry_to_kaddr(struct frame_entry *entry){
 	return (uint8_t*)f_table.base + (frame_entry_pos(entry)*PGSIZE);
 }
 
+/* Given a position returns the frame_entry that it corresponds to*/
 static inline struct frame_entry *frame_entry_at_pos(uint32_t pos){
-	return f_table.entries +pos ;
+	return f_table.entries + pos ;
 }
 
+/* Given the kernel virtual address, returns the corresponding frame table
+   entry */
 static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 	ASSERT(((uint32_t)kaddr % PGSIZE) == 0);
 	return frame_entry_at_pos(((uint32_t)kaddr-(uint32_t)f_table.base)/PGSIZE);
@@ -35,9 +42,21 @@ static void evict_init(void){
 	/* None yet */
 }
 
-
+/* Initializes the frame table by first allocating all of the
+   the user pool and creating a bitmap that corresponds to the
+   free or used frames that we currently have. Also initializes
+   a frame table lock and ensures that we only set individual
+   frames is_pinned to true/false inside this lock. This is
+   because we need to ensure that the frame we are looking at
+   will only be changed by us at any moment. Synchronization
+   could also work if we put a lock into each of the frames and
+   acquired it before changing any of its data but we erred on the
+   side of correctness and made sure that eviction on frames is done
+   with the lock acquired. Each frame has a condition variable which
+   will be used to synchronize frame_clear_page with eviction. If a
+   frame is pinned then it should not ever have its data pulled out
+   from underneath it. The condition variable ensures this.*/
 void frame_init(void){
-	//printf("frame init\n");
 	f_table.size = palloc_number_user_pages();
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
 	ASSERT(f_table.base != NULL);
@@ -55,18 +74,25 @@ void frame_init(void){
 		cond_init(&start->pin_condition);
 	}
 	evict_init();
-	//printf("frame table size %u bitmap size %u\n", f_table.size, bitmap_size(f_table.used_frames));
 }
 
+/* Evicts a page from the frame table and sets its new
+   uaddr and new thread to be the one passed in and the
+   current running thread. returns the kernel virtual
+   address of the memory which can then be installed in the
+   pagedir of the current thread. We give back the kernel virtual
+   address because this function is called from frame_get_page
+   which is a virtual wrapper to palloc_get_page(PAL_USER) which
+   also returns a kernel virtual address without mapping it to
+   any pagedir*/
 static void *evict_page(void *new_uaddr, bool zero_out){
-	//printf("evict \n");
 	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
 	medium_t medium;
 	uint32_t *pd;
 	bool move_to_disk = false;
-	/* Select random page and evict it */
+	/* Select page and evict it */
 	lock_acquire(&f_table.frame_table_lock);
 	while(true){
 		/* Must set the memory of another users page
@@ -74,9 +100,9 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        	   data in the PTE and the other process can
        	   fault and their ish will fail miserably*/
 		old_level = intr_disable();
+
+
 		frame_to_evict = random_ulong()%f_table.size;
-		/* Eviction policy here, should run with interrupts
-      	   disabled for same reason as above */
 		entry = frame_entry_at_pos(frame_to_evict);
 		if(entry->is_pinned) {
 			intr_set_level(old_level);
@@ -87,16 +113,16 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 		ASSERT(entry->is_pinned);
 
+		/* Atomically set the pagedir of the passed in uaddr
+		   to point to where it can find its memory and set
+		   it's present bit to 0 */
 		pd = entry->cur_thread->pagedir;
-		//printf("EVICTING %p which is dirty %u\n", entry->uaddr, pagedir_is_dirty(pd, entry->uaddr));
 		medium = pagedir_get_medium(pd, entry->uaddr);
 		if(pagedir_is_dirty(pd, entry->uaddr)){
 			if(medium == PTE_STACK || medium == PTE_EXEC){
-				//printf("med before %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
 				move_to_disk = true;
-				//printf("med after  %x, pres %u\n", pagedir_get_medium(pd, entry->uaddr), pagedir_is_present(pd, entry->uaddr));
 			}else if(medium == PTE_MMAP){
 				pagedir_setup_demand_page(pd, entry->uaddr, PTE_MMAP_WAIT,
 						((uint32_t)entry->uaddr & PTE_ADDR), true);
@@ -126,9 +152,10 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 	void *kaddr = entry_to_kaddr(entry);
 
-	/* We set the user to fault and wait until the
-     operation is complete, now we actually start
-     moving the data from this frame out */
+	/* We set the user to fault and wait until the move
+	   to disk operation is complete, now we actually start
+       moving the data from this frame out. Any attempt to access
+       it from the original owners thread will fault and wait */
 	if(move_to_disk){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
 			swap_write_out(entry->cur_thread, entry->uaddr, kaddr, medium);
@@ -142,21 +169,24 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	entry->cur_thread = thread_current();
 	lock_release(&f_table.frame_table_lock);
 
+	/* Clear out the page if PAL_ZERO was specified*/
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	//printf("evict return %p\n", kaddr);
 	return kaddr;
 }
 
+/* Finds the first frame that is free and returns it, if the table
+   is full then it will return NULL, in which case you should evict
+   something */
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
-	//printf("first free\n");
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
 		lock_release(&f_table.frame_table_lock);
 		return NULL;
 	}else{
+		/* Setup frame entry */
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
 		ASSERT(entry->uaddr == NULL && entry->cur_thread == NULL);
 		entry->uaddr = new_uaddr;
@@ -167,16 +197,14 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
-		/*printf("new frame: uaddr %p cur_thread %p pinned %u \n base %p entries %p,\n frame idx %u, at_pos %u\n",
-				entry->uaddr, entry->cur_thread, entry->is_pinned, f_table.base, f_table.entries, frame_idx, frame_entry_pos(entry));
-		printf("Other function check entry to\n kaddr %p , frame_entry_at pos %p\n vs entry %p, vs frame_entry at found kaddr %p\n\n",
-				entry_to_kaddr(entry), frame_entry_at_pos(frame_idx), entry, frame_entry_at_kaddr(entry_to_kaddr(entry)));*/
 		return entry;
 	}
 }
 
+/* If there are no frames that are free it will evict a frame
+   and return that evicted frame to the user, otherwise it will
+   return the first frame in the frame table that is free */
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
-	//printf("get\n");
 	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 	if(entry){
@@ -186,8 +214,12 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
 	}
 }
 
+/* Removes the data from the frame pointed to by the kaddr,
+   if the frame that the kaddr is pointing to does not belong
+   to the current thread will return with doing nothing. If the
+   frame is currently pinned then we can not return from this
+   function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
-	//printf("clear\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -195,18 +227,22 @@ void frame_clear_page (void *kaddr){
 	/* The thread is the same one that is in the frame
      now so it can release this*/
 
-	/* new shit is being put in the frame, moving our shit out
-	   so we need to wait before we can say that this frame
-	   is clear*/
 	while(entry->is_pinned){
+<<<<<<< HEAD:vm/frame.c
 	  //printf("waiting\n");
+=======
+		/* new shit is being put in the frame, moving our shit out
+		   so we need to wait until this entry->is_pinned is false */
+>>>>>>> 2605d2ef4c2073cfdcc96babc22ff24166fdbb4d:vm/frame.c
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		if(!entry->is_pinned){
+
 			lock_release(&f_table.frame_table_lock);
 			return;
 		}
 	}
 
+	/* Clear the entry */
 	entry->uaddr = NULL;
 	entry->cur_thread = NULL;
 	entry->is_pinned = false;
@@ -215,10 +251,9 @@ void frame_clear_page (void *kaddr){
 	lock_release(&f_table.frame_table_lock);
 }
 
-/* Need to unpin after it is installed
-   in the pagedir of your thread */
+/* Need to unpin after it is installed in the pagedir of your thread
+   will unpin the frame*/
 void unpin_frame_entry(void *kaddr){
-	//printf("unpin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);
