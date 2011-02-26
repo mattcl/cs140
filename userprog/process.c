@@ -372,7 +372,6 @@ void process_exit (void){
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
-	//printf("Pagedir destroyed %p\n", cur);
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
@@ -391,13 +390,11 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		//printf("parent not null acquire child lock\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
 
 		lock_acquire(&parent->child_pid_tid_lock);
-		//printf("acquired\n");
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
@@ -416,11 +413,20 @@ void process_exit (void){
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
-	/* Free all of the swap slots that are currently occupied
-	   by this process */
-	//printf("destroying hash table %p\n", cur);
-	hash_destroy(&cur_process->swap_table, &swap_slot_destroy);
-	//printf("destroyed hash table\n");
+	struct hash *delete = &cur_process->swap_table;
+
+	/* Tell swap.c to not try and put anything in the swap
+	   on our behalf. We are dead. Do this before we destroy
+	   the swap so that no matter how we acquire the swap lock
+	   we won't be in a race with other processes trying to
+	   evict frames that we held. We were able to mark those
+	   frames as cleared in pagedir_destroy because some other
+	   thread had a hold on them, but may not have gotten around
+	   to actually writing them to swap so we will tell the swap
+	   file to just ignore the request*/
+	cur_process->swap_table = NULL;
+
+	destroy_swap_table(delete);
 
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle
