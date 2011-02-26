@@ -241,6 +241,7 @@ static void page_fault (struct intr_frame *f){
 				   to the kernel code*/
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
+				PANIC("what");
 			}
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
@@ -255,6 +256,7 @@ static void page_fault (struct intr_frame *f){
 		}else{
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
+			PANIC("WHAT?");
 		}
 	}
 }
