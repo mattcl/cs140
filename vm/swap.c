@@ -122,14 +122,14 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
+	lock_acquire(&filesys_lock);
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
 		//printf("INserting into %p\n", kaddr_ptr);
-		lock_acquire(&filesys_lock);
 		block_read(swap_device, start_sector, kaddr_ptr );
-		lock_release(&filesys_lock);
 	}
+	lock_release(&filesys_lock);
 
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
@@ -222,13 +222,13 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
+	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		//printf("dereferencing %p\n", kaddr_ptr);
-		lock_acquire(&filesys_lock);
 		block_write(swap_device, start_sector, kaddr_ptr);
-		lock_release(&filesys_lock);
 	}
+	lock_release(&filesys_lock);
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap*/
