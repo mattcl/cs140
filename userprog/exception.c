@@ -149,6 +149,15 @@ static void page_fault (struct intr_frame *f){
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
+		/* Get the page address of the faulting address, masks off
+	   the lower 12 bits and makes it a byte pointer so that
+	   we can increment it easily*/
+
+	uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
+
+
+	printf("Page fault medium %u, faulting address %p\n", pagedir_get_medium(pd, fault_addr), fault_addr);
+
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 	if(not_present){
@@ -158,11 +167,6 @@ static void page_fault (struct intr_frame *f){
 		   so this process is either growing the stack or
 		   accessing invalid memory and must be killed*/
 		medium_t type = pagedir_get_medium(pd, fault_addr);
-
-		/* Get the page address of the faulting address, masks off
-		   the lower 12 bits and makes it a byte pointer so that
-		   we can increment it easily*/
-		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in

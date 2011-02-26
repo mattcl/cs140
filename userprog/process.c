@@ -353,6 +353,7 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
+	printf("Process exit\h");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -371,6 +372,7 @@ void process_exit (void){
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
+	printf("Pagedir destroyed\n");
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
@@ -389,10 +391,13 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
+		printf("parent not null acquire child lock\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+
 		lock_acquire(&parent->child_pid_tid_lock);
+		printf("acquired\n");
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
