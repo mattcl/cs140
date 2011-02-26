@@ -229,7 +229,7 @@ void frame_clear_page (void *kaddr){
 		PANIC("kaddr %p, base %p end %p %size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
-	printf("kaddr %p, base %p end %p %size %u\n", kaddr, f_table.base,
+	printf("kaddr %p, base %p end %p size %u\n", kaddr, f_table.base,
 			((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
