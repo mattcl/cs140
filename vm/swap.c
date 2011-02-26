@@ -114,17 +114,10 @@ bool swap_read_in (void *faulting_addr){
 
 	swap_slot = entry->swap_slot;
 	org_medium = entry->org_medium;
-
-//	printf("swap slot %u org_medium %x uaddr %x\n", swap_slot, org_medium, masked_uaddr);
-
-
-
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
-	printf("filesys try acquire\n");
 	lock_acquire(&filesys_lock);
-	printf("filesys acquired\n");
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
@@ -132,7 +125,6 @@ bool swap_read_in (void *faulting_addr){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
 	lock_release(&filesys_lock);
-	printf("released\n");
 
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
@@ -161,9 +153,7 @@ bool swap_read_in (void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
 
-
 	unpin_frame_entry(kaddr);
-	//printf("SWAP READ IN FINISHED\n");
 	return true;
 }
 
@@ -209,11 +199,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
 
-	//printf("kvaddr of data this page points to %p\n", kaddr_ptr);
-
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-
-	//printf("swap slot %u, start sector %u\n", new_entry->swap_slot, start_sector);
 
 	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
@@ -231,7 +217,6 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	}
 
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
-	//printf("Swap out finished\n");
 
 	lock_release(&swap_slots_lock);
 
