@@ -239,7 +239,7 @@ static void page_fault (struct intr_frame *f){
 				   the pointer for us to read they would have page faulted
 				   and already grown the stack. So it is safe to just return -1
 				   to the kernel code*/
-				printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
+				//printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 				//printf("kernel 1 write %u\n", write);
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
@@ -250,7 +250,7 @@ static void page_fault (struct intr_frame *f){
 		}
 	}else{
 		medium_t type = pagedir_get_medium(pd, fault_addr);
-		printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
+		//printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 		/* The page is present and we got a page fault so this means that
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
@@ -260,7 +260,7 @@ static void page_fault (struct intr_frame *f){
 			kill(f);
 		}else{
 			//printf("kernel 2 write %u\n", write);
-			printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
+			//printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
