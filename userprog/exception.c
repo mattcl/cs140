@@ -152,7 +152,6 @@ static void page_fault (struct intr_frame *f){
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
-	printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1) Read in the page from the appropriate place,
