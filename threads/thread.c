@@ -248,11 +248,13 @@ tid_t thread_create (const char *name, int priority,
 	/* Initialize the user process */
 	struct process *p = calloc (1, sizeof(struct process));
 	if(p == NULL){
+		intr_set_level (old_level);
 		return TID_ERROR;
 	}
 
 	if( initialize_process (p, t) == false){
 		free(p);
+		intr_set_level (old_level);
 		return TID_ERROR;
 	}
 #endif
