@@ -684,6 +684,27 @@ static void schedule (void){
 	ASSERT (cur->status != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 
+#ifdef USERPROG
+	uint32_t *cur_pd, next_pd;
+	/* Destroy the current process's page directory and switch back
+       to the kernel-only page directory. */
+	cur_pd = cur->pagedir;
+	next_pd = next->pagedir;
+	if(cur_pd != NULL){ /* Make sure we aren't kernel only thread */
+		/* Correct ordering here is crucial.  We must set
+           cur->pagedir to NULL before switching page directories,
+           so that a timer interrupt can't switch back to the
+           process page directory.  We must activate the base page
+           directory before destroying the process's page
+           directory, or our active page directory will be one
+           that's been freed (and cleared). */
+		cur->pagedir = NULL;
+		pagedir_activate (next_pd);
+		pagedir_destroy (cur_pd);
+	}
+	printf("Pagedir destroyed\n");
+#endif
+
 	if(cur != next){
 		prev = switch_threads (cur, next);
 	}
