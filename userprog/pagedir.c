@@ -407,8 +407,6 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	uint32_t data, bool writable){
 
-	//printf("setting %p's page to be medium type %u with auxilary data %p  and present bit %u\n", uaddr, medium, data, pagedir_is_present(pd, uaddr));
-
 	/* Ensure the PTE exists because the following functions won't create it.*/
 	uint32_t *pte = lookup_page(pd, uaddr, true);
 

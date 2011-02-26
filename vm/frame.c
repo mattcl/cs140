@@ -201,7 +201,7 @@ void frame_clear_page (void *kaddr){
 	   so we need to wait before we can say that this frame
 	   is clear*/
 	while(entry->is_pinned){
-		printf("waiting\n");
+	  //	printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		if(!entry->is_pinned){
 			lock_release(&f_table.frame_table_lock);
@@ -221,7 +221,7 @@ void frame_clear_page (void *kaddr){
 /* Need to unpin after it is installed
    in the pagedir of your thread */
 void unpin_frame_entry(void *kaddr){
-	//printf("unpin\n");
+  	//printf("unpin\n");
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	ASSERT(entry->is_pinned);

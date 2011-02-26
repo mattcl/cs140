@@ -241,7 +241,6 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
-	printf("about to call thread exit\n");
 	thread_exit();
 	NOT_REACHED();
 }
@@ -554,7 +553,6 @@ static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
-	//printf"map\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
 	   verifies the fd*/
@@ -668,13 +666,11 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	}
 
 	f->eax = mmap_entry->mmap_id;
-	//printf"mapend\n");
 }
 
 /* Called from process exit because it can never kill and we need to make
    sure all of the changes to the mmapped regions are saved to disk.*/
 static void system_munmap (struct intr_frame *f, mapid_t map_id){
-	//printf"un\n");
 	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
 	if(entry == NULL){
 		f->eax = -1;
@@ -706,7 +702,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 		fd_entry->is_closed = false;
 		system_close(f, fd_entry->fd);
 	}
-	//printf"un end\n");
+
 }
 
 static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
@@ -714,7 +710,6 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		//printf("sleepin\n");
 		timer_msleep(8);
 		intr_disable();
 	}
@@ -725,7 +720,6 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
    can call this function, when it page faulted
    trying to access memory*/
 bool mmap_read_in(void *faulting_addr){
-	//printf"readin\n");
 	struct thread *cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	/* Get the key into the hash, AKA the uaddr of this page*/
@@ -792,7 +786,6 @@ bool mmap_read_in(void *faulting_addr){
 
 	unpin_frame_entry(kaddr);
 
-	//printf"in end\n");
 	/*"Kernel out of memory! if false;"*/
 	return true;
 }
@@ -846,8 +839,6 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   back to on demand status*/
 	ASSERT(pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
 			masked_uaddr, true));
-
-	//printf"mmap out end\n");
 	return true;
 }
 
@@ -856,7 +847,6 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 /* Saves all of the pages that are dirty for the given mmap_hash_entry
    and frees their frames. */
 static void mmap_save_all(struct mmap_hash_entry *entry){
-	//printf"saveall\n");
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
@@ -886,8 +876,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
 		if(pagedir_get_medium(pd, pg_ptr) == PTE_MMAP_WAIT){
 			/* Being written out to disk now wait till it is done*/
-			printf("waiting mmap \n");
-			mmap_wait_until_saved(pd, pg_ptr);
+
 			/* Was just saved so continue*/
 			continue;
 		}
@@ -916,7 +905,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 				   are done before moving onto the next page in
 				   our mmapped file*/
 				intr_disable();
-				printf("waiting mmap \n");
 				mmap_wait_until_saved(pd, pg_ptr);
 			}
 		}
@@ -926,8 +914,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	lock_acquire(&filesys_lock);
 	file_seek(fd_entry->open_file, original_position);
 	lock_release(&filesys_lock);
-
-	//printf"saveall exit\n");
 }
 
 /* Returns the file or NULL if the fd is invalid.
