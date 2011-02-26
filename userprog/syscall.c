@@ -714,7 +714,7 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 		/* Wait for write to disk to complete*/
 		intr_enable();
 		//printf("sleepin\n");
-		timer_msleep(800);
+		timer_msleep(8);
 		intr_disable();
 	}
 }
@@ -885,6 +885,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
 		if(pagedir_get_medium(pd, pg_ptr) == PTE_MMAP_WAIT){
 			/* Being written out to disk now wait till it is done*/
+			printf("waiting mmap \n");
 			mmap_wait_until_saved(pd, pg_ptr);
 			/* Was just saved so continue*/
 			continue;
@@ -914,6 +915,7 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 				   are done before moving onto the next page in
 				   our mmapped file*/
 				intr_disable();
+				printf("waiting mmap \n");
 				mmap_wait_until_saved(pd, pg_ptr);
 			}
 		}
