@@ -19,9 +19,6 @@ cinfo "cleaning"
 make clean
 cinfo "building"
 make | grep "error"
-cinfo "creating filesystem"
-./gen_filesys.sh | grep "error"
-
 cinfo "running tests"
 
 make check

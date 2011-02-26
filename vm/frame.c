@@ -13,6 +13,7 @@
 static uint32_t clear_threshold;
 static uint32_t clear_hand;
 static uint32_t clock_hand;
+static bool init_done = false;
 
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
 	return (((uint32_t)entry - (uint32_t)f_table.entries)
@@ -36,14 +37,15 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 
 static void evict_init(void);
 static void *evict_page(void *new_uaddr, bool zero_out);
-static struct frame_entry *get_frame_to_evict(void);
+static uint32_t get_frame_to_evict(void);
 
 
 static void evict_init(void){
 	/* None yet */
     clear_hand = 0;
     clock_hand = 0;
-    evict_increment_clear_hand();
+    init_done = true;
+    clear_threshold = f_table.size / 4;
 }
 
 void frame_init(void){
@@ -69,31 +71,41 @@ void frame_init(void){
 }
 
 void evict_increment_clear_hand() {
+    printf("meh\n");
+    if(init_done && bitmap_scan (f_table.used_frames, 0, 1 , false) != BITMAP_ERROR){
+        return;
+    }
+
+    printf("incrementing clear\n");
+
     struct frame_entry *frame;
-    clear_hand %= f_table.size;
-    uint32_t end = (clock_hand + (f_table.size - clear_threshold)) % f_table.size;
-    for(; clear_hand < end; clear_hand++){
+    int start = 0;
+    uint32_t end = (f_table.size - clear_threshold) - ((clear_hand <= clock_hand ? f_table.size : 0) + clear_hand - clock_hand);
+    for(; start < end; start++){
         frame = frame_entry_at_pos(clear_hand % f_table.size);
         ASSERT(frame != NULL);
         ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
         pagedir_set_accessed(frame->cur_thread->pagedir, frame->uaddr, false);
+        clear_hand++;
     }
+    clear_hand %= f_table.size;
 }
 
-static struct frame_entry *get_frame_to_evict(){
+static uint32_t get_frame_to_evict(){
     struct frame_entry *frame;
     while(true){
         frame = frame_entry_at_pos(clock_hand % f_table.size);
         ASSERT(frame != NULL);
-        clock_hand++;
         if(clock_hand == clear_hand){
             evict_increment_clear_hand();
         }
         ASSERT(pagedir_is_present(frame->cur_thread->pagedir, frame->uaddr));
         if(!frame->is_pinned && !pagedir_is_accessed(frame->cur_thread->pagedir, frame->uaddr)){
             frame->is_pinned = true;
-            return frame;
+            return clock_hand;
         }
+        printf("clock hand is %d, clear hand is %d\n", clock_hand, clear_hand);
+        clock_hand = (clock_hand + 1) % f_table.size;
     }
 }
 
@@ -114,7 +126,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        	   fault and their ish will fail miserably*/
 		old_level = intr_disable();
 		//frame_to_evict = random_ulong()%f_table.size;
-        frame_to_evict = get_frame_to_evict;
+        frame_to_evict = get_frame_to_evict();
 		/* Eviction policy here, should run with interrupts
       	   disabled for same reason as above */
 		entry = frame_entry_at_pos(frame_to_evict);
