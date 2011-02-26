@@ -172,7 +172,7 @@ static void page_fault (struct intr_frame *f){
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-		//printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
+		printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 
 		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in
@@ -251,7 +251,7 @@ static void page_fault (struct intr_frame *f){
 		}
 	}else{
 		medium_t type = pagedir_get_medium(pd, fault_addr);
-		//printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
+		printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 		/* The page is present and we got a page fault so this means that
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
