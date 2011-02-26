@@ -130,7 +130,6 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	lock_init(&p->child_pid_tid_lock);
 	cond_init(&p->pid_cond);
 
-	lock_init(&p->swap_table_lock);
 	lock_init(&p->mmap_table_lock);
 
 	p->child_waiting_on_pid = -1;
