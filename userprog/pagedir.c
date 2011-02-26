@@ -44,6 +44,7 @@ void pagedir_destroy (uint32_t *pd){
 					frame_clear_page(pte_get_page(*pte));
 				}
 			}
+
 			palloc_free_page (pt);
 		}
 	}

@@ -167,7 +167,7 @@ bool swap_read_in (void *faulting_addr){
 
 /* Writes the data for the kaddr to the swap device, then saves the uaddr,
    medium and swap slot for the frame entry. */
-bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medium){
+bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr, medium_t medium){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
 
@@ -183,9 +183,8 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
-	struct hash empty;
-	memset(&empty, 0, sizeof(struct hash));
-	if(memcmp(&cur_process->swap_table, &empty, sizeof(struct hash))){
+
+	if(!thread_is_alive(cur_id)){
 		/* Process has just died and doesn't need
 		   to save any data on the swap so we will
 		   just return instead of doing any work*/
@@ -269,9 +268,6 @@ void destroy_swap_table(struct hash *to_destroy){
 	   by this process */
 	lock_acquire(&swap_slots_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
-	/* Clear it out so we won't use it in the near
-	   future*/
-	memset(to_destroy, 0, sizeof(struct hash));
 	lock_release(&swap_slots_lock);
 }
 

@@ -159,6 +159,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 	void * old_uaddr =  entry->uaddr;
 	void * old_frame_thread = entry->cur_owner;
+	tid_t old_thread_id;
 	entry->uaddr = new_uaddr;
 	entry->cur_owner = thread_current();
 
@@ -170,7 +171,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        it from the original owners thread will fault and wait */
 	if(move_to_disk){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
-			swap_write_out(old_frame_thread, old_uaddr, kaddr, medium);
+			swap_write_out(old_frame_thread, old_thread_id, old_uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
 			mmap_write_out(old_frame_thread, old_uaddr, kaddr);
 		}
