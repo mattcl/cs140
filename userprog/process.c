@@ -413,20 +413,7 @@ void process_exit (void){
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
-	struct hash *delete = &cur_process->swap_table;
-
-	/* Tell swap.c to not try and put anything in the swap
-	   on our behalf. We are dead. Do this before we destroy
-	   the swap so that no matter how we acquire the swap lock
-	   we won't be in a race with other processes trying to
-	   evict frames that we held. We were able to mark those
-	   frames as cleared in pagedir_destroy because some other
-	   thread had a hold on them, but may not have gotten around
-	   to actually writing them to swap so we will tell the swap
-	   file to just ignore the request*/
-	cur_process->swap_table = NULL;
-
-	destroy_swap_table(delete);
+	destroy_swap_table(&cur_process->swap_table);
 
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle

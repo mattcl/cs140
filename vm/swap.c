@@ -183,7 +183,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
 
-	if(cur_process->swap_table == NULL){
+	if((uint32_t)cur_process->swap_table == 0){
 		/* Process has just died and doesn't need
 		   to save any data on the swap so we will
 		   just return instead of doing any work*/
@@ -267,6 +267,9 @@ void destroy_swap_table(struct hash *to_destroy){
 	   by this process */
 	lock_acquire(&swap_slots_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
+	/* Clear it out so we won't use it in the near
+	   future*/
+	memset(to_destroy, 0, sizeof(struct hash));
 	lock_release(&swap_slots_lock);
 }
 
