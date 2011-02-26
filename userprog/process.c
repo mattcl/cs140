@@ -372,8 +372,6 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	//printf("pagedir is destroyed\n");
-
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -391,11 +389,9 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		printf("parent not null\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		printf("trying to lock parent tid lock\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
