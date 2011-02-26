@@ -92,6 +92,7 @@ bool swap_read_in (void *faulting_addr){
 	/* May evict a page to swap, returns a kernel virtual address so
 	   the dirty bit for this kernel address in the PTE*/
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
+	ASSERT(kaddr != NULL);
 
 	lock_acquire(&swap_slots_lock);
 	//printf("Swap in \n");
@@ -99,14 +100,13 @@ bool swap_read_in (void *faulting_addr){
 	   addresses data */
 	struct swap_entry key;
 	key.uaddr = masked_uaddr;
-	struct hash_elem *slot_result = hash_find(&cur_process->swap_table,
+	struct hash_elem *slot_result = hash_delete(&cur_process->swap_table,
 			&key.elem);
-	if(slot_result == NULL){
+	if(slot_result != NULL){
 		/* This only happens when we have inconsistency and we are trying to
 		   read back into memory data that we have yet to swap out... PANIC
 		   K-UNIT!!!!*/
 		PANIC("Inconsistency, expected inserted hash entry absent");
-		/*return false*/
 	}
 
 	struct swap_entry *entry =
@@ -117,7 +117,7 @@ bool swap_read_in (void *faulting_addr){
 
 //	printf("swap slot %u org_medium %x uaddr %x\n", swap_slot, org_medium, masked_uaddr);
 
-	ASSERT(kaddr != NULL);
+
 
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
@@ -134,17 +134,8 @@ bool swap_read_in (void *faulting_addr){
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
 
-	/* Remove this swap slot from the processes swap table */
-	struct hash_elem *deleted = hash_delete(&cur_process->swap_table,
-			slot_result);
-
-	if(deleted == NULL){
-		PANIC("Element found but then not able to be deleted???? Race is everywhere");
-		/*return false;*/
-	}
-
 	/* Free the malloced swap entry */
-	free(hash_entry(deleted, struct swap_entry, elem));
+	free(hash_entry(slot_result, struct swap_entry, elem));
 
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
@@ -167,8 +158,7 @@ bool swap_read_in (void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
 
-	/* This page will be set to accessed after the page is read in
-	   from swap so it is unnecessary to set it here*/
+
 	unpin_frame_entry(kaddr);
 	//printf("SWAP READ IN FINISHED\n");
 	return true;
@@ -187,7 +177,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
-	uint8_t *kaddr_ptr = (uint8_t*)kaddr;/* was kaddr*/
+	uint8_t *kaddr_ptr = (uint8_t*)kaddr;
 	size_t swap_slot, start_sector;
 
 	lock_acquire(&swap_slots_lock);
@@ -233,7 +223,7 @@ bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medi
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap*/
 	if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
-				masked_uaddr, 0)){
+				masked_uaddr, true)){
 		PANIC("Kernel out of memory");
 	}
 

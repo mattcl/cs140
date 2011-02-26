@@ -199,8 +199,8 @@ static void page_fault (struct intr_frame *f){
 			/* it will be set to dirty or accessed on the retry*/
 			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
-			unpin_frame_entry(kaddr);
 			intr_enable();
+			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){
 			if(user){
