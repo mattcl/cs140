@@ -592,7 +592,7 @@ done:
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
 	intr_enable();
-	//printf("Exec in\n");
+	printf("Exec in\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -913,11 +913,13 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
+	printf("try acquire filesys lock\n");
+
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
-	//printf("upage %p\n", upage);
+	printf("upage %p\n", upage);
 	/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
@@ -957,6 +959,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	lock_release(&filesys_lock);
 
+	printf("EXEC FILE READ IN\n");
 	return true;
 }
 
