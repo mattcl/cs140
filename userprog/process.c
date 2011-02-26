@@ -331,7 +331,7 @@ int process_wait (tid_t child_tid){
 	if(child != NULL){
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
-		printf("sema_down");
+		//printf("sema_down");
 		sema_down(&cur->waiting_semaphore);
 	}else{
 		lock_release(&processes_hash_lock);
@@ -358,7 +358,7 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
-	printf(" process exit called\n");
+	//printf(" process exit called\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -378,7 +378,7 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	printf("pagedir is destroyed\n");
+	//printf("pagedir is destroyed\n");
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
@@ -388,23 +388,23 @@ void process_exit (void){
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
-	printf("process removed\n");
+	//printf("process removed\n");
 
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
-	printf("getting parent\n");
+	//printf("getting parent\n");
 	struct process *parent = parent_process_from_child(cur_process);
-	printf("got parent\n");
+	//printf("got parent\n");
 
 	if(parent != NULL){
-		printf("parent not null\n");
+		//printf("parent not null\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		printf("trying to lock parent tid lock\n");
+		//printf("trying to lock parent tid lock\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
@@ -413,16 +413,16 @@ void process_exit (void){
 		}
 
 		lock_release(&parent->child_pid_tid_lock);
-		printf("releasing parent tid lock\n");
+		//printf("releasing parent tid lock\n");
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			printf("sema up \n");
+			//printf("sema up \n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
 	lock_release(&processes_hash_lock);
 
-	printf("before fd destroy\n");
+	//printf("before fd destroy\n");
 
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
@@ -453,7 +453,7 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
-	printf("process exited\n");
+	//printf"process exited\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
@@ -598,7 +598,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
-		printf("failed to setup stack\n");
+		//printf"failed to setup stack\n");
 		goto done;
 	}
 
@@ -617,7 +617,7 @@ done:
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
 	intr_enable();
-	printf("Exec in\n");
+	//printf"Exec in\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -938,13 +938,13 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	printf("try acquire filesys lock\n");
+	//printf"try acquire filesys lock\n");
 
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
-	printf("upage %p\n", upage);
+	//printf"upage %p\n", upage);
 	/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
@@ -984,7 +984,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	lock_release(&filesys_lock);
 
-	printf("EXEC FILE READ IN\n");
+	//printf"EXEC FILE READ IN\n");
 	return true;
 }
 
@@ -1043,9 +1043,9 @@ static struct process *process_lookup (pid_t pid){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 
-	printf("try acquire\n");
+	//printf"try acquire\n");
 	lock_acquire(&process->child_pid_tid_lock);
-	printf("acquired\n");
+	//printf"acquired\n");
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while((h = list_next(h)) != list_end(&process->children_list)){
