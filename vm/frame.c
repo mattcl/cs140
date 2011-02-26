@@ -97,7 +97,8 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	void *kaddr;
 
 	/* Select page and evict it */
-	lock_acquire(&f_table.frame_table_lock);
+	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
+
 	while(true){
 		/* Must set the memory of another users page
        	   atomically othewise we may have inconsistent
@@ -187,8 +188,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		lock_release(&f_table.frame_table_lock);
-		return NULL;
+		return evict_page(uaddr, (flags & PAL_ZERO) != 0);
 	}else{
 		/* Setup frame entry */
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
@@ -211,11 +211,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
 	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
-	if(entry){
-		return entry_to_kaddr(entry);
-	}else{
-		return evict_page(uaddr, (flags & PAL_ZERO) != 0);
-	}
+	return entry_to_kaddr(entry);
 }
 
 /* Removes the data from the frame pointed to by the kaddr,
