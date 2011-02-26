@@ -91,7 +91,7 @@ static void check_sector (struct block *block, block_sector_t sector){
 	if(sector >= block->size){
 		/* We do not use ASSERT because we want to panic here
          regardless of whether NDEBUG is defined. */
-		BSOD ("Access past end of device %s (sector=%"PRDSNu", "
+		PANIC ("Access past end of device %s (sector=%"PRDSNu", "
 				"size=%"PRDSNu")\n", block_name (block), sector, block->size);
 	}
 }
@@ -157,7 +157,7 @@ struct block *block_register (const char *name, enum block_type type,
 		const struct block_operations *ops, void *aux){
 	struct block *block = malloc (sizeof *block);
 	if(block == NULL){
-		BSOD ("Failed to allocate memory for block device descriptor");
+		PANIC ("Failed to allocate memory for block device descriptor");
 	}
 	list_push_back (&all_blocks, &block->list_elem);
 	strlcpy (block->name, name, sizeof block->name);

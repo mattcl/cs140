@@ -328,19 +328,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	if(pte != NULL){
 		/* This function makes sure that these 3 bits are zeroed
 		   before manipulating anything */
-		//ASSERT(*pte && PTE_AVL == PTE_AVL_MEMORY);
 		*pte &= ~(uint32_t)PTE_AVL;
-		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC ||
-				medium == PTE_AVL_MMAP ||medium == PTE_AVL_STACK ||
-				medium == PTE_AVL_ERROR){
-			*pte |= medium;
-		}else{
-			BSOD("pagedir_set_medium called with unexpected medium");
-		}
-	}else{
-		BSOD("pagedir_set_medium called on a page table entry that is not initialized");
+
+		*pte |= ((uint32_t)medium & PTE_AVL);
 	}
-	//PANIC("medium set to %u. %u set for pte %p", (*pte & (uint32_t)PTE_AVL), medium, uaddr);
 }
 
 /* Gets the type of medium that this uaddr came from
@@ -352,11 +343,7 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 
 	if(pte != NULL){
-		medium_t medium = (*pte & (uint32_t)PTE_AVL);
-		if(medium == PTE_AVL_SWAP || medium == PTE_AVL_EXEC||
-				medium == PTE_AVL_MMAP || medium == PTE_AVL_STACK){
-			return medium;
-		}
+		return (*pte & (uint32_t)PTE_AVL);
 	}
 	/* It is not currently mapped or is an invalid medium so we
 	   can return error*/
@@ -377,7 +364,7 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	if(pte != NULL){
 		*pte |= aux_data;
 	}else{
-		BSOD("pagedir_set_aux called on a page table entry that is not initialized");
+		PANIC("pagedir_set_aux called on a page table entry that is not initialized");
 	}
 }
 
@@ -413,7 +400,10 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
    to be loaded when a page fault occurs. This will map the most significant
    top 20 bits to be something that will be useful for the page fault handler.
    The data for the top 20 bits will be passed in as a uint32_t and have the
-   lower 12 bits masked off. Also sets the appropriate bits for medium type*/
+   lower 12 bits masked off. Also sets the appropriate bits for medium type.
+   It does this atomically by disabling interrupts while it sets the fields
+   this is so that we can't get interrupted while we have bits that are
+   inconsistent in the PTE of another thread. That would be all bad/*/
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	uint32_t data, bool writable){
 
@@ -426,7 +416,7 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 		return false;
 	}
 
-	intr_disable();
+	enum intr_level old_level = intr_disable();
 
 	/*Set writable bit */
 	*pte |= (writable ? PTE_W : 0);
@@ -440,7 +430,7 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	/*Clear the present bit and clear the TLB*/
 	pagedir_clear_page(pd, uaddr);
 
-	intr_enable();
+	intr_set_level(old_level);
 
 	return true;
 }
@@ -453,6 +443,7 @@ bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 void pagedir_clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 	uint8_t* rm_ptr = (uint8_t*)base;
 	uint32_t j;
+	intr_disable();
 	for(j = 0; j < num_pages; j++, rm_ptr += PGSIZE){
 		if(pagedir_is_present(pd, rm_ptr)){
 			frame_clear_page(pagedir_get_page(pd, rm_ptr));
@@ -460,5 +451,6 @@ void pagedir_clear_pages(uint32_t* pd, void *base, uint32_t num_pages){
 		pagedir_set_medium(pd, rm_ptr, PTE_AVL_ERROR);
 		pagedir_clear_page(pd, rm_ptr);
 	}
+	intr_enable();
 }
 

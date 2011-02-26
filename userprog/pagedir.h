@@ -4,11 +4,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define PTE_AVL_ERROR 0       /* 000 */
-#define PTE_AVL_SWAP (1 << 9)  /* 001 */
-#define PTE_AVL_EXEC (1 << 10) /* 010 */
-#define PTE_AVL_MMAP (1 << 11) /* 100 */
-#define PTE_AVL_STACK (3 << 9)  /* 110 */
+#define PTE_AVL_ERROR 0      	 /* 000 */
+#define PTE_SWAP (1 << 9)  		 /* 001 */
+#define PTE_EXEC (1 << 10) 		 /* 010 */
+#define PTE_MMAP (1 << 11) 		 /* 100 */
+#define PTE_STACK (3 << 9)  	 /* 011 */
+#define PTE_SWAP_WAIT (3 << 10) /* 110 */
+#define PTE_MMAP_WAIT (5 << 9)   /* 101 */
+#define PTE_AVL_UNDEF (7 << 9)	 /* 111 */
 
 typedef uint32_t medium_t; /* used to represent one of the constants above */
 

@@ -76,6 +76,7 @@ void exception_print_stats (void){
 /* Handler for an exception (probably) caused by a user process. */
 
 static void kill (struct intr_frame *f){
+	intr_enable();
 	/* This interrupt is one (probably) caused by a user process.
        For example, the process might have tried to access unmapped
        virtual memory (a page fault).  For now, we simply kill the
@@ -102,7 +103,7 @@ static void kill (struct intr_frame *f){
            may cause kernel exceptions--but they shouldn't arrive
            here.)  Panic the kernel to make the point.  */
 		intr_dump_frame (f);
-		BSOD ("Kernel bug - unexpected interrupt in kernel");
+		PANIC ("Kernel bug - unexpected interrupt in kernel");
 
 	default:
 		/* Some other code segment?  Shouldn't happen.  Panic the
@@ -140,10 +141,6 @@ static void page_fault (struct intr_frame *f){
        (#PF)". */
 	asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-	/* Turn interrupts back on (they were only off so that we could
-     be assured of reading CR2 before it changed). */
-	intr_enable ();
-
 	//printf("fault\n");
 
 	/* Count page faults. */
@@ -157,7 +154,7 @@ static void page_fault (struct intr_frame *f){
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
-	//printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
+	printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1) Read in the page from the appropriate place,
@@ -175,34 +172,35 @@ static void page_fault (struct intr_frame *f){
 		   we can increment it easily*/
 		uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-		//printf("Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_AVL_SWAP, fault_addr);
-
-		if(type == PTE_AVL_SWAP){
+		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in
 							   then return so that dereference becomes valid*/
 			if(!swap_read_in(uaddr)){
 				printf("COULDN't read in from swap!!!!\n");
 				kill(f);
 			}
-		}else if(type == PTE_AVL_EXEC){
+		}else if(type == PTE_EXEC){
 			/* Data is not present but is on disk still so
 			   read it in and then derefernece becomes valid*/
 			if(!process_exec_read_in(uaddr)){
 				printf("COULDN'T load the executable segment, KILLL\n");
 				kill(f);
 			}
-		}else if(type == PTE_AVL_MMAP){
+		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			if(!mmap_read_in(uaddr)){
 				printf("Couldn't load page from mmaped file\n");
 				kill(f);
 			}
-		}else if(type == PTE_AVL_STACK){
+		}else if(type == PTE_STACK){
+			intr_enable();
 			/* read in zero page */
 			/* Get new frame and install it at the faulting addr*/
 			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
-			frame_unpin(kaddr);
 			/* it will be set to dirty or accessed on the retry*/
+			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
+			intr_enable();
+			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){
 			if(user){
@@ -220,15 +218,17 @@ static void page_fault (struct intr_frame *f){
 
 						/* Put a demand stack page in the page table*/
 						pagedir_setup_demand_page(pd, uaddr,
-								PTE_AVL_STACK,0 , true);
+								PTE_STACK,0 , true);
 
 						/* move to the next higher page size */
 						uaddr += PGSIZE;
 					}
+					intr_enable();
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/
 					//printf("kill1\n");
+					//PANIC("killed\n");
 					kill(f);
 				}
 			}else{
@@ -239,26 +239,38 @@ static void page_fault (struct intr_frame *f){
 				   the pointer for us to read they would have page faulted
 				   and already grown the stack. So it is safe to just return -1
 				   to the kernel code*/
+				//printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 				//printf("kernel 1 write %u\n", write);
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
+				intr_enable();
 			}
 		}else{
-		    BSOD("unrecognized medium in page fault, check exception.c");
+		    PANIC("unrecognized medium in page fault, check exception.c");
 		}
 	}else{
+		medium_t type = pagedir_get_medium(pd, fault_addr);
+		//printf("PF P Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 		/* The page is present and we got a page fault so this means that
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
 		if(user){
-			//printf("kill2\n");
+			//printf("kill2 %u\n", write);
+			//PANIC("killed 3\n");
 			kill(f);
 		}else{
 			//printf("kernel 2 write %u\n", write);
+			//printf("PF NP Medium is %x dirty is %u, swap is %x %p addr\n", type, pagedir_is_dirty(thread_current()->pagedir,fault_addr ), PTE_SWAP, fault_addr);
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
 		}
+		intr_enable();
 	}
+
+	/* Turn interrupts back on (they were only off so that we could
+     be assured of reading CR2 and pagedirs before they changed). */
+	//intr_enable ();
+
 	/* Page was read in or the return value was set for kernel code
 	   so the memory access will try again and succeed or we will kill
 	   the process or fail silently from the kernel code that faulted

@@ -16,6 +16,10 @@
 typedef int32_t pid_t;
 #define PID_ERROR ((pid_t)-1)          /* Error value for tid_t. */
 
+/* You can not acquire this lock and acquire memory
+   using frame_get_page (user memory) because frame_get_page
+   may try to evict a page to disk and also try to acquire
+   this lock */
 struct lock filesys_lock;
 
 typedef uint32_t mapid_t;
@@ -78,11 +82,15 @@ struct process {
 	/* Swap hash. This structure allows us to put pages at virtual
 	   addresses onto the swap device and retrieve them. The swap
 	   table is per process to allow us to use the virtual address
-	   for the process as an index into the table. Only the code in
-	   swap.c will put objects into this table. And we will only
-	   remove things when we read the page back into memory from
-	   swap.*/
+	   for the process as an index into the table. .*/
 	struct hash swap_table;
+
+	/* Because any process can evict any other processes frames
+	   the per process swap table needs to be locked. Otherwise
+	   inserting things into the swap table from multiple processes
+	   simultaneously will fail miserably*/
+	struct lock swap_table_lock;
+
 
 	/* The exec_info is a pointer to an array of ELF program
 	   header information this information is used to determine
@@ -101,6 +109,14 @@ struct process {
 	   the information from the file */
 	struct hash mmap_table;
 	mapid_t mapid_counter;
+
+	/* As with the swap table, the mmap table can also be
+	   accessed from multiple threads via eviction so it too
+	   must be locked down so reading and writing to the table
+	   while the owning process creates or destroyes mmaps can
+	   be synchronized*/
+	struct lock mmap_table_lock;
+
 };
 
 /* An entry into the list of children that a particular process

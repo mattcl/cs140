@@ -73,7 +73,7 @@ void process_init(void){
 	struct process *global = calloc(1, sizeof(struct process));
 	if(global == NULL){
 		/* We can't allocate the global process, this is bad*/
-		BSOD("We can't Allocate the global process");
+		PANIC("We can't Allocate the global process");
 	}
 	global->pid = 0;
 
@@ -81,7 +81,7 @@ void process_init(void){
 
 	/* Initializes this process with the parent process ID of 0 */
 	if(!initialize_process(global, thread_current())){
-		BSOD("ERROR initialzing the global process");
+		PANIC("ERROR initialzing the global process");
 	}
 }
 
@@ -128,6 +128,9 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	lock_init(&p->child_pid_tid_lock);
 	cond_init(&p->pid_cond);
 
+	lock_init(&p->swap_table_lock);
+	lock_init(&p->mmap_table_lock);
+
 	p->child_waiting_on_pid = -1;
 	p->child_pid_created = false;
 	our_thread->process = p;
@@ -152,6 +155,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
+	//printf("execute\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -200,6 +204,7 @@ tid_t process_execute (const char *file_name){
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_){
+	//printf("start\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
@@ -288,6 +293,7 @@ static void start_process (void *file_name_){
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int process_wait (tid_t child_tid){
+	//printf("wait\n");
 	struct process *cur = thread_current()->process;
 	/* Find pid and see if the process still exists. I.E.
 	   it hasn't removed itself from the processes hash
@@ -340,6 +346,7 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
+	printf(" process exit called\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -359,6 +366,8 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
+	printf("pagedir is destroyed\n");
+
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -367,17 +376,23 @@ void process_exit (void){
 	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
+	printf("process removed\n");
+
 	if( deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
-		BSOD("WEIRD SHIT WITH HASH TABLE!!!");
+		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}
 
+	printf("getting parent\n");
 	struct process *parent = parent_process_from_child(cur_process);
+	printf("got parent\n");
 
 	if(parent != NULL){
+		printf("parent not null\n");
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+		printf("trying to lock parent tid lock\n");
 		lock_acquire(&parent->child_pid_tid_lock);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
@@ -386,12 +401,16 @@ void process_exit (void){
 		}
 
 		lock_release(&parent->child_pid_tid_lock);
+		printf("releasing parent tid lock\n");
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
+			printf("sema up \n");
 			sema_up(&parent->waiting_semaphore);
 		}
 	}
 	lock_release(&processes_hash_lock);
+
+	printf("before fd destroy\n");
 
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
@@ -422,6 +441,7 @@ void process_exit (void){
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
 	free(cur_process);
+	printf("process exited\n");
 }
 
 /* Sets up the CPU for running user code in the current thread.
@@ -510,14 +530,13 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool load (const char *file_name, void (**eip) (void), void **esp){
+	//printf("load\n");
 	struct thread *t = thread_current ();
 	struct process *cur_process = t->process;
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
 	bool success = false;
 
-	/* Acquire the lock in advance just incase we need to break */
-	lock_acquire(&filesys_lock);
 
 	char arg_buffer[MAX_ARG_LENGTH];
 	size_t len = strnlen(file_name, MAX_ARG_LENGTH) + 1;
@@ -546,16 +565,24 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	}
 	process_activate ();
 
+	/* Acquire the lock so we can read in file info */
+	lock_acquire(&filesys_lock);
+
+
 	/* Open executable file. */
 	file = filesys_open (f_name);
 	if(file == NULL){
 		printf ("load: %s: open failed\n", file_name);
+		lock_release(&filesys_lock);
 		goto done;
 	}
 
 	if(!read_elf_headers(file, &ehdr, cur_process, t)){
+		lock_release(&filesys_lock);
 		goto done;
 	}
+
+	lock_release(&filesys_lock);
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
@@ -571,14 +598,14 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	lock_release(&filesys_lock);
-	
 	return success;
 }
 
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
+	intr_enable();
+	printf("Exec in\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t vaddr = ((uint32_t)faulting_addr & ~(uint32_t)PGMASK);
@@ -600,7 +627,7 @@ bool process_exec_read_in(void *faulting_addr){
 		   for it that should have been set in process load
 		   EXEC bit shouldn't be set unless the corresponding
 		   data can be found in the exec_info array*/
-		BSOD("INCONSISTENCY IN EXCEPTION.C");
+		PANIC("INCONSISTENCY IN EXCEPTION.C");
 		/*return false;*/
 	}
 
@@ -679,7 +706,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	//printf("base %p size %u %u\n", head, sizeof(struct exec_page_info), ehdr.e_phnum);
 
 	if(head == NULL){
-		BSOD("KERNEL OUT OF MEMORY");
+		PANIC("KERNEL OUT OF MEMORY");
 	}
 
 	for(i = 0; i < ehdr->e_phnum; i++){
@@ -742,7 +769,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 					uint8_t* uaddr = ((uint8_t*)head[k].mem_page) + (PGSIZE*j);
 					//printf("user address %p\n", uaddr);
 					pagedir_setup_demand_page(t->pagedir, (uint32_t*)uaddr,
-								PTE_AVL_EXEC, (uint32_t)uaddr, head[k].writable);
+								PTE_EXEC, (uint32_t)uaddr, head[k].writable);
 				}
 				//printf("Data for this vaddr fpage %u, mempage %p read_bytes %u zero_bytes %u end_addr %p\n", exec_pages[load_i].file_page, exec_pages[load_i].mem_page, exec_pages[load_i].read_bytes, exec_pages[load_i].zero_bytes, exec_pages[load_i].end_addr);
 				k ++;
@@ -756,7 +783,7 @@ static bool read_elf_headers(struct file *file, struct Elf32_Ehdr *ehdr,
 	/* Save all of our infor so that we can handle page_faults */
 	cur_process->exec_info = calloc (k, sizeof(struct exec_page_info));
 	if(cur_process->exec_info == NULL){
-		BSOD("KERNEL OUT OF MEMORY!!!!");
+		PANIC("KERNEL OUT OF MEMORY!!!!");
 	}
 	memcpy (cur_process->exec_info, head, k*sizeof(struct exec_page_info));
 	cur_process->num_exec_pages = k;
@@ -892,70 +919,60 @@ static bool validate_segment (const struct Elf32_Phdr *phdr, struct file *file){
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
              uint32_t read_bytes, uint32_t zero_bytes, bool writable){
 
-	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
+	ASSERT ((read_bytes + zero_bytes) == PGSIZE );
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
-	//bool already_held = lock_held_by_current_thread (&filesys_lock);
-	//if(!already_held){
-	    lock_acquire(&filesys_lock);
-	    //}
+
+	/* Get a page of memory. */
+	uint8_t *kpage = frame_get_page(PAL_USER, upage);
+
+	printf("try acquire filesys lock\n");
+
+	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
 
-	/* This loop only executed once per call it isn't changed because
-	   it doesn't need to be changed*/
-	while(read_bytes > 0 || zero_bytes > 0){
-		//printf("upage %p\n", upage);
-		/* Calculate how to fill this page.
+	printf("upage %p\n", upage);
+	/* Calculate how to fill this page.
            We will read PAGE_READ_BYTES bytes from FILE
            and zero the final PAGE_ZERO_BYTES bytes. */
-		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+	size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-		/* Get a page of memory. */
-		uint8_t *kpage = frame_get_page(PAL_USER, upage);
-		if(kpage == NULL){
-			lock_release(&filesys_lock);
-			//printf("couldn't allocate frame %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			frame_unpin(kpage);
-			return false;
-		}
+	if(kpage == NULL){
+		return false;
+	}
 
-		/* Load this page. */
-		if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
-			frame_clear_page (kpage);
-			lock_release(&filesys_lock);
-			//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			frame_unpin(kpage);
-			return false;
-		}
-		memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	/* Load this page. */
+	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
+		frame_clear_page (kpage);
+		lock_release(&filesys_lock);
+		//printf("file read failed %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+		unpin_frame_entry(kpage);
+		return false;
+	}
+	memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
-		/* Add the page to the process's address space. But only if that
+	/* Add the page to the process's address space. But only if that
 		   virtual address doesn't already have something mapped to it,
 		   I.E. the present bit is on*/
-		if(!pagedir_install_page (upage, kpage, writable)){
-			frame_clear_page(kpage);
-			lock_release(&filesys_lock);
-			//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
-			frame_unpin(kpage);
-			return false;
-		}
-
-		/* Make sure that if this page is evicted and is readonly that it will
-		   be deleted outright instead of put on swap */
-		pagedir_set_medium(thread_current()->pagedir, upage, PTE_AVL_EXEC);
-
-		frame_unpin(kpage);
-
-		/* Advance. */
-		read_bytes -= page_read_bytes;
-		zero_bytes -= page_zero_bytes;
-		upage += PGSIZE;
+	if(!pagedir_install_page (upage, kpage, writable)){
+		frame_clear_page(kpage);
+		lock_release(&filesys_lock);
+		//printf("couldn't install the page %p %u %u %u\n", upage, ofs, read_bytes, zero_bytes);
+		unpin_frame_entry(kpage);
+		return false;
 	}
-	//if(!already_held){
-	    lock_release(&filesys_lock);
-	    //}
+
+	/* Make sure that if this page is evicted and is readonly that it will
+		   be deleted outright instead of put on swap*/
+	pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
+
+	unpin_frame_entry(kpage);
+
+	lock_release(&filesys_lock);
+
+	printf("EXEC FILE READ IN\n");
 	return true;
 }
 
@@ -972,10 +989,10 @@ static bool setup_stack (void **esp){
 		if(success){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
-					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_AVL_STACK);
-			frame_unpin(kpage);
+					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
+			unpin_frame_entry(kpage);
 		}else{
-			frame_unpin(kpage);
+			unpin_frame_entry(kpage);
 			frame_clear_page (kpage);
 		}
 	}
@@ -1014,7 +1031,9 @@ static struct process *process_lookup (pid_t pid){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 
+	printf("try acquire\n");
 	lock_acquire(&process->child_pid_tid_lock);
+	printf("acquired\n");
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while((h = list_next(h)) != list_end(&process->children_list)){

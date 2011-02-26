@@ -41,7 +41,7 @@ static void test_sleep (int thread_cnt, int iterations){
   /* Allocate memory. */
   output = malloc (sizeof *output * iterations * thread_cnt * 2);
   if (output == NULL){
-    BSOD ("couldn't allocate memory for test");
+    PANIC ("couldn't allocate memory for test");
   }
   /* Initialize test. */
   test.start = timer_ticks () + 100;
