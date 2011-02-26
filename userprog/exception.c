@@ -154,7 +154,7 @@ static void page_fault (struct intr_frame *f){
 	/* This section implements virtual memory from the fault
 	     handlers prospective. */
 
-	printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
+	//printf("fault_addr %p, esp %x \n", fault_addr, ((uint32_t)f->esp - 32));
 	if(not_present){
 		/* We got a page fault for a not-present error.  We need to
 	       either 1) Read in the page from the appropriate place,
@@ -176,19 +176,19 @@ static void page_fault (struct intr_frame *f){
 			/* Data is not present but on swap read it in
 							   then return so that dereference becomes valid*/
 			if(!swap_read_in(uaddr)){
-				printf("COULDN't read in from swap!!!!\n");
+				//printf("COULDN't read in from swap!!!!\n");
 				kill(f);
 			}
 		}else if(type == PTE_EXEC){
 			/* Data is not present but is on disk still so
 			   read it in and then derefernece becomes valid*/
 			if(!process_exec_read_in(uaddr)){
-				printf("COULDN'T load the executable segment, KILLL\n");
+				//printf("COULDN'T load the executable segment, KILLL\n");
 				kill(f);
 			}
 		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			if(!mmap_read_in(uaddr)){
-				printf("Couldn't load page from mmaped file\n");
+				//printf("Couldn't load page from mmaped file\n");
 				kill(f);
 			}
 		}else if(type == PTE_STACK){
