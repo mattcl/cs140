@@ -357,6 +357,9 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
+
+	printf("thread %d is dying ------------------\n");
+
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
 	pd = cur->pagedir;
