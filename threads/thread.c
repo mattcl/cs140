@@ -87,7 +87,7 @@ static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
-static void schedule (void);
+static void schedule (enum thread_status status_this_thread);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
@@ -295,8 +295,8 @@ tid_t thread_create (const char *name, int priority,
 void thread_block (void){
 	ASSERT (!intr_context ());
 	ASSERT (intr_get_level () == INTR_OFF);
-	thread_current ()->status = THREAD_BLOCKED;
-	schedule ();
+	//thread_current ()->status = THREAD_BLOCKED;
+	schedule (THREAD_BLOCKED);
 }
 
 /* Transitions a blocked thread T to the ready-to-run state.
@@ -366,8 +366,8 @@ void thread_exit (void){
 	   when it calls thread_schedule_tail(). */
 	list_remove (&thread_current()->allelem);
 	printf("schedule\n");
-	thread_current ()->status = THREAD_DYING;
-	schedule ();
+	//thread_current ()->status = THREAD_DYING;
+	schedule (THREAD_DYING);
 	NOT_REACHED ();
 }
 
@@ -404,8 +404,8 @@ void thread_yield (void){
 		}
 	}
 
-	cur->status = THREAD_READY;
-	schedule ();
+	//cur->status = ;
+	schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
 
@@ -669,21 +669,29 @@ void thread_schedule_tail (struct thread *prev){
 }
 
 /* Schedules a new process.  At entry, interrupts must be off and
-   the running process's state must have been changed from
-   running to some other state.  This function finds another
-   thread to run and switches to it.
+   the running process's new state must be different than thread
+   running.  This function finds another thread to run and switches
+   to it. This function expects to have the current thread moved
+   to its new list before entry to this function. Because the
+   scheduling algorithms only look at priority and list position.
+   The threads status will be set in this function after the
+   pagedir is changed to the next processes page dir so that
+   we know that on wake up of the other thread page faults will
+   be handled correctly.
 
    It's not safe to call printf() until thread_schedule_tail()
    has completed. */
-static void schedule (void){
+static void schedule (enum thread_status status_this_thread){
 	struct thread *cur = running_thread ();
 	struct thread *next = next_thread_to_run ();
 	struct thread *prev = NULL;
 
 	ASSERT (intr_get_level () == INTR_OFF);
-	ASSERT (cur->status != THREAD_RUNNING);
+	ASSERT (status_this_thread != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 
+	/* KILL the current pagedir and switch to the next
+	   threads pagedir*/
 #ifdef USERPROG
 	uint32_t *cur_pd, next_pd;
 	/* Destroy the current process's page directory and switch back
@@ -703,6 +711,8 @@ static void schedule (void){
 		pagedir_destroy (cur_pd);
 	}
 #endif
+
+	thread_current ()->status = THREAD_DYING;
 
 	if(cur != next){
 		prev = switch_threads (cur, next);
