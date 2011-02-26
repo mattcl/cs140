@@ -231,17 +231,17 @@ void frame_clear_page (void *kaddr){
      now so it can release this*/
 	printf("clearing %p\n", entry);
 	while(entry->is_pinned || entry->cur_thread == thread_current()){
-		printf("waiting won't clearf\n");
+		printf("waiting won't clear\n");
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		if(!entry->is_pinned || entry->cur_thread != thread_current()){
-
+			printf("finally clearing %p\n", entry);
 			lock_release(&f_table.frame_table_lock);
 			return;
 		}
 	}
-	//printf("cleared\n");
+	printf("cleared %p\n", entry);
 	/* Clear the entry */
 	entry->uaddr = NULL;
 	entry->cur_thread = NULL;
