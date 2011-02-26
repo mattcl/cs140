@@ -79,6 +79,8 @@ void process_init(void){
 
 	thread_current()->process = global;
 
+	lock_acquire(&processes_hash_lock);
+
 	/* Initializes this process with the parent process ID of 0 */
 	if(!initialize_process(global, thread_current())){
 		PANIC("ERROR initialzing the global process");
@@ -100,6 +102,7 @@ static pid_t allocate_pid(void){
    Initializes the process and sets the process pointer
    In the thread that is being created */
 bool initialize_process (struct process *p, struct thread *our_thread){
+	ASSERT(lock_held_by_current_thread(&processes_hash_lock));
 	p->pid = allocate_pid();
 	p->parent_id = thread_current()->process->pid;
 	p->fd_count = 2;
@@ -136,7 +139,6 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	our_thread->process = p;
 	p->exit_code = -1;
 
-
 	struct hash_elem *process = hash_insert(&processes, &p->elem);
 
 	/* returns something if it wasn't inserted of NULL if it
@@ -146,6 +148,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		hash_destroy(&p->open_files, NULL);
 		return false;
 	}
+	lock_release(&processes_hash_lock);
 	return true;
 }
 
@@ -154,7 +157,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
-	printf("execute\n");
+	//printf("execute\n");
 	char *fn_copy;
 	tid_t tid;
 
@@ -179,9 +182,14 @@ tid_t process_execute (const char *file_name){
 	if(tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
+		/* Not released if we get a TID error */
 		lock_release(&processes_hash_lock);
 		return TID_ERROR;
 	}
+
+	/* processes_hash_lock is released by initialize process
+	   if we get to here */
+	ASSERT(!lock_held_by_current_thread(&processes_hash_lock));
 
 	/* wait until the child process is set up or fails. Must
 	   be after we know the thread is running that we wait on the
@@ -192,7 +200,6 @@ tid_t process_execute (const char *file_name){
 	/* Check to see if it set up correcly */
 	if(cur_process->child_pid_created == false){
 		lock_release(&cur_process->child_pid_tid_lock);
-		lock_release(&processes_hash_lock);
 		return TID_ERROR;
 	}
 
@@ -201,15 +208,13 @@ tid_t process_execute (const char *file_name){
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
 
-	lock_release(&processes_hash_lock);
-	printf("started\n");
 	return tid;
 }
 
 /* A thread function that loads a user process and starts it
    running. */
 static void start_process (void *file_name_){
-	printf("start\n");
+	//printf("start\n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
@@ -218,7 +223,7 @@ static void start_process (void *file_name_){
 	lock_acquire(&processes_hash_lock);
 	struct process *parent = parent_process_from_child(cur_process);
 	lock_release(&processes_hash_lock);
-	printf("start2\n");
+
 	/* Parent hasn't exited yet so we can grab their lock
 	   so that they wait until set up is done and so we can
 	   signal them when set up is finished
