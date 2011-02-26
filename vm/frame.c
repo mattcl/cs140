@@ -228,12 +228,6 @@ void frame_clear_page (void *kaddr){
      now so it can release this*/
 
 	while(entry->is_pinned){
-<<<<<<< HEAD:vm/frame.c
-	  //printf("waiting\n");
-=======
-		/* new shit is being put in the frame, moving our shit out
-		   so we need to wait until this entry->is_pinned is false */
->>>>>>> 2605d2ef4c2073cfdcc96babc22ff24166fdbb4d:vm/frame.c
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		if(!entry->is_pinned){
 
