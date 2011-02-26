@@ -154,7 +154,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
-	//printf("execute\n");
+	printf("execute\n");
 	char *fn_copy;
 	tid_t tid;
 
