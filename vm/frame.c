@@ -237,19 +237,25 @@ void frame_clear_page (void *kaddr){
 	/* The thread is the same one that is in the frame
      now so it can release this*/
 	//printf("clearing %p, pos %u, entry %p kaddr %p\n", entry, frame_entry_pos(entry), frame_entry_at_pos(frame_entry_pos(entry)), kaddr);
-	while(entry->is_pinned ){
+	if(entry->is_pinned ){
 		//printf("waiting won't clear %p \n", entry);
 		/* new shit is being put in the frame, moving our shit out
 		   so we need to wait until this entry->is_pinned is false */
-		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
+		//cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		/* it is possible that between the time that we were signaled
 		   and we woke up another process has pinned down this frame.
 		   In this case, howe		 */
-		if(!entry->is_pinned ){
+		//if(!entry->is_pinned ){
 			//printf("finally clearing %p\n", entry);
-			lock_release(&f_table.frame_table_lock);
-			return;
-		}
+
+
+		/* meaning that we don't need to care about it any more
+		   because we are exiting and will free our swap table
+		   in a second*/
+
+		lock_release(&f_table.frame_table_lock);
+		return;
+		//}
 	}
 	//printf("cleared %p\n", entry);
 	/* Clear the entry */
@@ -259,6 +265,14 @@ void frame_clear_page (void *kaddr){
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
 	lock_release(&f_table.frame_table_lock);
+}
+
+/* For when we are going to free many pages at
+   the same time it is more efficient to acquire
+   the lock in advance and
+ */
+void acquire_frame_lock(){
+
 }
 
 /* Need to unpin after it is installed in the pagedir of your thread
