@@ -184,7 +184,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	/* Acquire the swap lock */
 	printf("swap acq\n");
 	lock_acquire(&swap_slots_lock);
-	printf("swap acqed\n");
 
 	if(!thread_is_alive(cur_id)){
 		/* Process has just died and doesn't need
@@ -194,7 +193,7 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 		/* Signal that the swap is free to be used to those waiting on
 		   PTE_SWAP_WAIT in read in.*/
 		cond_broadcast(&swap_free_condition, &swap_slots_lock);
-		printf("swap rel\n");
+		printf("swap rel check \n");
 		lock_release(&swap_slots_lock);
 		return true;
 	}
