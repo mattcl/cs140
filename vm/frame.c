@@ -144,7 +144,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	printf("evict return %p\n", kaddr);
+	//printf("evict return %p\n", kaddr);
 	return kaddr;
 }
 
@@ -198,7 +198,7 @@ void frame_clear_page (void *kaddr){
 	   so we need to wait before we can say that this frame
 	   is clear*/
 	while(entry->is_pinned){
-		printf("waiting\n");
+	  //printf("waiting\n");
 		cond_wait(&entry->pin_condition, &f_table.frame_table_lock);
 		lock_release(&f_table.frame_table_lock);
 		return;
