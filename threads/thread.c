@@ -642,14 +642,17 @@ static struct thread *next_thread_to_run (void){
    is complete. */
 void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
+	/* Mark us as running. */
+	cur->status = THREAD_RUNNING;
+#ifdef USERPROG
+	/* Activate the new address space. */
+	process_activate ();
+#endif
 	/* prev and cur can't be the same and dying or we will
 	 * reach Non-reachable code as a thread that is dying
 	 * now is running and will try to resume execution*/
 	ASSERT (prev != cur && cur ->status != THREAD_DYING);
 	ASSERT (intr_get_level () == INTR_OFF);
-
-	/* Mark us as running. */
-	cur->status = THREAD_RUNNING;
 
 	/* Start new time slice. */
 	thread_ticks = 0;
@@ -676,11 +679,6 @@ static void schedule (void){
 	struct thread *cur = running_thread ();
 	struct thread *next = next_thread_to_run ();
 	struct thread *prev = NULL;
-
-	#ifdef USERPROG
-	/* Activate the new address space. */
-	process_activate (next);
-	#endif
 
 	ASSERT (intr_get_level () == INTR_OFF);
 	ASSERT (cur->status != THREAD_RUNNING);
