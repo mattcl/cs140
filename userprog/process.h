@@ -183,8 +183,8 @@ pid_t child_tid_to_pid (tid_t c_tid);
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
-void process_exit (struct thread *t);
-void process_activate (void);
+void process_exit (void);
+void process_activate (struct thread *t);
 
 bool initialize_process (struct process *p, struct thread *our_thread);
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
