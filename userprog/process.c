@@ -1031,7 +1031,9 @@ static struct process *process_lookup (pid_t pid){
 static struct list_elem *child_list_entry_gen(
 		struct process *process, void *c_tid, is_equal *func){
 
+	printf("try acquire\n");
 	lock_acquire(&process->child_pid_tid_lock);
+	printf("acquired\n");
 	struct list_elem *h;
 	h = list_head(&process->children_list);
 	while((h = list_next(h)) != list_end(&process->children_list)){
