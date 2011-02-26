@@ -418,7 +418,7 @@ void process_exit (void){
 
 	/* Free all of the swap slots that are currently occupied
 	   by this process */
-	printf("destroying hash table\n");
+	printf("destroying hash table %p\n", cur);
 	hash_destroy(&cur_process->swap_table, &swap_slot_destroy);
 	printf("destroyed hash table\n");
 

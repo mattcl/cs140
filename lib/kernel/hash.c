@@ -98,18 +98,13 @@ hash_destroy (struct hash *h, hash_action_func *destructor)
 struct hash_elem *
 hash_insert (struct hash *h, struct hash_elem *new)
 {
-  printf("1\n");
   struct list *bucket = find_bucket (h, new);
-  printf("2\n");
   struct hash_elem *old = find_elem (h, bucket, new);
 
   if (old == NULL){
-	  printf("3\n");
     insert_elem (h, bucket, new);
   }
-  printf("4\n");
   rehash (h);
-  printf("5\n");
   return old; 
 }
 
@@ -309,7 +304,7 @@ hash_int (int i)
 static struct list *
 find_bucket (struct hash *h, struct hash_elem *e) 
 {
-  printf("%p %p %p %p\n", h->hash, h->hash(e, h->aux), h->bucket_cnt, h->aux);
+ /// printf("%p %p %p %p\n", h->hash, h->hash(e, h->aux), h->bucket_cnt, h->aux);
   size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1);
   return &h->buckets[bucket_idx];
 }
