@@ -38,7 +38,7 @@ static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
 static void *evict_page(void *new_uaddr, bool zero_out);
-static struct frame_entry *choose_frame_to_evict();
+static struct frame_entry *choose_frame_to_evict(void);
 
 
 static void evict_init(void){
@@ -49,14 +49,11 @@ static void evict_init(void){
 static struct frame_entry *choose_frame_to_evict(){
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 	struct frame_entry *entry;
-	enum intr_level old_level;
 	uint32_t index;
 	while(true){
 		index = random_ulong() % f_table.size;
 		entry = frame_entry_at_pos(index);
-		if(entry->is_pinned) {
-			continue;
-		}else{
+		if(!entry->is_pinned) {
 			entry->is_pinned = true;
 			break;
 		}
@@ -87,11 +84,6 @@ void frame_init(void){
 	lock_init(&f_table.frame_table_lock);
 	f_table.entries = calloc(f_table.size, sizeof(struct frame_entry));
 	ASSERT(f_table.entries  != NULL);
-	/* Initialize the condition variable in each frame to
-	   guarantee that data will not leave the frame while
-	   it is pinned*/
-	struct frame_entry *start = f_table.entries;
-	uint32_t i;
 	evict_init();
 }
 

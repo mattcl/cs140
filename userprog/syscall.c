@@ -826,7 +826,10 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   mmapping to it */
 	ASSERT(fd_entry != NULL);
 
-	lock_acquire(&filesys_lock);
+	bool already_held = lock_held_by_current_thread(&filesys_lock);
+	if(already_held){
+		lock_acquire(&filesys_lock);
+	}
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
@@ -838,7 +841,10 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   kicked off*/
 	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
-	lock_release(&filesys_lock);
+
+	if(already_held){
+		lock_release(&filesys_lock);
+	}
 
 	lock_release(&cur->process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE

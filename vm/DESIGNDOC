@@ -105,20 +105,6 @@ struct exec_page_info{
        bool writable;
 };
 
-/* The entry in the mmap table */
-struct mmap_hash_entry{
-	mapid_t mmap_id;     	/* Key into the hash table*/
-	uint32_t begin_addr;	/* start address of this mmapping*/
-	
-	/* While we can calculate this from the filesize accessing the
-	disk In any way is too slow so just keep it stored in memory*/
-	uint32_t end_addr;
-	
-	int fd;		     /* FD for this mapping*/
-	uint32_t num_pages;  /* Number of pages so I don't have to calculate*/
-	struct hash_elem elem;  /* hash elem*/
-};
-
 ---- ALGORITHMS ----
 
 >> A2: In a few paragraphs, describe your code for locating the frame,
@@ -225,11 +211,10 @@ typedef uint32_t medium_t;
 	refer to the virtual address of this PTE, this virtual address
 	will be used as a key to locate the data that is supposed to
 	be in main memory by the appropriate functions.
-	
 
    31                                 12 11                PTE_P
    +----------------------------------+---+---------------------+
-   |         Top 20 bits              |AVL|      Flags     | 1/0|
+   |       Virtual Address            |AVL|      Flags     | 1/0|
    +----------------------------------+---+---------------------+
 
 	How the AVL bits are used
@@ -263,9 +248,9 @@ typedef uint32_t medium_t;
    This tells the page fault handler to route this page fault to
    swap_read_in, but it also tells swap_read_in that it must make
    the requesting process to wait untill the data is completely
-   transfered to disk. The top 20 bits for this condition are the
-   top 20 bits of the kernel virtual address that this used to be
-   mapped to, used by swap_read_in.
+   transfered to disk. The top 20 bits for this condition are mostly
+   ignored and only when this PTE's AVL bits get updated to PTE_SWAP
+   will they continue to use the top 20 bits.
 
    MMAP WAIT - AVL BITS 101
    ------
@@ -273,24 +258,23 @@ typedef uint32_t medium_t;
    mmap_read_in, but also tells mmap read in that it must make the
    faulting process wait until its memory is completely written to
    the mmapped file before reading it back out. Similar to SWAP_WAIT
-   the top 20 bits are used to store the old kernel virtual address
-   that this page used to be mapped to. 
-
+   The top 20 bits for this condition are mostly
+   ignored and only when this PTE's AVL bits get updated to PTE_SWAP
+   will they continue to use the top 20 bits.
+   
    UNDEF - AVL BITS 111
    -------
    Not used in this project
 
-//userprog_h
-typedef uint32_t mapid_t;
+/* exception.h */
 
-//exception.h
-#define MAX_ASM_PUSH 32 /* The maximum amount of data that can be pushed
-						   by a single assembly instruction. This exists
-						   because 80x86 tries to dereference the memory
-						   before actually decrementing the stack....
-						   Which is completely counter intuitive....
-						   Just sayin */
-
+/* The maximum amount of data that can be pushed
+   by a single assembly instruction. This exists
+   because 80x86 tries to dereference the memory
+   before actually decrementing the stack....
+   Which is completely counter intuitive....
+   Just sayin */
+#define MAX_ASM_PUSH 32 
 
 
 ---- ALGORITHMS ----
@@ -304,48 +288,72 @@ have been read into the frame table), we have to zero the accesed bits
 of pages some how.  
 
 We have an evict hand and a clear hand.  The clear hand starts threshold
-frames in front of the evict hand.  In every interrupt, we start clearing
+frames in front of the evict hand.  In every timer interrupt, we start clearing
 accessed bits until we are threshold bits behind the evict hand.  If when
 evicting the evict hand comes within threshold frames of the clear hand 
 without finding  an un accessed page, we set threshold more pages as
-not-accesed.  Because this happens with interrupts disabled, the
-evict_hand is then guaranteed to find a non accessed page in the next
-threshold pages in the frame table.  We chose a value of 1/4 the size
-of the frame table for threshold.  This means that the clock hands never 
-pass each other up, nor get closer than 1/4 of the size of the page table
-close to each other.
+not-accesed with the clear hand. Because this happens with interrupts 
+disabled, the evict_hand is then guaranteed to find a non accessed page 
+in the next threshold pages in the frame table.  We chose a value of 1/4 
+the size of the frame table for threshold. This means that the clock
+hands never pass each other up, nor get closer than 1/4 of the size 
+of the page table to each other.
 
 
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
 
-Since process Q originally had the page, it must get evicted.  As soon as
-the frame that Q has is chosen as the candidate for P's page, we turn off
-interupts and set the Q's page as not present, and we set it's AVL_MEDIUM
-and AVL_ADDR to reflect where we have moved it.  Now if Q page faults
-on the page it will see the correct location of it and it will be
-retrieved by the page fualt handler.
+When process P obtains a frame in the eviction process it is pinned down
+with the frame_table lock held. Then we disable interrupts and set the PTE
+of process Q that corresponds to this frame to the correct value. If the 
+page was dirty the following happens:
+If the AVL bits were SWAP or EXEC we set Q's page's AVL bits to PTE_SWAP_WAIT
+because it is about to be swapped out but isn't done swapping out the frame
+yet, it also sets the present bit to 0 so that Q will page fault and then 
+try to get the page from the swap. If the AVL bits are MMAP, they are set to
+MMAP_WAIT and a similar process ensues in mmap_read_in. 
+If it is clear:
+If it is PTE_STACK it just clears the present bit which tells the page
+fault handler to just grant the process a new ZEROed out page. This is
+because if the data is on the stack and has not been accessed then it 
+was just a zero page anyway and we can just yank the frame fro Q. 
+If it is PTE_EXEC then we set up a demand page which tells the page fault
+handler to read this file from its original location. 
+If it is PTE_MMAP we also define a demand page which tells the page fault
+handler to read this page in from the orginal mmapped file.
 
+pagedir_setup_demand_page is the heart of the if/else tree it disables
+interrupts sets the present bit to 0, set the writable bit to what is 
+passed in, sets the upper 20 bits to the appropriate user virtual address
+and sets the AVL bits to the given medium. 
+
+After the bits are set Q no longer has the frame. On pagedir destroy we
+check if the frame is pinned, if it isn't pinned we will set it to not 
+pinned and set the user address and current owner to NULL. Then set the 
+frame table bitmap to show that it is free to be handed out. 
+
+That is all that is needed to update Q and specify where it's data is.
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 
 The idea is that you must decrement your stack pointer before you place
-something on the stack (with the exceptoin of pushal) so we check if their
-address is between PHYS_BASE and esp (including esp but not including
-PHYS_BASE).
+something on the stack, however x86 decides to only increment ESP after
+the move has been made, for this reason we need to take this into account.
+Our heuristic goes as follows: we define the valid stack segment to be 
+addresses between 0xc0000000 and 0xc0000000 - max_stack_size. A constant
+that defaults to 8 mb but can be changed at the command line by specifying
+--stack=X. If it is in this region it may be valid so next we check to see
+if the address handed in is above esp, but we can't check this directly we
+must also subtract from esp the maximum size of an assembly push (pushal 
+which pushes all of the registers at once). If these conditions pass we
+then set all of the pages in the processes page directory that all indicate
+that the memory is PTE_STACK and not present, this makes sure that if the 
+process decides to allocate alot of space that only when it tries to 
+actually use that data will it actually have frames allocated for it. 
 
-
-However, because pushal dereferences memory before decrementing the stack
-pointer we must also allow for stack growth if the faulting address is 
-MAX_ASM_PUSH bytes below the currenty address (it is defined as 32 bytes
-to allow the 4 interger registers to be pushed).
-
-Finally, in order to avoid the stack being grown beyond it's limit, we 
-make sure that growing the stack would not cause the user to exceed the 
-limit of their stack size.
 
 ---- SYNCHRONIZATION ----
 
@@ -353,11 +361,15 @@ limit of their stack size.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
-We make sure that we only acquire locks from largest to smallest scope
-so that we can not have cycles in the lock graph. Because we stick with
-this we know that we won't get dead lock. However our project has race
-conditions that we could not figure out. 
 
+We try to only acquire at most 2 locks at any given time. Because we 
+only acquire at most 2 locks at the same time we can easily draw out 
+the dependency graphs for our code. We also make sure that, when possible,
+we acquire our locks from largest to smallest scope, this also reduces the 
+chance that we have deadlock in the function; When we start thinking
+about locks we can easily write out all the different possible combinations
+of locks and see which combinations of acquires will cause dead lock and
+evict them, just like we evict frames lol. 
 
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
@@ -369,7 +381,7 @@ table entry corresponding to the frame.  This way any accesses to
 the page after we begin eviction will page fault instead of 
 accessing the frame, and it will not be able to access the page.  Once
 eviction begins we pin Q's page to the frame so that neither Q nor any
-other user process can attempt to reclaim the page.
+other user process can attempt to reclaim the page until it is unpined.
 
 If Q tries to fault the page back in before it has been written to swap,
 we would have another race condition.  To handle this, before we begin writing the 
@@ -392,8 +404,14 @@ been set to PTE_SWAP.
 
 In our frame_entry their is a bool is_pinned.  Before we begin the read
 in we set this bool to true.  When we are done reading in the data from
-disk we unpin page to the frame.  This way nobody can evict a page that 
-is already designated as a destination for IO.
+disk we unpin the frame. This way nobody can evict a page that 
+is already designated as a destination for IO. We ensure that the pinned
+variable is only changed to false by the thread that just recieved the 
+page from frame_get_frame. Because we only unpin this when we are done
+reading our data into it for the case of IO, and because a frame that is
+pinned will not be marked for eviction, we can guarantee that our frame
+will stay valid untill all of the data is written to the frame in either
+the swap code, exec code, or mmap code. 
 
 
 >> B8: Explain how you handle access to paged-out pages that occur
@@ -403,13 +421,16 @@ is already designated as a destination for IO.
 >> gracefully handle attempted accesses to invalid virtual addresses?
 
 We use page faults in system calls, when we are in a system call we try 
-to dereference the user data through the user's pointers. Because we do
-this and the address is translated through the processes pagedirectory 
-it will page fault and then the normal mechanism for handling that fault
-will occur. It will read in the data from wherever it is. We kill invalid
-access to memory. We know what is valid and what is not because invalid 
-accesses will allways have PTE_AVL_ERROR in the the AVL bits so we know 
-that it is invalid.
+to dereference the user data through the user's pointers before even 
+working with the data, because we kill the process if the page fault 
+occurs in bad memory we know that we will either exit or have valid 
+memory when we start executing the system call. This error checking 
+leverages the processes page directory which will correctly identify
+the validity of the fault through its normal mechanism for handling that.
+It will read in the data from wherever it is. We kill for invalid
+accesses to memory. If the memory is valid we just run the system call
+using the user address as normal. This may or may not refault pages in 
+from swap or mmap but it is transparent to the system call handlers.
 
 ---- RATIONALE ----
 
@@ -421,13 +442,20 @@ that it is invalid.
 >> design it this way.
 
 We are right in the middle. We have a lock for the frame table, a lock for
-the swap table, and a lock for individual mmap tables that are in threads.
+the swap table, and a lock for individual mmap tables that are in processes.
 Because we have some locks but don't get down to the granularity of frames 
-we have some possiblity of getting deadlock. Our design allows page faults
-to occur and not wait on swap or mmap disk access. We also have to set the 
-bits in the PTE entries synchronously by disabling interrupts until the
-bits in the PTE entry are set.
-
+we have some possiblity of getting deadlock. Our design is simple enough 
+that the likeliehood of that happenig is fairly low. However some 
+parallelism is sacrificed as a cost. We know that the frame_table_lock needs
+to be held for as short as possible in order to get the maximum benifit of
+parallelism so we try our hardest to reduce the amount of code that goes
+on inside that lock. The swap lock we are more liberal with because we know
+that the time it takes to put something on the swap is what will dominate
+so we include much more code while we have the swap lock enabled, the same
+is true for mmap_locks as well. Because all the IO occurs outside the frame
+lock our system may be slow but it still runs at memory speed given an 
+appropriate eviction algorithm which can be specified by changing the 
+implementation of the choose_next_frame_evict_x.
 
 			 MEMORY MAPPED FILES
 			 ===================
@@ -437,6 +465,11 @@ bits in the PTE entry are set.
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+/*userprog_h*/
+
+typedef uint32_t mapid_t;
+
  	/* A hash table that stores the necessary information to
 	   map a file into the address space and to lazily load
 	   the information from the file */
@@ -450,6 +483,22 @@ bits in the PTE entry are set.
 	   be synchronized*/
 	struct lock mmap_table_lock;
 
+/* Process.h*/
+	
+	/* The entry in the mmap table */
+struct mmap_hash_entry{
+	mapid_t mmap_id;     	/* Key into the hash table*/
+	uint32_t begin_addr;	/* start address of this mmapping*/
+	
+	/* While we can calculate this from the filesize accessing the
+	disk In any way is too slow so just keep it stored in memory*/
+	uint32_t end_addr;
+	
+	int fd;		     /* FD for this mapping*/
+	uint32_t num_pages;  /* Number of pages so I don't have to calculate*/
+	struct hash_elem elem;  /* hash elem*/
+};
+
 ---- ALGORITHMS ----
 
 >> C2: Describe how memory mapped files integrate into your virtual
@@ -461,25 +510,32 @@ own mmap table, a counter for map id, and a lock for the table. When a
 file is mmaped, then all of the pages that are created for that file are
 put on demand and will be read in when the process faults. When a process 
 faults it will always just route the fault to the appropriate place by
-looking at the medium bits. We set the PTE_AVL bits to MMAP when we mmap
-the file. When a page fault occurs the request for the page is routed to 
-mmap_read_in which gets a free page and then puts the data into that 
-page using the kernel virtual address. We do it through the kernel virtual
-address so that we will not dirty the bits for the entry in the user page
-directory. It is not different than the process we use for swap pages and
-EXEC pages as well.
+looking at the medium bits. Because for all pages mapped to mmap we put
+PTE_MMAP we know that page faults will be mapped to mmap_read_in. In this
+function we acquire the filesystem lock and read in the file. Because we
+know that the only thread that can read in this file is our own and that 
+the only race condition that can happen is between the insertion and deletion
+of mmap entries for the process. To solve this we make sure that when the 
+process exits it releases all of its mmap entries holding its mmap lock, 
+while it is deleting these entries it also waits for PTE_MMAP_WAIT to be 
+PTE_MMAP for any files before continuing writing its dirty pages to disk. 
+Because it needs to wait for this condition, and that if a frame is on 
+disk for mmap that it will to be writen out only once. Using this 
+method we avoid race conditions. And ensure that all data is written
+out when the process exits.
 
 >> C3: Explain how you determine whether a new file mapping overlaps
 >> any existing segment.
 
 To do this we simply check all of the proposed entries in the page
-directory to see if they are mapped, mapped being that they have their
-PTE_AVL bits set. Because whenever we have valid memory we set the
-AVL BITS so if they are not set this means that the mmap file will
-not overlap with any other data. If we do this for every page in the 
-range of the mmapped file, then the mmaped file does not overlap.
-We also check that the mmap does not overlap with the max stack size
-so that we know that it won't overlap then either.
+directory to see if they are mapped. Because whenever we put any 
+memory in the virtual address space of this process we also set the
+PTE_AVL bits to where this memory belongs / where it came from. If 
+we have yet to set it, the PTE_AVL bits will be set to 0 by the 
+default meaning that when we get the medium it will be PTE_AVL_ERROR
+and we know that it is unmapped. So we just check every page in the
+processes page dir and if they are all PTE_AVL_ERROR we can just mmap
+the file, otherwise we will just make them fail.
 
 ---- RATIONALE ----
 
@@ -490,9 +546,17 @@ so that we know that it won't overlap then either.
 >> implementation either does or does not share much of the code for
 >> the two situations.
 
-Our impementation does not share the code because it moves the data to
-different places. This is because we need to synchronize the swap table
-and the mmap table k
+We did keep alot of the code about how to handle the paging in and out
+of the mmap files the same as alot of everything else. we even use the
+same function pagedir_setup_demand_page to set up and route the pages
+in the frame table. This abstraction is key to our implementation of 
+virtual memory. When we actually read in or write out mmap data we 
+do have different functions however because we handle the data differently
+alot of code is shared between the implementations but because they are 
+different enough in their behavior we seperated them out. Also they
+acquire much different locks because we have a global swap device but
+mmap files are only stored per process. Thats another reason why we 
+choose to seperate the implementations. 
 
 			   SURVEY QUESTIONS
 			   ================
@@ -519,7 +583,8 @@ Hard... We spent all week coding.... more than 40 hours on it...
 >> students, either for future quarters or the remaining projects?
 
 We would have really liked our grades back from assignment 2 because we
-had to fix problems that really affected how assignment 3 worked. We had
-dead lock. 
+found race conditions and deadlock that weren't evident when we submitted
+project 2. Wish we would have known about it cause we spent alot of time 
+debuging it.
 
 >> Any other comments?

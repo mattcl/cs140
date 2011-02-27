@@ -121,13 +121,21 @@ bool swap_read_in (void *faulting_addr){
 
 
 	/* Filesys lock needed to prevent race with syscall write*/
-	lock_acquire(&filesys_lock);
+
+	bool already_held = lock_held_by_current_thread(&filesys_lock);
+	if(already_held){
+		lock_acquire(&filesys_lock);
+	}
+
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
-	lock_release(&filesys_lock);
+
+	if(already_held){
+		lock_release(&filesys_lock);
+	}
 
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
@@ -228,12 +236,18 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 
 	/* Write this out to disk now so that it is saved */
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-	lock_acquire(&filesys_lock);
+
+	bool already_held = lock_held_by_current_thread(&filesys_lock);
+	if(already_held){
+		lock_acquire(&filesys_lock);
+	}
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
-	lock_release(&filesys_lock);
+	if(already_held){
+		lock_release(&filesys_lock);
+	}
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
