@@ -95,7 +95,6 @@ static void clear_accessed_to_threshold(void){
 	struct frame_entry *entry;
 	uint32_t i;
 	for(i = 0; i < threshold; i ++, clear_hand++){
-		printf("loop\3");
 		/* Check if the frame is occupied if so we know that
 		   the thread that is in it is still alive because it
 		   must have acquired the frame table lock to die*/
@@ -119,13 +118,11 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
 	intr_set_level(old_level);
 
     while((evict_hand + threshold) % f_table.size < clear_hand % f_table.size){
-    	printf("loop1\n");
         entry = frame_entry_at_pos((evict_hand++)%f_table.size);
         old_level = intr_disable();
-        if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+        if(!entry->is_pinned && !pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
         	intr_set_level(old_level);
         	entry->is_pinned = true;
-        	printf("exit loop1\n");
         	return entry;
         }
         intr_set_level(old_level);
@@ -141,16 +138,13 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
     struct frame_entry *clear_entry;
 	enum intr_level old_level;
     while(true){
-    	printf("loop2 %u %u\n", evict_hand, clear_hand);
         entry = frame_entry_at_pos((evict_hand++) % f_table.size);
         clear_entry = frame_entry_at_pos((clear_hand++) % f_table.size);
         old_level = intr_disable();
         pagedir_set_accessed(clear_entry->cur_owner->pagedir, clear_entry->uaddr, false);
-        printf("locked %u accessed %u\n", entry->is_pinned , pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr));
-		if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+		if(!entry->is_pinned && !pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
 			intr_set_level(old_level);
 			entry->is_pinned = true;
-			printf("exit loop2\n");
 			return entry;
 		}
 		intr_set_level(old_level);
