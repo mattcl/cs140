@@ -32,7 +32,6 @@ Matt Chun-lum <mchunlum@stanford.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-<<<<<<< HEAD
 /* Frame.h */
 
 struct frame_table{
