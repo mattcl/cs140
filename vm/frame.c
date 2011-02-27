@@ -50,7 +50,7 @@ static uint32_t clear_hand;
 static uint32_t threshold;
 
 static void evict_init(void){
-  threshold = 2;
+  threshold = f_table.size/4;
   evict_hand = 0;
   clear_hand = evict_hand + threshold;
 }
