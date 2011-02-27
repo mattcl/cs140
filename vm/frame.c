@@ -10,6 +10,8 @@
 #include "swap.h"
 #include "userprog/syscall.h"
 
+static struct frame_table f_table;
+
 /* Given the frame entry pointer, returns its position in the
    frame table*/
 static inline uint32_t frame_entry_pos(struct frame_entry *entry){
@@ -54,7 +56,7 @@ static void evict_init(void){
   clear_hand = evict_hand + threshold;
 }
 
-/* Algorithm for choosing next frame to evict*/
+/* Algorithm for choosing next frame to evict randomly*/
 static struct frame_entry *choose_frame_to_evict_random(void){
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 	struct frame_entry *entry;
@@ -70,6 +72,7 @@ static struct frame_entry *choose_frame_to_evict_random(void){
 	return entry;
 }
 
+
 /* clock algorithm for choosing next frame to evict.  We will have two
    hands, and evict hand and a clear hand.  The clear hand will always
    lead zeroing out accesed bits, while the evict hand will follow
@@ -80,17 +83,53 @@ static struct frame_entry *choose_frame_to_evict_random(void){
    bit again, we esure that the two hands never come withing threshold
    frames of each other, this has to be taken into consideration when 
    choosing a frame to evict */
+
+static void clear_accessed_to_threshold(void){
+	ASSERT(intr_get_level() == INTR_OFF);
+	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
+
+	if(f_table.size - (clear_hand - evict_hand) <= (threshold * 2)){
+		/* If clear hand is way in front of evict hand don't clear
+		   access bits*/
+		return;
+	}
+
+	struct frame_entry *entry;
+	uint32_t i;
+	for(i = 0; i < threshold; i ++, clear_hand++){
+		/* Check if the frame is occupied if so we know that
+		   the thread that is in it is still alive because it
+		   must have acquired the frame table lock to die*/
+		entry = frame_entry_at_pos(clear_hand % f_table.size);
+		if(entry->cur_owner != NULL){
+			pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr);
+		}
+	}
+
+}
+
 static struct frame_entry *choose_frame_to_evict_clock(void){
     ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
     struct frame_entry *entry;
-    
-    while(evict_hand + threshold % f_table.size < clear_hand % f_table.size){
-        entry = frame_entry_at_pos(evict_hand++);
-        if(!entry->is_pinned){
-	    entry->is_pinned = true;
-	    return entry;
+	enum intr_level old_level;
+	bool should_advance;
+
+	old_level = intr_disable();
+	if(advance_clear_hand){
+		clear_accessed_to_threshold();
 	}
-    }
+	intr_set_level(old_level);
+
+    while((evict_hand + threshold) % f_table.size < clear_hand % f_table.size){
+        entry = frame_entry_at_pos((evict_hand++)%f_table.size);
+        old_level = intr_disable();
+        if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+        	intr_set_level(old_level);
+        	entry->is_pinned = true;
+        	return entry;
+        }
+
+	}
 
     return choose_frame_to_evict_lockstep();
 }
@@ -98,22 +137,21 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
 static struct frame_entry *choose_frame_to_evict_lockstep(void){
     ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
     struct frame_entry *entry;
-
+    struct frame_entry *clear_entry;
+	enum intr_level old_level;
     while(true){
-        entry = frame_entry_at_pos(evict_hand++ % f_table.size);
-        set_page_in_frame_as_accesed(clear_hand++ % f_table.size);
-	if(!entry->is_pinned){
-	    entry->is_pinned = true;
-	    return entry;
-	}
+        entry = frame_entry_at_pos((evict_hand++) % f_table.size);
+        clear_entry = frame_entry_at_pos((clear_hand++) % f_table.size);
+        old_level = intr_disable();
+        pagedir_set_accessed(clear_entry->cur_owner->pagedir, clear_entry->uaddr, false);
+		if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+			intr_set_level(old_level);
+			entry->is_pinned = true;
+			return entry;
+		}
+		intr_set_level(old_level);
     }
 }
-
-static void set_page_in_frame_as_accesed(uint32_t pos){
-    struct frame_entry *entry = frame_entry_at_pos(pos);
-    pagedir_set_accessed(entry->cur_owner->pagedir, entry->uaddr, false);
-}
-
 
 /* Initializes the frame table by first allocating all of the
    the user pool and creating a bitmap that corresponds to the

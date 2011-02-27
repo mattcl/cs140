@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "vm/frame.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -82,9 +83,7 @@ void timer_sleep (int64_t ticks){
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-	// ---------- BEGIN CHANGES -----------//
 	thread_sleep(start + ticks);
-	// ------------ END CHANGES -----------//
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -150,6 +149,10 @@ static void timer_interrupt (struct intr_frame *args UNUSED){
 
 	thread_tick ();
 	thread_check_sleeping(ticks);
+
+	if(ticks % 4){
+		advance_clear_hand = true;
+	}
 
 	if (thread_mlfqs){
 		// every 4 ticks we update all the priorities
