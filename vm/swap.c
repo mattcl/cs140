@@ -252,11 +252,18 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
-	   atomically*/
-	if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
-				masked_uaddr, true)){
-		PANIC("Kernel out of memory");
+	   atomically. PDE may be destroyed and thread may be dead
+	   by the time we get here, if it isn't dead just update its
+	   pagedir_setup_demand_page*/
+	intr_disable();
+	if(!thread_is_alive(cur_id)){
+		if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
+					masked_uaddr, true)){
+			PANIC("Kernel out of memory");
+		}
 	}
+
+	intr_enable();
 
 	/* Signal that the swap is free to be used to those waiting on
 	   PTE_SWAP_WAIT in read in.*/
