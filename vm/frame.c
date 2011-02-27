@@ -74,16 +74,19 @@ static struct frame_entry *choose_frame_to_evict_random(void){
 
 /* clock algorithm for choosing next frame to evict.  We will have two
    hands, and evict hand and a clear hand.  The clear hand will always
-   lead zeroing out accesed bits, while the evict hand will follow
-   and evict the first page it finds that still has not ben accesed.
-   The clearing of the bits will happen in the timer interrupt, but to 
-   ensure that 1. our hands never cross and 2. We allow a reasonable 
-   amout of time for a page to be accesed before checking it's accesed
-   bit again, we esure that the two hands never come withing threshold
+   lead zeroing out accessed bits, while the evict hand will follow
+   and evict the first page it finds that still has not been accessed.
+   The clearing of the bits will happen only if the interrupt handler
+   has ticked the appropriate number of ticks and we get a page fault
+   to ensure that 1. our hands never cross and 2. We allow a reasonable
+   amount of time for a page to be accessed before checking it's accessed
+   bit again, we ensure that the two hands never come within threshold
    frames of each other, this has to be taken into consideration when 
    choosing a frame to evict */
 
-static void clear_accessed_to_threshold(void){
+/* Clears a threshold number of PTE's accessed bits from the current
+   clear hand of our clock*/
+static void clear_accessed_threshold(void){
 	ASSERT(intr_get_level() == INTR_OFF);
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 
@@ -106,6 +109,7 @@ static void clear_accessed_to_threshold(void){
 
 }
 
+/* Implements the clock algorithm */
 static struct frame_entry *choose_frame_to_evict_clock(void){
     ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
     struct frame_entry *entry;
@@ -113,7 +117,8 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
 
 	old_level = intr_disable();
 	if(advance_clear_hand){
-		clear_accessed_to_threshold();
+		clear_accessed_threshold();
+		advance_clear_hand = false;
 	}
 	intr_set_level(old_level);
 
@@ -132,6 +137,8 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
     return choose_frame_to_evict_lockstep();
 }
 
+/* Choose a frame to evict but increment both hands so that
+   our hands never cross */
 static struct frame_entry *choose_frame_to_evict_lockstep(void){
     ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
     struct frame_entry *entry;
