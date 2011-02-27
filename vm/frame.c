@@ -97,7 +97,6 @@ void frame_init(void){
    also returns a kernel virtual address without mapping it to
    any pagedir*/
 static void *evict_page(void *new_uaddr, bool zero_out){
-	uint32_t frame_to_evict;
 	enum intr_level old_level;
 	struct frame_entry *entry;
 	medium_t medium;
@@ -243,14 +242,6 @@ void frame_clear_page (void *kaddr){
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
 	lock_release(&f_table.frame_table_lock);
-}
-
-/* For when we are going to free many pages at
-   the same time it is more efficient to acquire
-   the lock in advance and
- */
-void acquire_frame_lock(){
-
 }
 
 /* Need to unpin after it is installed in the pagedir of your thread
