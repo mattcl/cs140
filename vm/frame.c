@@ -43,7 +43,6 @@ static void *evict_page(void *new_uaddr, bool zero_out);
 static struct frame_entry *choose_frame_to_evict_clock(void);
 static struct frame_entry *choose_frame_to_evict_random(void);
 static struct frame_entry *choose_frame_to_evict_lockstep(void);
-static void set_page_in_frame_as_accesed(uint32_t pos);
 
 /* variables for managing the clock algorithm */
 static uint32_t evict_hand;
@@ -112,7 +111,6 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
     ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
     struct frame_entry *entry;
 	enum intr_level old_level;
-	bool should_advance;
 
 	old_level = intr_disable();
 	if(advance_clear_hand){
