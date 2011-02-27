@@ -38,28 +38,82 @@ static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
 static void *evict_page(void *new_uaddr, bool zero_out);
-static struct frame_entry *choose_frame_to_evict(void);
+static struct frame_entry *choose_frame_to_evict_clock(void);
+static struct frame_entry *choose_frame_to_evict_random(void);
+static struct frame_entry *choose_frame_to_evict_lockstep(void);
+static void set_page_in_frame_as_accesed(uint32_t pos);
 
+/* variables for managing the clock algorithm */
+static uint32_t evict_hand;
+static uint32_t clear_hand;
+static uint32_t threshold;
 
 static void evict_init(void){
-	/* None yet */
+  threshold = 2;
+  evict_hand = 0;
+  clear_hand = evict_hand + threshold;
 }
 
 /* Algorithm for choosing next frame to evict*/
-static struct frame_entry *choose_frame_to_evict(){
+static struct frame_entry *choose_frame_to_evict_random(void){
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 	struct frame_entry *entry;
-	uint32_t index;
+       	uint32_t index;
 	while(true){
 		index = random_ulong() % f_table.size;
 		entry = frame_entry_at_pos(index);
-		if(!entry->is_pinned) {
-			entry->is_pinned = true;
-			break;
+		if(!entry->is_pinned){
+		    entry->is_pinned = true;
+		    break;
 		}
 	}
 	return entry;
 }
+
+/* clock algorithm for choosing next frame to evict.  We will have two
+   hands, and evict hand and a clear hand.  The clear hand will always
+   lead zeroing out accesed bits, while the evict hand will follow
+   and evict the first page it finds that still has not ben accesed.
+   The clearing of the bits will happen in the timer interrupt, but to 
+   ensure that 1. our hands never cross and 2. We allow a reasonable 
+   amout of time for a page to be accesed before checking it's accesed
+   bit again, we esure that the two hands never come withing threshold
+   frames of each other, this has to be taken into consideration when 
+   choosing a frame to evict */
+static struct frame_entry *choose_frame_to_evict_clock(void){
+    ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
+    struct frame_entry *entry;
+    
+    while(evict_hand + threshold % f_table.size < clear_hand % f_table.size){
+        entry = frame_entry_at_pos(evict_hand++);
+        if(!entry->is_pinned){
+	    entry->is_pinned = true;
+	    return entry;
+	}
+    }
+
+    return choose_frame_to_evict_lockstep();
+}
+
+static struct frame_entry *choose_frame_to_evict_lockstep(void){
+    ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
+    struct frame_entry *entry;
+
+    while(true){
+        entry = frame_entry_at_pos(evict_hand++ % f_table.size);
+        set_page_in_frame_as_accesed(clear_hand++ % f_table.size);
+	if(!entry->is_pinned){
+	    entry->is_pinned = true;
+	    return entry;
+	}
+    }
+}
+
+static void set_page_in_frame_as_accesed(uint32_t pos){
+    struct frame_entry *entry = frame_entry_at_pos(pos);
+    pagedir_set_accessed(entry->cur_owner->pagedir, entry->uaddr, false);
+}
+
 
 /* Initializes the frame table by first allocating all of the
    the user pool and creating a bitmap that corresponds to the
@@ -106,8 +160,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	/* Select page and evict it */
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 
-	entry = choose_frame_to_evict();
-
+	entry = choose_frame_to_evict_clock();
 	kaddr = entry_to_kaddr(entry);
 	ASSERT(entry->is_pinned);
 

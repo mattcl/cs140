@@ -211,7 +211,9 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
+
 		PANIC("SWAP IS FULL BABY");
+
 	}
 
 	/* make a new frame entry to store the relevant data to this
@@ -232,7 +234,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	if(returned != NULL){
 		PANIC("COLLISION USING VADDR AS KEY IN HASH TABLE");
 	}
-
 
 	/* Write this out to disk now so that it is saved */
 	start_sector = swap_slot * SECTORS_PER_SLOT;
