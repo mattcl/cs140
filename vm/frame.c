@@ -136,11 +136,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(pagedir_is_dirty(pd, entry->uaddr)){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
 			pagedir_setup_demand_page(pd, entry->uaddr, PTE_SWAP_WAIT,
-					(uint32_t)kaddr, true);
+					((uint32_t)entry->uaddr & PTE_ADDR), true);
 			move_to_disk = true;
 		}else if(medium == PTE_MMAP){
 			pagedir_setup_demand_page(pd, entry->uaddr, PTE_MMAP_WAIT,
-					(uint32_t)kaddr, true);
+					((uint32_t)entry->uaddr & PTE_ADDR), true);
 			move_to_disk = true;
 		}else{
 			PANIC("realocate_page called with dirty page of medium_t: %x", medium);
