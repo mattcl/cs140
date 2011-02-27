@@ -67,8 +67,8 @@ struct frame_entry{
       map a file into the address space and to lazily load
       the information from the file */
    struct hash mmap_table;
-	mapid_t mapid_counter;
-
+   mapid_t mapid_counter;
+      
 	
 
 /* This is the struct that describes the necessary ELF
@@ -151,7 +151,9 @@ can use the kernel virtual address in order to keep the accessed and
 dirty bits for the user the same regardless of the fault that caused the
 frame to be evicted. Using the kernel virtual address to access memory in
 the eviction process allows us to ensure that the bits for the user's PTE
-entry stay as they were. Because we manage the memory in this way we 
+entry stay as they were. Because we manage the memory in this way we can 
+guarantee that the accessed and dirty bits are always coordinated. Thank
+you x86.
 
 
 ---- SYNCHRONIZATION ----
@@ -161,24 +163,42 @@ entry stay as they were. Because we manage the memory in this way we
 
 When a process needs a new frame they fault, then they call
 frame_get_frame with the appropriate flags. Inside frame_get_frame we have
-a frame table lock must be acquired to get a frame so we know that there
-is no race condition in this place. When a user process requires a new
- frame it searches a bit map.  Every bit map bit is matched to one frame
-in the frame table.  In order to search this bit map must acquire the frame table lock.
+a frame table lock must be acquired to modify the frame table so we know 
+that there is no race condition between the two threads because they both.
+Must acquire the same lock when they are trying to get a new frame for when
+the fault and need to read in from disk/swap/mmap or when then are growing 
+the stack. This simple synchronization is somewhat slow however because we
+know that page faults are very common and that needing to acquire a frame 
+should be fast so we did our best to only hold the lock long enough to run
+the eviction algorithm and set the appropriate data in the PTE for the evicted
+frame's process.
 
 In the case that eviction is neccesary we pin the page to the frame
 while we are evicting it, so that another user process cannot decide
-to evict from that frame that we are evicting from until we are done.
-We control access to this boolean using the frame table lock.
+to evict from the frame that we are currently evicting, this makes sure
+that we will won't try to give the same frame to two processes at the 
+same time. Access to the is_pinned boolean requires that you hold the
+frame_table_lock so we know that any updates to the boolean are done 
+atomically.
+
 
 ---- RATIONALE ----
 
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
-We just manage all of the memory for the user pool directly, we also
-leverage the pagedirectory heavily to find the virtual to kernel
-mappings. We implemented no new data structure but rather decided to
-use the pagedirectory to find the kernel virtual address. 
+
+The data structure for virtual to pysical mappings are handles by 
+the PTE for that particular page. When the page is not present we
+manually handle the top 20 bits of the PTE and the bits that are 
+available for the OS. We know we can change the top 20 bits in the 
+PTE when the page is not present because the processor only looks 
+at the present bit when deciding whether it needs to invoke a page
+fault. So when we need the page to fault we just set the page to be
+not present and use the top 20 bits and the AVL bits to efficiently
+route the page fault to find the correct data on its storage medium.
+
+This method requires no new data structure but rather just changes 
+the one that we had already to serve virtual memory better
 
 
 		       PAGING TO AND FROM DISK
@@ -198,12 +218,67 @@ use the pagedirectory to find the kernel virtual address.
 #define PTE_AVL_MMAP (1 << 11) /* 100 */
 #define PTE_AVL_STACK (3 << 9)  /* 110 */ 
 
-typedef uint32_t medium_t; /* used to represent one of the constants above */
+/* used to represent one of the constants above */
+typedef uint32_t medium_t; 
 
-The above defines define the "states" of the AVL bits of a page table entry. Since
-we are using the page table as our supplemental page table as well, we needed the 
-AVL bits to store the additional information.
+	When the data in the PTE is not present the top 20 bits will
+	refer to the virtual address of this PTE, this virtual address
+	will be used as a key to locate the data that is supposed to
+	be in main memory by the appropriate functions.
+	
 
+   31                                 12 11                PTE_P
+   +----------------------------------+---+---------------------+
+   |         Top 20 bits              |AVL|      Flags     | 1/0|
+   +----------------------------------+---+---------------------+
+
+	How the AVL bits are used
+
+   ERROR  - AVL BITS 000
+   ------
+   This should never happen because. Whenever a user is able to
+   access memory we set the AVL bits to the appropriate medium
+   that corresponds to where the memory belongs. 
+
+   SWAP - AVL BITS 001
+   ------
+   This indicates to the page fault handler that the memory that is
+   faulted on resides on the swap and that it can be recovered in a
+   call to swap_read_in
+
+   EXEC - AVL BITS 010
+   ------
+   This indicates to the page fault handler that the memory that it
+   faulted on resides in the original file that the process was loaded
+   from, and that it can be read in with a call to process_exec_read_in
+
+   MMAP - AVL BITS 100
+   ------
+   This indicates to the page fault handler that the memory that it
+   is looking for can be found in the original file that it mmapped
+   and that its data can be found in a call to mmap_read_in
+
+   SWAP WAIT - AVL BITS 110
+   ------
+   This tells the page fault handler to route this page fault to
+   swap_read_in, but it also tells swap_read_in that it must make
+   the requesting process to wait untill the data is completely
+   transfered to disk. The top 20 bits for this condition are the
+   top 20 bits of the kernel virtual address that this used to be
+   mapped to, used by swap_read_in.
+
+   MMAP WAIT - AVL BITS 101
+   ------
+   This tells the page fault handler to route this page fault to
+   mmap_read_in, but also tells mmap read in that it must make the
+   faulting process wait until its memory is completely written to
+   the mmapped file before reading it back out. Similar to SWAP_WAIT
+   the top 20 bits are used to store the old kernel virtual address
+   that this page used to be mapped to. 
+
+   UNDEF - AVL BITS 111
+   -------
+   Not used in this project
 
 //userprog_h
 typedef uint32_t mapid_t;

@@ -256,11 +256,7 @@ static void invalidate_pagedir (uint32_t *pd){
 	}
 }
 
-/* Currently these are notes for how we will use the page table
-   to contain the information we need for the supplementary page
-   table.
-
-	When the data in the PTE is not present the top 20 bits will
+/*	When the data in the PTE is not present the top 20 bits will
 	refer to the virtual address of this PTE, this virtual address
 	will be used as a key to locate the data that is supposed to
 	be in main memory by the appropriate functions.

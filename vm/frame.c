@@ -38,11 +38,12 @@ static inline struct frame_entry *frame_entry_at_kaddr (void *kaddr){
 
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr);
 static void *evict_page(void *new_uaddr, bool zero_out);
+static struct frame_entry *choose_frame_to_evict();
+
 
 static void evict_init(void){
 	/* None yet */
 }
-
 
 /* Algorithm for choosing next frame to evict*/
 static struct frame_entry *choose_frame_to_evict(){
