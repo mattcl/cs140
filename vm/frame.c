@@ -149,7 +149,7 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
 		if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
 			intr_set_level(old_level);
 			entry->is_pinned = true;
-			printf("exit loop2\n")
+			printf("exit loop2\n");
 			return entry;
 		}
 		intr_set_level(old_level);
