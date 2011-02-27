@@ -84,13 +84,13 @@ bool swap_read_in (void *faulting_addr){
 		intr_disable();
 	}
 
+	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
+
 	intr_enable();
 
 	/* Frame get page may read something out to swap so we must
 	   release this lock*/
 	lock_release(&swap_slots_lock);
-
-	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
 
 	/* May evict a page to swap, returns a kernel virtual address*/
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
@@ -162,10 +162,9 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Make sure it is read back out to swap if faulted*/
 	pagedir_set_dirty(pd, (void*)masked_uaddr, true);
+	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
 
 	intr_enable();
-
-	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
@@ -191,18 +190,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
-
-	if(!thread_is_alive(cur_id)){
-		/* Process has just died and doesn't need
-		   to save any data on the swap so we will
-		   just return instead of doing any work*/
-
-		/* Signal that the swap is free to be used to those waiting on
-		   PTE_SWAP_WAIT in read in.*/
-		cond_broadcast(&swap_free_condition, &swap_slots_lock);
-		lock_release(&swap_slots_lock);
-		return true;
-	}
 
 	/* If we get here we know that the swap table still
 	   exists for this process because destroying it needs
@@ -254,26 +241,16 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	   PTE_SWAP_WAIT in read in.*/
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
-	lock_release(&swap_slots_lock);
-
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
-	   atomically. PDE may be destroyed and thread may be dead
-	   by the time we get here, if it isn't dead just update its
-	   pagedir_setup_demand_page. It may be "dead" because it has
-	   destroyed all of it's pagedirectory entries but we can be
-	   assured that it will not cease to exist until it calls
-	   hash_destroy. Intr need to be disabled so that we can
-	   check the process hash and then set its PTE */
-	intr_disable();
-	if(!thread_is_alive(cur_id)){
-		if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
-					masked_uaddr, true)){
-			PANIC("Kernel out of memory");
-		}
+	   atomically. */
+	if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
+			masked_uaddr, true)){
+		PANIC("Kernel out of memory");
 	}
 
-	intr_enable();
+	lock_release(&swap_slots_lock);
+
 	return true;
 }
 

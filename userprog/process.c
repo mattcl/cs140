@@ -413,7 +413,6 @@ void process_exit (void){
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
 
-	destroy_swap_table(&cur_process->swap_table);
 
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle

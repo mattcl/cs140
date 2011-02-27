@@ -241,7 +241,13 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	   interrupts off*/
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
+
+
+
 	lock_release(&proc->mmap_table_lock);
+
+	destroy_swap_table(&proc->swap_table);
+
 	thread_exit();
 	NOT_REACHED();
 }
@@ -813,6 +819,12 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   table, so both adding and removing data from the mmap table
 	   and reading it from this function must be locked */
 	lock_acquire(&cur->process->mmap_table_lock);
+	/* This lock will exist until system_exit which grabs the
+	   lock and destroyes the hash and frees all the mmapped
+	   frames so none of their frames will exist */
+
+
+
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (void*)masked_uaddr);
 	if(entry == NULL){
 		/* Process has just deleted this entry meaning that it was
