@@ -146,6 +146,7 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
         clear_entry = frame_entry_at_pos((clear_hand++) % f_table.size);
         old_level = intr_disable();
         pagedir_set_accessed(clear_entry->cur_owner->pagedir, clear_entry->uaddr, false);
+        printf("locked %u accessed %u\n", entry->is_pinned , pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr));
 		if(!entry->is_pinned && pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
 			intr_set_level(old_level);
 			entry->is_pinned = true;
