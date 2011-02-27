@@ -182,7 +182,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	size_t swap_slot, start_sector;
 
 	/* Acquire the swap lock */
-	//printf("swap acq\n");
 	lock_acquire(&swap_slots_lock);
 
 	if(!thread_is_alive(cur_id)){
@@ -193,7 +192,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 		/* Signal that the swap is free to be used to those waiting on
 		   PTE_SWAP_WAIT in read in.*/
 		cond_broadcast(&swap_free_condition, &swap_slots_lock);
-		//printf("swap rel check %d\n", cur_id);
 		lock_release(&swap_slots_lock);
 		return true;
 	}
@@ -221,7 +219,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	new_entry->swap_slot = swap_slot;
 
 	/* Insert this into the swap map for the process. */
-	//printf("faluting address? %p %p %p\n", &cur_process->swap_table, &new_entry->elem, cur);
 	struct hash_elem *returned  = hash_insert(&cur_process->swap_table,
 			&new_entry->elem);
 	if(returned != NULL){
@@ -231,14 +228,12 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 
 	/* Write this out to disk now so that it is saved */
 	start_sector = swap_slot * SECTORS_PER_SLOT;
-//	printf("file acq\n");
 	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
 	lock_release(&filesys_lock);
-	//printf("file rel\n");
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
@@ -253,7 +248,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	cond_broadcast(&swap_free_condition, &swap_slots_lock);
 
 	lock_release(&swap_slots_lock);
-	//printf("swap rel\n");
 	return true;
 }
 
@@ -270,11 +264,9 @@ unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 void destroy_swap_table(struct hash *to_destroy){
 	/* Free all of the swap slots that are currently occupied
 	   by this process */
-	//printf("swap d acq\n");
 	lock_acquire(&swap_slots_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
 	lock_release(&swap_slots_lock);
-	//printf("swap d rel\n");
 }
 
 /* Function to compare the individual swap hash table elements

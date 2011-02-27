@@ -155,11 +155,7 @@ static void page_fault (struct intr_frame *f){
 
 	uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
-
-
-	//printf("Page fault medium %x, faulting address %p\n", pagedir_get_medium(pd, fault_addr), fault_addr);
-
-	if(fault_addr == (void*)0xffffffff){
+	if(!user && fault_addr == (void*)0xffffffff){
 		PANIC("Infinite page faults detected");
 	}
 	/* This section implements virtual memory from the fault
@@ -245,7 +241,6 @@ static void page_fault (struct intr_frame *f){
 				   to the kernel code*/
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
-				//PANIC("what");
 			}
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
@@ -259,7 +254,6 @@ static void page_fault (struct intr_frame *f){
 		}else{
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
-			//PANIC("WHAT?");
 		}
 	}
 }

@@ -18,7 +18,6 @@ struct frame_entry{
 	bool is_pinned;
 	struct thread *cur_owner;
 	void *uaddr;
-	struct condition pin_condition;
 };
 
 

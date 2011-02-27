@@ -353,7 +353,6 @@ int process_wait (tid_t child_tid){
    And signals the parent that it has finished,
    if the parent still exists and is waiting*/
 void process_exit (void){
-	//printf("Process exit\n");
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
@@ -580,7 +579,6 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
-		//printf"failed to setup stack\n");
 		goto done;
 	}
 
@@ -909,12 +907,9 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
 
-	//printf("load seg\n");
-
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	//printf("got page %p\n", kpage);
 	lock_acquire(&filesys_lock);
 
 	file_seek (file, ofs);
@@ -957,7 +952,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	unpin_frame_entry(kpage);
 
-	//printf("load seg done\n");
 	lock_release(&filesys_lock);
 
 	return true;

@@ -161,7 +161,6 @@ struct exec_page_info{
 							   end of this segment. MAY BE MORE THAN ONE
 							   page worth of zero bytes*/
 	bool writable;   		/* Whether this segment is read/write or read only*/
-	/* Is writable can be written in the lower 12 bits of mem_page for efficiency*/
 };
 
 struct mmap_hash_entry{
