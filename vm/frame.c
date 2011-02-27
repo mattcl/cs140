@@ -71,10 +71,8 @@ static struct frame_entry *choose_frame_to_evict(){
    could also work if we put a lock into each of the frames and
    acquired it before changing any of its data but we erred on the
    side of correctness and made sure that eviction on frames is done
-   with the lock acquired. Each frame has a condition variable which
-   will be used to synchronize frame_clear_page with eviction. If a
-   frame is pinned then it should not ever have its data pulled out
-   from underneath it. The condition variable ensures this.*/
+   with the lock acquired. If a frame is pinned then it should not
+   ever have its data pulled out from underneath it.*/
 void frame_init(void){
 	f_table.size = palloc_number_user_pages();
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
