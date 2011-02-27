@@ -250,11 +250,21 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 		lock_release(&filesys_lock);
 	}
 
+	/* Signal that the swap is free to be used to those waiting on
+	   PTE_SWAP_WAIT in read in.*/
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);
+
+	lock_release(&swap_slots_lock);
+
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
 	   atomically. PDE may be destroyed and thread may be dead
 	   by the time we get here, if it isn't dead just update its
-	   pagedir_setup_demand_page*/
+	   pagedir_setup_demand_page. It may be "dead" because it has
+	   destroyed all of it's pagedirectory entries but we can be
+	   assured that it will not cease to exist until it calls
+	   hash_destroy. Intr need to be disabled so that we can
+	   check the process hash and then set its PTE */
 	intr_disable();
 	if(!thread_is_alive(cur_id)){
 		if(!pagedir_setup_demand_page(pd, uaddr, PTE_SWAP,
@@ -264,12 +274,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	}
 
 	intr_enable();
-
-	/* Signal that the swap is free to be used to those waiting on
-	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);
-
-	lock_release(&swap_slots_lock);
 	return true;
 }
 
