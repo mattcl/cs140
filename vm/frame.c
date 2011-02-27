@@ -141,7 +141,7 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
     struct frame_entry *clear_entry;
 	enum intr_level old_level;
     while(true){
-    	printf("loop2\n");
+    	printf("loop2 %u %u\n", evict_hand, clear_hand);
         entry = frame_entry_at_pos((evict_hand++) % f_table.size);
         clear_entry = frame_entry_at_pos((clear_hand++) % f_table.size);
         old_level = intr_disable();
