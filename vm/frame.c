@@ -92,7 +92,6 @@ static void clear_accessed_to_threshold(void){
 		   access bits*/
 		return;
 	}
-
 	struct frame_entry *entry;
 	uint32_t i;
 	for(i = 0; i < threshold; i ++, clear_hand++){
@@ -126,6 +125,7 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
         	entry->is_pinned = true;
         	return entry;
         }
+        intr_set_level(old_level);
 
 	}
 
