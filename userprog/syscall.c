@@ -16,6 +16,7 @@
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
 #include <string.h>
 #include "devices/timer.h"
 

@@ -174,7 +174,7 @@ bool swap_read_in (void *faulting_addr){
 
 /* Writes the data for the kaddr to the swap device, then saves the uaddr,
    medium and swap slot for the frame entry. */
-bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr, medium_t medium){
+bool swap_write_out (struct thread *cur, void *uaddr, void *kaddr, medium_t medium){
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
 
