@@ -234,14 +234,14 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
 	printf("%s: exit(%d)\n", proc->program_name, status);
 	proc->exit_code = status;
-	/* Must be done before destroying the page dir which will lose all
-	   of the data from the mmapped files and before we dissable interrupts
-	   because moving dirty pages to disk takes a loooooonnnnggggg time*/
 
+	/* We Need to clear out the mmap table before exiting
+	   and before thread exit because freeing the mmap table
+	   may require I.O. that will wait and can't be done with
+	   interrupts off*/
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
-	printf("about to call thread exit\n");
 	thread_exit();
 	NOT_REACHED();
 }
@@ -506,8 +506,8 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 	   If this fd is not mmapped then we can actually delete
 	   it and remove it from the hash, otherwise we will mark
 	   it as closed but not really close it. This will be called
-	   again on system munmap, which will set both flags to false
-	   so that it will actually remove the file.*/
+	   again on system munmap, which will decrement the reference
+	   count to this fd and then call system close if it is 0.*/
 	if(entry->num_mmaps == 0){
 		lock_acquire(&filesys_lock);
 		file_close(entry->open_file);
@@ -515,17 +515,21 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
 		struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
-				   This Is obviously a huge problem so system KILLLLLLL!!!! */
+			   This Is obviously a huge problem so system KILLLLLLL!!!! */
 			PANIC("ERROR WITH HASH IN PROCESS EXIT!! CLOSE");
 		}
 
 		free(entry);
 
 	}else{
+		/* Will tell munmap to actually close this file*/
 		entry->is_closed = true;
 	}
 }
 
+/* Converts a user address to a mmap_hash_entry, or NULL
+   Will look through the hash table to see if uaddr
+   is between the bounds of the given mmaped region*/
 static struct mmap_hash_entry *uaddr_to_mmap_entry(
 	struct thread *cur, void *uaddr){
 	struct hash_iterator i;
@@ -542,6 +546,9 @@ static struct mmap_hash_entry *uaddr_to_mmap_entry(
 	return NULL;
 }
 
+/* Given the map id looks up the mmap_hash_entry using the
+   mid as the key. And either returns the entry or it will
+   return NULL*/
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 	struct process *process = thread_current()->process;
 	struct mmap_hash_entry key;
@@ -554,7 +561,6 @@ static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid){
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
-	//printf"map\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't mmap a closed file. Fd to hash_entry also implicitly
 	   verifies the fd*/
@@ -668,13 +674,11 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	}
 
 	f->eax = mmap_entry->mmap_id;
-	//printf"mapend\n");
 }
 
 /* Called from process exit because it can never kill and we need to make
    sure all of the changes to the mmapped regions are saved to disk.*/
 static void system_munmap (struct intr_frame *f, mapid_t map_id){
-	//printf"un\n");
 	struct mmap_hash_entry *entry = mapid_to_hash_entry(map_id);
 	if(entry == NULL){
 		f->eax = -1;
@@ -706,7 +710,6 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 		fd_entry->is_closed = false;
 		system_close(f, fd_entry->fd);
 	}
-	//printf"un end\n");
 }
 
 static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
@@ -714,7 +717,6 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		//printf("sleepin\n");
 		timer_msleep(8);
 		intr_disable();
 	}
@@ -725,7 +727,6 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
    can call this function, when it page faulted
    trying to access memory*/
 bool mmap_read_in(void *faulting_addr){
-	//printf"readin\n");
 	struct thread *cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	/* Get the key into the hash, AKA the uaddr of this page*/
@@ -792,8 +793,6 @@ bool mmap_read_in(void *faulting_addr){
 
 	unpin_frame_entry(kaddr);
 
-	//printf"in end\n");
-	/*"Kernel out of memory! if false;"*/
 	return true;
 }
 
@@ -827,7 +826,10 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   mmapping to it */
 	ASSERT(fd_entry != NULL);
 
-	lock_acquire(&filesys_lock);
+	bool already_held = lock_held_by_current_thread(&filesys_lock);
+	if(already_held){
+		lock_acquire(&filesys_lock);
+	}
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
@@ -839,7 +841,10 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   kicked off*/
 	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
-	lock_release(&filesys_lock);
+
+	if(already_held){
+		lock_release(&filesys_lock);
+	}
 
 	lock_release(&cur->process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE
@@ -847,7 +852,6 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	ASSERT(pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
 			masked_uaddr, true));
 
-	//printf"mmap out end\n");
 	return true;
 }
 
@@ -856,7 +860,6 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 /* Saves all of the pages that are dirty for the given mmap_hash_entry
    and frees their frames. */
 static void mmap_save_all(struct mmap_hash_entry *entry){
-	//printf"saveall\n");
 	struct thread * cur = thread_current();
 	uint32_t *pd = cur->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
@@ -886,7 +889,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	for(j = 0; j < entry->num_pages; j++, pg_ptr += PGSIZE){
 		if(pagedir_get_medium(pd, pg_ptr) == PTE_MMAP_WAIT){
 			/* Being written out to disk now wait till it is done*/
-			printf("waiting mmap \n");
 			mmap_wait_until_saved(pd, pg_ptr);
 			/* Was just saved so continue*/
 			continue;
@@ -916,7 +918,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 				   are done before moving onto the next page in
 				   our mmapped file*/
 				intr_disable();
-				printf("waiting mmap \n");
 				mmap_wait_until_saved(pd, pg_ptr);
 			}
 		}
@@ -927,7 +928,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	file_seek(fd_entry->open_file, original_position);
 	lock_release(&filesys_lock);
 
-	//printf"saveall exit\n");
 }
 
 /* Returns the file or NULL if the fd is invalid.

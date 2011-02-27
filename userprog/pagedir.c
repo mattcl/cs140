@@ -41,13 +41,7 @@ void pagedir_destroy (uint32_t *pd){
 
 			for(pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++){
 				if(*pte & PTE_P){
-					frame_clear_page(pte_get_page (*pte));
-				} else {
-					/* if its in the swap we need to "free"
-				     it's swap memory */
-					/* Swap slots are recovered when we free
-					   the swap hash table. Using the hash
-					   do all*/
+					frame_clear_page(pte_get_page(*pte));
 				}
 			}
 			palloc_free_page (pt);
@@ -93,12 +87,10 @@ static uint32_t *lookup_page (uint32_t *pd, const void *vaddr, bool create){
 
 /* Adds a mapping in page directory PD from user virtual page
    uaddr to the physical frame identified by kernel virtual
-   address kaddr.
-   uaddr must not already be mapped.
+   address kaddr.  uaddr must not already be mapped.
    kaddr should probably be a page obtained from the user pool
-   with palloc_get_page().
-   If WRITABLE is true, the new page is read/write;
-   otherwise it is read-only.
+   with palloc_get_page(). If WRITABLE is true, the new page
+   is read/write; otherwise it is read-only.
    Returns true if successful, false if memory allocation
    failed. */
 bool pagedir_set_page (uint32_t *pd, void *uaddr, void *kaddr, bool writable){
@@ -157,8 +149,7 @@ void pagedir_clear_page (uint32_t *pd, void *uaddr){
 
 /* Returns true if the PTE for virtual page uaddr in PD is dirty,
    that is, if the page has been modified since the PTE was
-   installed.
-   Returns false if PD contains no PTE for uaddr. */
+   installed.   Returns false if PD contains no PTE for uaddr. */
 bool pagedir_is_dirty (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_D) != 0;
@@ -187,8 +178,8 @@ bool pagedir_is_accessed (uint32_t *pd, const void *uaddr){
 	return pte != NULL && (*pte & PTE_A) != 0;
 }
 
-/* Sets the accessed bit to ACCESSED in the PTE for virtual page
-   uaddr in PD. */
+/* Sets the accessed bit to whatever accessed is
+   in the PTE for virtual page*/
 void pagedir_set_accessed (uint32_t *pd, const void *uaddr, bool accessed){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 	if(pte != NULL){
@@ -209,8 +200,7 @@ bool pagedir_is_present (uint32_t *pd, const void *uaddr){
 	return pte != NULL && (*pte & PTE_P) != 0;
 }
 
-
-
+/* Returns true if the PTE for uaddr is writable */
 bool pagedir_is_writable (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page (pd, uaddr, false);
 	return pte != NULL && (*pte & PTE_W) != 0;
@@ -266,61 +256,63 @@ static void invalidate_pagedir (uint32_t *pd){
 	}
 }
 
-/* Currently these are notes for how we will use the page table
-   to contain the information we need for the supplementary page
-   table.
+/*	When the data in the PTE is not present the top 20 bits will
+	refer to the virtual address of this PTE, this virtual address
+	will be used as a key to locate the data that is supposed to
+	be in main memory by the appropriate functions.
 
-   Memory
+   31                                 12 11                PTE_P
+   +----------------------------------+---+---------------------+
+   |         Virtual Address          |000|      Flags     | 1/0  |
+   +----------------------------------+---+---------------------+
+
+	How the AVL bits are used
+
+   ERROR  - AVL BITS 000
    ------
-   We do not have to handle this case since we will not get a page fault.
-   Because the OS zeros PTE_AVL we can assert that these are not zero 
-   whenever we do anything with this area.
+   This should never happen because. Whenever a user is able to
+   access memory we set the AVL bits to the appropriate medium
+   that corresponds to the place of the memory.
 
-   31                                 12 11                  PTE_P 
-   +----------------------------------+---+---------------------+
-   |         Physical Address         |000|      Flags     | 1  |
-   +----------------------------------+---+---------------------+
+   SWAP - AVL BITS 001
+   ------
+   This indicates to the page fault handler that the memory that is
+   faulted on resides on the swap and that it can be recovered in a
+   call to swap_read_in
 
-   Swap
-   ___
-   We use the 20 bits alloted to store a virtual address.  The 
-   virtual adress will then be a key into a swap table-a hash that 
-   is stored per process.  The values in that hash will be a 32 bit
-   integer that says what swap slot the page is stored in.
+   EXEC - AVL BITS 010
+   ------
+   This indicates to the page fault handler that the memory that it
+   faulted on resides in the original file that the process was loaded
+   from, and that it can be read in with a call to process_exec_read_in
 
-   31                                 12 11                  PTE_P 
-   +----------------------------------+---+---------------------+
-   |         Virtual Address          |001|      Flags     | 0  |
-   +----------------------------------+---+---------------------+
+   MMAP - AVL BITS 100
+   ------
+   This indicates to the page fault handler that the memory that it
+   is looking for can be found in the original file that it mmapped
+   and that its data can be found in a call to mmap_read_in
 
-   Disk Executable
-   --------------
-   We use the 20 bits to store the offset into the executable that 
-   the process is running.  Because each process has a pointer to
-   its executable we can ask the current process for it's executable.
-   Note that because we know we will be reading page size chunks out
-   of the file we only need 20 bits.
+   SWAP WAIT - AVL BITS 110
+   ------
+   This tells the page fault handler to route this page fault to
+   swap_read_in, but it also tells swap_read_in that it must make
+   the requesting process to wait untill the data is completely
+   transfered to disk
 
-   31                                 12 11                  PTE_P 
-   +----------------------------------+---+---------------------+
-   |         Virtual Address          |010|      Flags     | 0  |
-   +----------------------------------+---+---------------------+
+   MMAP WAIT - AVL BITS 101
+   ------
+   This tells the page fault handler to route this page fault to
+   mmap_read_in, but also tells mmap read in that it must make the
+   faulting process wait until its memory is completely written to
+   the mmapped file before reading it back out
 
-   Disk MMap
-   ---------
-   We use the 20 bits to store the id of the mmapped
-   file that page faulted.  We use that as a key into a hash
-   that the current process holds, and combine the starting virtual
-   address of that file to get an offset into the mmaped file  
-
-   31                                 12 11                  PTE_P 
-   +----------------------------------+---+---------------------+
-   |         mmapid_t                 |100|      Flags     | 0  |
-   +----------------------------------+---+---------------------+
- */
+   UNDEF - AVL BITS 111
+   -------
+   Not used in this project */
 
 /* Sets the medium that this uaddr originated from, this will be used
-   by eviction and then read by the page fault handler. */
+   by the page fault handler to appropriately find the data on the
+   given device medium. */
 void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	/* get the page table out of the page directory */
 	uint32_t *pte = lookup_page (pd, uaddr, false);
@@ -334,10 +326,10 @@ void pagedir_set_medium (uint32_t *pd, void *uaddr, medium_t medium){
 	}
 }
 
-/* Gets the type of medium that this uaddr came from
-   this is used by the page fault handler to determine
-   where to look for data when it has been evicted, or
-   lazily loaded*/
+/* Gets the type of medium that this uaddr is currently mapped to
+   this will be used by the page fault handler to appropriately
+   store/retrieve the data for this uaddr when it is not actually
+   in main memory*/
 medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	/*get the page table entry out of the page directory*/
 	uint32_t *pte = lookup_page (pd, uaddr, false);
@@ -350,16 +342,12 @@ medium_t pagedir_get_medium (uint32_t *pd, const void *uaddr){
 	return PTE_AVL_ERROR;
 }
 
+/* Sets the upper 20 bits of the page table, generally used
+   to set the virtual address key for this uaddr*/
 void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 	/* The last 12 bits should be zero */
 	ASSERT((aux_data & ~(uint32_t)PTE_ADDR) == 0);
-
-	/* Set the bottom 12 bits to 0, more usable form of the
-	   function I believe, avoids asserting something. Use
-	   after done debugging
-	aux_data &= ~(uint32_t)PTE_ADDR;
-	 */
 
 	if(pte != NULL){
 		*pte |= aux_data;
@@ -368,14 +356,15 @@ void pagedir_set_aux (uint32_t *pd, void *uaddr, uint32_t aux_data){
 	}
 }
 
+/* Gets the most significant 20 bits of the PTE, these bits are
+   generally used for mapping into the appropriate medium tables */
 uint32_t pagedir_get_aux (uint32_t *pd, const void *uaddr){
 	uint32_t *pte = lookup_page(pd, uaddr, false);
 
 	if(pte != NULL){
 		return *pte & PTE_ADDR;
 	}else{
-		//PANIC("pagedir_get_aux called on a page table entry that is not initialized");
-		return 0;
+		return PTE_AVL_ERROR;
 	}
 }
 
@@ -406,8 +395,6 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
    inconsistent in the PTE of another thread. That would be all bad/*/
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	uint32_t data, bool writable){
-
-	//printf("setting %p's page to be medium type %u with auxilary data %p  and present bit %u\n", uaddr, medium, data, pagedir_is_present(pd, uaddr));
 
 	/* Ensure the PTE exists because the following functions won't create it.*/
 	uint32_t *pte = lookup_page(pd, uaddr, true);

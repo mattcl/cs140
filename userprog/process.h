@@ -83,14 +83,7 @@ struct process {
 	   addresses onto the swap device and retrieve them. The swap
 	   table is per process to allow us to use the virtual address
 	   for the process as an index into the table. .*/
-	struct hash swap_table;
-
-	/* Because any process can evict any other processes frames
-	   the per process swap table needs to be locked. Otherwise
-	   inserting things into the swap table from multiple processes
-	   simultaneously will fail miserably*/
-	struct lock swap_table_lock;
-
+	struct hash swap_table; /* Protected by the overarching swap lock*/
 
 	/* The exec_info is a pointer to an array of ELF program
 	   header information this information is used to determine
@@ -168,7 +161,6 @@ struct exec_page_info{
 							   end of this segment. MAY BE MORE THAN ONE
 							   page worth of zero bytes*/
 	bool writable;   		/* Whether this segment is read/write or read only*/
-	/* Is writable can be written in the lower 12 bits of mem_page for efficiency*/
 };
 
 struct mmap_hash_entry{

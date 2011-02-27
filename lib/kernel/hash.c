@@ -101,11 +101,10 @@ hash_insert (struct hash *h, struct hash_elem *new)
   struct list *bucket = find_bucket (h, new);
   struct hash_elem *old = find_elem (h, bucket, new);
 
-  if (old == NULL) 
+  if (old == NULL){
     insert_elem (h, bucket, new);
-
+  }
   rehash (h);
-
   return old; 
 }
 
@@ -305,6 +304,7 @@ hash_int (int i)
 static struct list *
 find_bucket (struct hash *h, struct hash_elem *e) 
 {
+ /// printf("%p %p %p %p\n", h->hash, h->hash(e, h->aux), h->bucket_cnt, h->aux);
   size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1);
   return &h->buckets[bucket_idx];
 }

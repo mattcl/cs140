@@ -114,6 +114,7 @@ static void set_page_in_frame_as_accesed(uint32_t pos){
     pagedir_set_accessed(entry->cur_owner->pagedir, entry->uaddr, false);
 }
 
+
 /* Initializes the frame table by first allocating all of the
    the user pool and creating a bitmap that corresponds to the
    free or used frames that we currently have. Also initializes
@@ -162,7 +163,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 
 	entry = choose_frame_to_evict_clock();
-
 	kaddr = entry_to_kaddr(entry);
 	ASSERT(entry->is_pinned);
 
@@ -264,7 +264,6 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
 	return entry_to_kaddr(entry);
 }
-
 
 /* Removes the data from the frame pointed to by the kaddr,
    if the frame that the kaddr is pointing to does not belong

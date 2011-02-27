@@ -248,11 +248,13 @@ tid_t thread_create (const char *name, int priority,
 	/* Initialize the user process */
 	struct process *p = calloc (1, sizeof(struct process));
 	if(p == NULL){
+		intr_set_level (old_level);
 		return TID_ERROR;
 	}
 
 	if( initialize_process (p, t) == false){
 		free(p);
+		intr_set_level (old_level);
 		return TID_ERROR;
 	}
 #endif
@@ -353,17 +355,17 @@ tid_t thread_tid (void){
 void thread_exit (void){
 	ASSERT (!intr_context ());
 	intr_disable();
-	release_locks();
 	
-#ifdef USERPROG
-	process_exit ();
-#endif
-
 	/* Remove thread from all threads list, set our status to dying,
 	   and schedule another process.  That process will destroy us
 	   when it calls thread_schedule_tail(). */
 	list_remove (&thread_current()->allelem);
-	
+
+#ifdef USERPROG
+	process_exit ();
+#endif
+
+	release_locks();
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();
@@ -640,23 +642,20 @@ static struct thread *next_thread_to_run (void){
    is complete. */
 void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
-
+	/* Mark us as running. */
+	cur->status = THREAD_RUNNING;
+#ifdef USERPROG
+	/* Activate the new address space. */
+	process_activate ();
+#endif
 	/* prev and cur can't be the same and dying or we will
 	 * reach Non-reachable code as a thread that is dying
 	 * now is running and will try to resume execution*/
 	ASSERT (prev != cur && cur ->status != THREAD_DYING);
 	ASSERT (intr_get_level () == INTR_OFF);
 
-	/* Mark us as running. */
-	cur->status = THREAD_RUNNING;
-
 	/* Start new time slice. */
 	thread_ticks = 0;
-
-#ifdef USERPROG
-	/* Activate the new address space. */
-	process_activate ();
-#endif
 
 	/* If the thread we switched from is dying, destroy its struct
 	   thread.  This must happen late so that thread_exit() doesn't
@@ -685,10 +684,10 @@ static void schedule (void){
 	ASSERT (cur->status != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 
+
 	if(cur != next){
 		prev = switch_threads (cur, next);
 	}
-
 	thread_schedule_tail (prev);
 }
 
@@ -703,6 +702,21 @@ static tid_t allocate_tid (void){
 
 	return tid;
 }
+
+bool thread_is_alive(tid_t tid){
+	struct list_elem *e;
+	enum intr_level old_level = intr_disable();
+	for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)){
+		struct thread *t = list_entry(e, struct thread, allelem);
+		if(t->tid == tid){
+			intr_set_level(old_level);
+			return true;
+		}
+	}
+	intr_set_level(old_level);
+	return false;
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
