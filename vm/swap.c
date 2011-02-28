@@ -11,6 +11,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "devices/timer.h"
+#include "threads/thread.h"
 
 /* This bit map tracks used swap slots, each swap slot is
    4096 bytes large (I.E.) one page. When the bit is set to
