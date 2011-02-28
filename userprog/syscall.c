@@ -392,12 +392,15 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		f->eax = 0;
 		return;
 	}
-
+	printf("pinning\n");
 	pin_all_frames_for_buffer(buffer, size);
+	printf("pinned\n");
 	lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
 	lock_release(&filesys_lock);
+	printf("unpinning\n");
 	unpin_all_frames_for_buffer(buffer, size);
+	printf("unpinned\n");
 	f->eax = bytes_read;
 }
 
