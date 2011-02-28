@@ -1058,6 +1058,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
 			get_user(uaddr);
+			printf("looped\n");
 		}
 		intr_enable();
 		increment = (size > PGSIZE) ? PGSIZE : size;
