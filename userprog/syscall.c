@@ -1048,6 +1048,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	 /* Used to prevent trying to pin the same frame twice, because
 	    buffer is arbitrary and span multiple pages */
 	uint8_t *masked = NULL;
+	printf("size %u\n", size);
 	while(size > 0){
 		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
 		/* pin_frame_entry returns false when the current frame
