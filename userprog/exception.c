@@ -155,6 +155,7 @@ static void page_fault (struct intr_frame *f){
 
 	uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
+
 	printf("user %u fault_addr %p\n", user, fault_addr);
 	if(!user && fault_addr == (void*)0xffffffff){
 		PANIC("Infinite page faults detected");
