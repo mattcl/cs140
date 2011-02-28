@@ -885,7 +885,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	off_t offset, original_position, write_bytes, f_length, last_page_length;
 
 	lock_acquire(&filesys_lock);
-	original_position = file_tell(fd_entry->open_file);
 	f_length = file_length(fd_entry->open_file);
 	lock_release(&filesys_lock);
 
@@ -910,13 +909,15 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 			if(pin_frame_entry(kaddr_for_pg)){
 				/* It is now pinned so it will not be evicted */
 				lock_acquire(&filesys_lock);
-
+				original_position = file_tell(fd_entry->open_file);
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
 				file_seek(fd_entry->open_file, offset);
 
 				write_bytes = (entry->num_pages -1 == j)  ? last_page_length : PGSIZE;
 
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
+				file_seek(fd_entry->open_file, original_position);
+
 				lock_release(&filesys_lock);
 				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
@@ -931,10 +932,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 		}
 	}
 	intr_enable();
-
-	lock_acquire(&filesys_lock);
-	file_seek(fd_entry->open_file, original_position);
-	lock_release(&filesys_lock);
 
 }
 

@@ -363,6 +363,15 @@ void process_exit (void){
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
 
+	/* We are no longer viable processes and are being removed from the
+	   list of processes. The lock here also ensures that our parent
+	   has either exited or hasn't exited while we update information
+	   Lock prevents a parent from waiting on this process if we get to
+	   the lock first. This ensures that a waiting parent will be woken up*/
+	lock_acquire(&processes_hash_lock);
+
+	destroy_swap_table(&cur_process->swap_table);
+
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
 	pd = cur->pagedir;
@@ -379,12 +388,6 @@ void process_exit (void){
 		pagedir_destroy (pd);
 	}
 
-	/* We are no longer viable processes and are being removed from the
-	   list of processes. The lock here also ensures that our parent
-	   has either exited or hasn't exited while we update information
-	   Lock prevents a parent from waiting on this process if we get to
-	   the lock first. This ensures that a waiting parent will be woken up*/
-	lock_acquire(&processes_hash_lock);
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
 
@@ -418,8 +421,6 @@ void process_exit (void){
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
 	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
-
-	destroy_swap_table(&cur_process->swap_table);
 
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle
@@ -622,6 +623,7 @@ bool process_lock(pid_t pid, struct lock *lock_to_grab){
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
+	printf("prn\n");
 	intr_enable();
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
@@ -946,9 +948,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-	if(kpage == NULL){
-		return false;
-	}
+	ASSERT(kpage != NULL);
 
 	/* Load this page. */
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
@@ -956,6 +956,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		lock_release(&filesys_lock);
 		unpin_frame_entry(kpage);
 		frame_clear_page (kpage);
+		printf("prin done\n");
 		return false;
 	}
 	memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -968,6 +969,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* remove this frame cause we failed*/
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
+		printf("prin done\n");
 		return false;
 	}
 
@@ -979,6 +981,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	unpin_frame_entry(kpage);
 
 	lock_release(&filesys_lock);
+	printf("prin done\n");
 
 	return true;
 }
