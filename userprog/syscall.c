@@ -1050,7 +1050,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* pin_frame_entry returns false when the current frame
 		   in question is in the process of being evicted. We want
 		   the page address so we mask off the lower 12 bits*/
-		intr_disabled();
+		intr_disable();
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
@@ -1059,7 +1059,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 			   in so that we can pin it's frame */
 			get_user(uaddr);
 		}
-		intr_enabled();
+		intr_enable();
 		increment = (size > PGSIZE) ? PGSIZE : size;
 		size -= PGSIZE;
 		uaddr += increment;
