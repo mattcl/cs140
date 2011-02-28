@@ -250,6 +250,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	void * old_uaddr =  entry->uaddr;
 	struct process * old_frame_process = entry->cur_owner;
 	pid_t old_process_id = entry->cur_owner->pid;
+	uint32_t * old_pd = entry->pd;
 	entry->uaddr = new_uaddr;
 	entry->cur_owner = thread_current()->process;
 	entry->pd = thread_current()->pagedir;
@@ -261,9 +262,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        it from the original owners thread will fault and wait */
 	if(move_to_disk){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
-			swap_write_out(old_frame_process, old_process_id, old_uaddr, kaddr, medium);
+			swap_write_out(old_frame_process, old_pd,
+					old_process_id, old_uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
-			mmap_write_out(old_frame_process, old_process_id, old_uaddr, kaddr);
+			mmap_write_out(old_frame_process, old_pd,
+					old_process_id, old_uaddr, kaddr);
 		}
 	}
 
