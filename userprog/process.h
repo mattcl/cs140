@@ -83,7 +83,11 @@ struct process {
 	   addresses onto the swap device and retrieve them. The swap
 	   table is per process to allow us to use the virtual address
 	   for the process as an index into the table. .*/
-	struct hash swap_table; /* Protected by the overarching swap lock*/
+	struct hash swap_table;
+
+	/* Lock for this processes swap table */
+	struct lock swap_table_lock;
+
 
 	/* The exec_info is a pointer to an array of ELF program
 	   header information this information is used to determine
@@ -188,6 +192,8 @@ void process_activate (void);
 bool initialize_process (struct process *p, struct thread *our_thread);
 bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
+
+bool process_lock(pid_t pid, struct lock *lock_to_grab);
 
 /* Called by exception.c */
 bool process_exec_read_in(void *faulting_addr);

@@ -72,7 +72,7 @@ bool swap_read_in (void *faulting_addr){
 	medium_t org_medium;
 
 	ASSERT(intr_get_level() == INTR_OFF);
-	lock_acquire(&swap_slots_lock);
+	lock_acquire(&cur_process->swap_table_lock);
 
 	/* Wait while the data finishes moving to swap atomically
 	   check our medium bits */
@@ -80,7 +80,7 @@ bool swap_read_in (void *faulting_addr){
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
-		cond_wait(&swap_free_condition, &swap_slots_lock);
+		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
 	}
 
@@ -88,7 +88,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Frame get page may read something out to swap so we must
 	   release this lock*/
-	lock_release(&swap_slots_lock);
+	lock_release(&cur_process->swap_table_lock);
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_SWAP);
 
@@ -96,7 +96,7 @@ bool swap_read_in (void *faulting_addr){
 	void* kaddr = frame_get_page(PAL_USER, (void*)faulting_addr);
 	ASSERT(kaddr != NULL);
 
-	lock_acquire(&swap_slots_lock);
+	lock_acquire(&cur_process->swap_table_lock);
 
 	/* Lookup the corresponding swap slot that is holding this faulting
 	   addresses data */
@@ -122,10 +122,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Filesys lock needed to prevent race with syscall write*/
 
-	bool already_held = lock_held_by_current_thread(&filesys_lock);
-	if(already_held){
-		lock_acquire(&filesys_lock);
-	}
+	lock_acquire(&filesys_lock);
 
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
@@ -133,21 +130,11 @@ bool swap_read_in (void *faulting_addr){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
 
-	if(already_held){
-		lock_release(&filesys_lock);
-	}
-
-	/* Set this swap slot to usable */
-	bitmap_set(used_swap_slots, swap_slot, false);
+	lock_release(&filesys_lock);
 
 	/* Free the malloced swap entry */
 	free(hash_entry(slot_result, struct swap_entry, elem));
 
-	/* Signal that the swap is free to be used to those waiting on
-	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);
-
-	lock_release(&swap_slots_lock);
 
 	/* Disable interrupts while atomically setting medium
 	   dirty and clear bits*/
@@ -166,6 +153,16 @@ bool swap_read_in (void *faulting_addr){
 	intr_enable();
 
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
+
+	/* Signal that the swap is free to be used to those waiting on
+	   PTE_SWAP_WAIT in read in.*/
+	cond_broadcast(&swap_free_condition, &swap_slots_lock);
+	lock_release(&cur_process->swap_table_lock);
+
+	lock_acquire(&swap_slots_lock);
+	/* Set this swap slot to usable */
+	bitmap_set(used_swap_slots, swap_slot, false);
+	lock_release(&swap_slots_lock);
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
@@ -192,22 +189,6 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 	/* Acquire the swap lock */
 	lock_acquire(&swap_slots_lock);
 
-	if(!thread_is_alive(cur_id)){
-		/* Process has just died and doesn't need
-		   to save any data on the swap so we will
-		   just return instead of doing any work*/
-
-		/* Signal that the swap is free to be used to those waiting on
-		   PTE_SWAP_WAIT in read in.*/
-		cond_broadcast(&swap_free_condition, &swap_slots_lock);
-		lock_release(&swap_slots_lock);
-		return true;
-	}
-
-	/* If we get here we know that the swap table still
-	   exists for this process because destroying it needs
-	   the swap lock so we can continue as usual */
-
 	/* Flip the first false bit to be true */
 	swap_slot = bitmap_scan_and_flip(used_swap_slots, 0, 1, false);
 	if(swap_slot == BITMAP_ERROR){
@@ -215,6 +196,16 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 		PANIC("SWAP IS FULL BABY");
 
 	}
+
+	lock_release(&swap_slots_lock);
+
+	if(!process_lock(pid, &cur->process->swap_table_lock)){
+		/* Process has exited so we know that we can't
+		   access any of the processes memory */
+		return false;
+	}
+
+	ASSERT(lock_held_by_current_thread(&cur->process->swap_table_lock));
 
 	/* make a new frame entry to store the relevant data to this
 	   swap slot*/
@@ -260,9 +251,10 @@ bool swap_write_out (struct thread *cur, tid_t cur_id, void *uaddr, void *kaddr,
 
 	/* Signal that the swap is free to be used to those waiting on
 	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);
+	cond_broadcast(&swap_free_condition, &cur->process->swap_table_lock);
 
-	lock_release(&swap_slots_lock);
+	lock_release(&cur->process->swap_table_lock);
+
 	return true;
 }
 
@@ -278,7 +270,10 @@ unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 /* Atomically destroyes the hash table*/
 void destroy_swap_table(struct hash *to_destroy){
 	/* Free all of the swap slots that are currently occupied
-	   by this process */
+	   by this process  We know that our swap table can no longer
+	   be found because our process can no longer be found so we
+	   do not need to acquire our own swap table lock, just the
+	   lock for the slots in the swap */
 	lock_acquire(&swap_slots_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
 	lock_release(&swap_slots_lock);

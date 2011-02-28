@@ -103,6 +103,11 @@ static pid_t allocate_pid(void){
    In the thread that is being created */
 bool initialize_process (struct process *p, struct thread *our_thread){
 	p->pid = allocate_pid();
+
+	/* The lock should be held, unless we are bootstraping the
+	   global process*/
+	ASSERT(lock_is_held_by_current_thread(&processes_hash_lock) || p->pid == 1);
+
 	p->parent_id = thread_current()->process->pid;
 	p->fd_count = 2;
 	bool success = hash_init(&p->open_files, &file_hash_func, &file_hash_compare, NULL);
@@ -131,6 +136,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	cond_init(&p->pid_cond);
 
 	lock_init(&p->mmap_table_lock);
+	lock_init(&p->swap_table_lock);
 
 	p->child_waiting_on_pid = -1;
 	p->child_pid_created = false;
@@ -592,6 +598,26 @@ done:
 	/* We arrive here whether the load is successful or not. */
 	return success;
 }
+
+/* Looks up the process using it's pid if the
+   process has exited will return false, otherwise
+   it will grab the lock in the processes struct
+   that was passed in, note you must release the lock */
+bool process_lock(pid_t pid, struct lock *lock_to_grab){
+	lock_acquire(&processes_hash_lock);
+	struct process *proc = process_lookup(pid);
+	if(proc == NULL){
+		/* Process has exited you can not grab this
+		   lock, sorry*/
+		lock_release(&processes_hash_lock);
+		return false;
+	}else{
+		lock_acquire(lock_to_grab);
+		lock_release(&processes_hash_lock);
+		return true;
+	}
+}
+
 
 /* Reads in the appropriate page of the executable for this
    faulting address */

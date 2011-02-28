@@ -9,6 +9,6 @@ void syscall_init (void);
 void system_exit (struct intr_frame *f, int status );
 
 bool mmap_read_in(void *faulting_addr);
-bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr);
+bool mmap_write_out(struct thread *cur, pid_t pid, void *uaddr, void *kaddr);
 
 #endif /* userprog/syscall.h */

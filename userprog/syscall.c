@@ -40,6 +40,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id);
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
+static void pin_all_frames_for_buffer(void *buffer, unsigned int size);
+static void unpin_all_frames_for_buffer(void *buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
 static unsigned int get_user_int(const uint32_t *masked_uaddr, int *error);
@@ -391,9 +393,11 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		return;
 	}
 
+	pin_all_frames_for_buffer(buffer, size);
 	lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_read;
 }
 
@@ -433,9 +437,11 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 		return;
 	}
 
+	pin_all_frames_for_buffer(buffer, size);
 	lock_acquire(&filesys_lock);
 	bytes_written = file_write(open_file, buffer, size);
 	lock_release(&filesys_lock);
+	pin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
 }
 
@@ -798,9 +804,17 @@ bool mmap_read_in(void *faulting_addr){
 
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
-bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
+bool mmap_write_out(struct thread *cur, pid_t pid, void *uaddr, void *kaddr){
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
 	uint32_t *pd = cur->pagedir;
+
+	if(!process_lock(pid, &cur->process->mmap_table_lock)){
+		/* Process has exited so we know that we can't
+		   access any of the processes memory */
+		return false;
+	}
+
+	ASSERT(lock_held_by_current_thread(&cur->process->mmap_table_lock));
 
 	/* We should have set this up atomically before being
 	   called */
@@ -812,7 +826,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   while the owning thread changes the structure of the mmap
 	   table, so both adding and removing data from the mmap table
 	   and reading it from this function must be locked */
-	lock_acquire(&cur->process->mmap_table_lock);
+	//lock_acquire(&cur->process->mmap_table_lock);
 	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (void*)masked_uaddr);
 	if(entry == NULL){
 		/* Process has just deleted this entry meaning that it was
@@ -826,10 +840,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   mmapping to it */
 	ASSERT(fd_entry != NULL);
 
-	bool already_held = lock_held_by_current_thread(&filesys_lock);
-	if(already_held){
-		lock_acquire(&filesys_lock);
-	}
+	lock_acquire(&filesys_lock);
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
@@ -842,9 +853,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 
-	if(already_held){
-		lock_release(&filesys_lock);
-	}
+	lock_release(&filesys_lock);
 
 	lock_release(&cur->process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE
@@ -1017,6 +1026,46 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 		}
 	}
 	return true;
+}
+
+/* Because a page fault while doing IO may require a thread to acquire
+   the IDE locks multiple times we need to make sure that we don't page
+   fault. The only way to guarantee that we won't page fault during an
+   IO operation is to pin its frame. Because other threads may evict
+   this page immediately after reading it in (unlikely to happen) we need
+   to generate another page fault to get the data back in memory and then
+   try to pin it again. We know that we have to do this because as soon as
+   the page fault handler returns the frame is unpinned. We don't do error
+   checking here, we assume that the buffer has already been passed to
+   buffer_is_valid(_writable).*/
+static void pin_all_frames_for_buffer(void *buffer, unsigned int size){
+	uint32_t increment;
+	uint8_t *uaddr = (uint8_t*)buffer;
+	uint32_t *pd = thread_current()->pagedir;
+	while(size != 0){
+		/* pin_frame_entry returns false when the current frame
+		   in question is in the process of being evicted*/
+		while(!pin_frame_entry(pagedir_get_page(pd, uaddr))){
+			/* Generate a page fault to get the page read
+			   in so that we can pin it's frame */
+			get_user(uaddr);
+		}
+		increment = (size > PGSIZE) ? PGSIZE : size;
+		size -= increment;
+		uaddr += increment;
+	}
+}
+
+/* Does the opposite of pin_all_frames_for_buffer. Assumes the buffer has
+   already been passed to pin all frames of buffer.*/
+static void unpin_all_frames_for_buffer(void *buffer, unsigned int size){
+	uint32_t increment;
+	uint8_t *uaddr = (uint8_t*)buffer;
+	uint32_t *pd = thread_current()->pagedir;
+	while(size != 0){
+		/* Will kill kernel if the frames haven't been pinned */
+		unpin_frame_entry(pagedir_get_page(pd, uaddr));
+	}
 }
 
 
