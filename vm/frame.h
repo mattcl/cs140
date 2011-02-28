@@ -24,7 +24,8 @@ struct frame_table{
 
 struct frame_entry{
 	bool is_pinned;
-	struct thread *cur_owner;
+	struct process *cur_owner;
+	uint32_t *pd;
 	void *uaddr;
 };
 

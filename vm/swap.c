@@ -63,9 +63,8 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	struct thread *cur = thread_current();
-	struct process *cur_process = cur->process;
-	uint32_t *pd = cur->pagedir;
+	struct process *cur_process = thread_current()->process;
+	uint32_t *pd = thread_current()->pagedir;
 	uint32_t masked_uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
 	uint8_t *kaddr_ptr;
@@ -165,9 +164,9 @@ bool swap_read_in (void *faulting_addr){
 
 /* Writes the data for the kaddr to the swap device, then saves the uaddr,
    medium and swap slot for the frame entry. */
-bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, medium_t medium){
-	struct process *cur_process = cur->process;
-	uint32_t *pd = cur->pagedir;
+bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
+		void *uaddr, void *kaddr, medium_t medium){
+	struct process *cur_process = cur;
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
 	uint8_t *kaddr_ptr = (uint8_t*)kaddr;
@@ -186,7 +185,7 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 
 	lock_release(&swap_slots_lock);
 
-	if(!process_lock(pid, &cur->process->swap_table_lock)){
+	if(!process_lock(pid, &cur_process->swap_table_lock)){
 		/* Process has exited so we know that we can't
 		   access any of the processes memory */
 		lock_acquire(&swap_slots_lock);
@@ -200,7 +199,7 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
 	ASSERT(kaddr != NULL);
 
-	ASSERT(lock_held_by_current_thread(&cur->process->swap_table_lock));
+	ASSERT(lock_held_by_current_thread(&cur_process->swap_table_lock));
 
 	/* make a new frame entry to store the relevant data to this
 	   swap slot*/
@@ -242,9 +241,9 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	/* Signal that the swap is free to be used to the thread whose
 	   data we wrote out, only that process can be waiting on this
 	   event so we just signal.*/
-	cond_signal(&swap_free_condition, &cur->process->swap_table_lock);
+	cond_signal(&swap_free_condition, &cur_process->swap_table_lock);
 
-	lock_release(&cur->process->swap_table_lock);
+	lock_release(&cur_process->swap_table_lock);
 	return true;
 }
 

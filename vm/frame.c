@@ -59,7 +59,7 @@ static void evict_init(void){
 static struct frame_entry *choose_frame_to_evict_random(void){
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 	struct frame_entry *entry;
-       	uint32_t index;
+    uint32_t index;
 	while(true){
 		index = random_ulong() % f_table.size;
 		entry = frame_entry_at_pos(index);
@@ -103,7 +103,7 @@ static void clear_accessed_threshold(void){
 		   must have acquired the frame table lock to die*/
 		entry = frame_entry_at_pos(clear_hand % f_table.size);
 		if(entry->cur_owner != NULL){
-			pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr);
+			pagedir_is_accessed(entry->pd, entry->uaddr);
 		}
 	}
 
@@ -125,7 +125,7 @@ static struct frame_entry *choose_frame_to_evict_clock(void){
     while((evict_hand + threshold) % f_table.size < clear_hand % f_table.size){
         entry = frame_entry_at_pos((evict_hand++)%f_table.size);
         old_level = intr_disable();
-        if(!entry->is_pinned && !pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+        if(!entry->is_pinned && !pagedir_is_accessed(entry->pd, entry->uaddr)){
         	intr_set_level(old_level);
         	entry->is_pinned = true;
         	return entry;
@@ -148,8 +148,8 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
         entry = frame_entry_at_pos((evict_hand++) % f_table.size);
         clear_entry = frame_entry_at_pos((clear_hand++) % f_table.size);
         old_level = intr_disable();
-        pagedir_set_accessed(clear_entry->cur_owner->pagedir, clear_entry->uaddr, false);
-		if(!entry->is_pinned && !pagedir_is_accessed(entry->cur_owner->pagedir, entry->uaddr)){
+        pagedir_set_accessed(clear_entry->pd, clear_entry->uaddr, false);
+		if(!entry->is_pinned && !pagedir_is_accessed(entry->pd, entry->uaddr)){
 			intr_set_level(old_level);
 			entry->is_pinned = true;
 			return entry;
@@ -216,7 +216,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	/* Atomically set the pagedir of the passed in uaddr
 	   to point to where it can find its memory and set
 	   it's present bit to 0 */
-	pd = entry->cur_owner->pagedir;
+	pd = entry->pd;
 	medium = pagedir_get_medium(pd, entry->uaddr);
 	if(pagedir_is_dirty(pd, entry->uaddr)){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
@@ -248,10 +248,11 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 
 	void * old_uaddr =  entry->uaddr;
-	void * old_frame_thread = entry->cur_owner;
-	pid_t old_process_id = entry->cur_owner->process->pid;
+	struct process * old_frame_process = entry->cur_owner;
+	pid_t old_process_id = entry->cur_owner->pid;
 	entry->uaddr = new_uaddr;
-	entry->cur_owner = thread_current();
+	entry->cur_owner = thread_current()->process;
+	entry->pd = thread_current()->pagedir;
 
 	lock_release(&f_table.frame_table_lock);
 	/* We set the user to fault and wait until the move
@@ -260,9 +261,9 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        it from the original owners thread will fault and wait */
 	if(move_to_disk){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
-			swap_write_out(old_frame_thread, old_process_id, old_uaddr, kaddr, medium);
+			swap_write_out(old_frame_process, old_process_id, old_uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
-			mmap_write_out(old_frame_thread, old_process_id, old_uaddr, kaddr);
+			mmap_write_out(old_frame_process, old_process_id, old_uaddr, kaddr);
 		}
 	}
 
@@ -286,7 +287,8 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		struct frame_entry *entry = frame_entry_at_pos(frame_idx);
 		ASSERT(entry->uaddr == NULL && entry->cur_owner == NULL);
 		entry->uaddr = new_uaddr;
-		entry->cur_owner = thread_current();
+		entry->cur_owner = thread_current()->process;
+		entry->pd = thread_current()->pagedir;
 		entry->is_pinned = true;
 		bitmap_set(f_table.used_frames, frame_idx, true);
 		lock_release(&f_table.frame_table_lock);
@@ -332,6 +334,7 @@ void frame_clear_page (void *kaddr){
 	/* Clear the entry */
 	entry->uaddr = NULL;
 	entry->cur_owner = NULL;
+	entry->pd = NULL;
 	entry->is_pinned = false;
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
@@ -363,7 +366,7 @@ bool pin_frame_entry(void *kaddr){
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
-	if(entry->cur_owner != thread_current()){
+	if(entry->cur_owner != thread_current()->process){
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
