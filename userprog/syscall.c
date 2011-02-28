@@ -1042,17 +1042,30 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t increment;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
-	while(size != 0){
+	 /* Used to prevent trying to pin the same frame twice, because
+	    buffer is arbitrary and span multiple pages */
+	uint8_t *masked = NULL;
+	while(size > 0){
+		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
 		/* pin_frame_entry returns false when the current frame
-		   in question is in the process of being evicted*/
-		while(!pin_frame_entry(pagedir_get_page(pd, uaddr))){
+		   in question is in the process of being evicted. We want
+		   the page address so we mask off the lower 12 bits*/
+		intr_disabled();
+		/* only get complete changes to our PTE, if we page fault
+		   it should be read in and then we can continue. pin_frame_entry
+		   may reenable interrupts to acquire the frame lock*/
+		while(!pagedir_is_present(pd, masked) || !pin_frame_entry(pagedir_get_page(pd, masked))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
 			get_user(uaddr);
 		}
+		intr_enabled();
 		increment = (size > PGSIZE) ? PGSIZE : size;
-		size -= increment;
+		size -= PGSIZE;
 		uaddr += increment;
+		if(masked == (uint8_t*)((uint32_t)uaddr & PTE_ADDR)){
+			break;
+		}
 	}
 }
 
@@ -1062,12 +1075,20 @@ static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t increment;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
+	uint8_t *masked = NULL;
 	while(size != 0){
-		/* Will kill kernel if the frames haven't been pinned */
-		unpin_frame_entry(pagedir_get_page(pd, uaddr));
+		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
+		/* Will kill kernel if the frames haven't been pinned
+		   we also know that the PTE bits will be the same as
+		   before because we could not be evicted while we had
+		   the frame pinned */
+		unpin_frame_entry(pagedir_get_page(pd, masked));
 		increment = (size > PGSIZE) ? PGSIZE : size;
 		size -= increment;
 		uaddr += increment;
+		if(masked == (uint8_t*)((uint32_t)uaddr & PTE_ADDR)){
+			break;
+		}
 	}
 }
 

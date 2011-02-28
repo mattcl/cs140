@@ -250,9 +250,10 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 		PANIC("Kernel out of memory");
 	}
 
-	/* Signal that the swap is free to be used to those waiting on
-	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &cur->process->swap_table_lock);
+	/* Signal that the swap is free to be used to the thread whose
+	   data we wrote out, only that process can be waiting on this
+	   event so we just signal.*/
+	cond_signal(&swap_free_condition, &cur->process->swap_table_lock);
 
 	lock_release(&cur->process->swap_table_lock);
 
