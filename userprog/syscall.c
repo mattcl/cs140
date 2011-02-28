@@ -757,7 +757,7 @@ bool mmap_read_in(void *faulting_addr){
 	lock_acquire(&cur_process->mmap_table_lock);
 
 	/* Get hash entry if it exists */
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)masked_uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur_process, (uint32_t*)masked_uaddr);
 
 	lock_release(&cur_process->mmap_table_lock);
 
