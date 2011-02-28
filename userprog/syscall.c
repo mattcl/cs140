@@ -1045,7 +1045,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uaddr -= front;
 
 	ASSERT(size % PGSIZE == 0);
-	ASSERT(uaddr % PGSIZE == 0);
+	ASSERT((uint32_t)uaddr % PGSIZE == 0);
 
 	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
 		/* pin_frame_entry returns false when the current frame
