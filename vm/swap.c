@@ -272,12 +272,17 @@ unsigned swap_slot_hash_func (const struct hash_elem *a, void *aux UNUSED){
 /* Atomically destroyes the hash table*/
 void destroy_swap_table(struct hash *to_destroy){
 	/* Free all of the swap slots that are currently occupied
-	   by this process  We know that our swap table can no longer
-	   be found because our process can no longer be found so we
-	   do not need to acquire our own swap table lock, just the
-	   lock for the slots in the swap */
+	   by this process  We need both locks because it may be
+	   the case that swap write out was able to acquire our
+	   swap table lock and then got preempted by this thread
+	   and we go ahead and destroy the table while they are
+	   holding the lock and are expecting that memory to be
+	   valid still. So we must acquire the lock before
+	   destroying the table. Otherwise we have a race condition */
 	lock_acquire(&swap_slots_lock);
+	lock_acquire(&thread_current()->process->swap_table_lock);
 	hash_destroy(to_destroy, &swap_slot_destroy);
+	lock_release(&thread_current()->process->swap_table_lock);
 	lock_release(&swap_slots_lock);
 }
 
