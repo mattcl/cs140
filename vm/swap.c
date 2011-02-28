@@ -246,7 +246,7 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	cond_signal(&swap_free_condition, &cur->process->swap_table_lock);
 
 	lock_release(&cur->process->swap_table_lock);
-	pritnf("swo done\n");
+	printf("swo done\n");
 	return true;
 }
 
