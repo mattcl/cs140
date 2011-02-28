@@ -1063,6 +1063,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 			intr_enable();
 			get_user(uaddr);
 			printf("looped %u \n", pagedir_is_present(pd, masked));
+			intr_disable();
 		}
 		intr_enable();
 		increment = (size > PGSIZE) ? PGSIZE : size;

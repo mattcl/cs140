@@ -181,6 +181,7 @@ static void page_fault (struct intr_frame *f){
 				/* Failed to read it in so fail*/
 				kill(f);
 			}
+			printf("read in\n");
 		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			/* Read in from mmaped file on disk */
 			if(!mmap_read_in(uaddr)){
