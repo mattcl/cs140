@@ -171,12 +171,6 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	printf("swo \n");
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
-
-	/* We set the page to not present in memory in evict so assert it*/
-	ASSERT(!pagedir_is_present(pd, uaddr));
-	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
-	ASSERT(kaddr != NULL);
-
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
 	uint8_t *kaddr_ptr = (uint8_t*)kaddr;
@@ -198,8 +192,16 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	if(!process_lock(pid, &cur->process->swap_table_lock)){
 		/* Process has exited so we know that we can't
 		   access any of the processes memory */
+		lock_acquire(&swap_slots_lock);
+		bitmap_set(used_swap_slots, swap_slot, false);
+		lock_release(&swap_slots_lock);
 		return false;
 	}
+
+	/* We set the page to not present in memory in evict so assert it*/
+	ASSERT(!pagedir_is_present(pd, uaddr));
+	ASSERT(pagedir_get_medium(pd, uaddr) == PTE_SWAP_WAIT);
+	ASSERT(kaddr != NULL);
 
 	ASSERT(lock_held_by_current_thread(&cur->process->swap_table_lock));
 
