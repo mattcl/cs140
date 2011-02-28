@@ -1073,7 +1073,10 @@ static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t front = (uint32_t)buffer % PGSIZE;
 	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
 	size += (front + back);
+	uaddr -= front;
+
 	ASSERT(size % PGSIZE == 0);
+	ASSERT((uint32_t)uaddr % PGSIZE == 0);
 
 	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
 		unpin_frame_entry(pagedir_get_page(pd, uaddr));
