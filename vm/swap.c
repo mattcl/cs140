@@ -51,7 +51,7 @@ void swap_init (void){
 	ASSERT(used_swap_slots != NULL);
 
 	if(used_swap_slots == NULL){
-		PANIC("Couldn't allocat swap bitmap");
+		PANIC("Couldn't allocate swap bitmap");
 	}
 
 	lock_init(&swap_slots_lock);
@@ -63,7 +63,6 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	printf("srn \n");
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
@@ -84,7 +83,6 @@ bool swap_read_in (void *faulting_addr){
 		intr_enable();
 		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
-		printf("waiting\n");
 	}
 
 	intr_enable();
@@ -162,14 +160,12 @@ bool swap_read_in (void *faulting_addr){
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
-	printf("srn done\n");
 	return true;
 }
 
 /* Writes the data for the kaddr to the swap device, then saves the uaddr,
    medium and swap slot for the frame entry. */
 bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, medium_t medium){
-	printf("swo \n");
 	struct process *cur_process = cur->process;
 	uint32_t *pd = cur->pagedir;
 	uint32_t i;
@@ -249,7 +245,6 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	cond_signal(&swap_free_condition, &cur->process->swap_table_lock);
 
 	lock_release(&cur->process->swap_table_lock);
-	printf("swo done\n");
 	return true;
 }
 
