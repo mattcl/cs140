@@ -255,18 +255,21 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if(!string_is_valid(cmd_line)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 	tid_t returned = process_execute(cmd_line);
 	if(returned == TID_ERROR){
+		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 		f->eax = -1;
 		return;
 	}
 	pid_t ret =  child_tid_to_pid(returned);
 	if(ret == PID_ERROR){
+		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 		f->eax = -1;
 		return;
-	}else{
-		f->eax = ret;
 	}
+	f->eax = ret;
+	unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 }
 
 /* Waits on the given pid to finish and returns that pid's
@@ -291,9 +294,11 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_create(file_name, initial_size);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 }
 
 /* removes a file by the name of file name returns the value from
@@ -302,9 +307,11 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_remove(file_name);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 }
 
 /* Opens the file by the name of file_name returns -1 if the file
@@ -314,9 +321,11 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		system_exit(f, -1);
 	}
 	struct file *opened_file;
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	opened_file = filesys_open(file_name);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 	if(opened_file  == NULL){
 		f->eax = -1;
 		return;
