@@ -84,6 +84,7 @@ bool swap_read_in (void *faulting_addr){
 		intr_enable();
 		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
+		printf("waiting\n");
 	}
 
 	intr_enable();

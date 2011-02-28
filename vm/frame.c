@@ -203,7 +203,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	/* Select page and evict it */
 	ASSERT(lock_held_by_current_thread(&f_table.frame_table_lock));
 
-	entry = choose_frame_to_evict_clock();
+	entry = choose_frame_to_evict_random();
 	kaddr = entry_to_kaddr(entry);
 	ASSERT(entry->is_pinned);
 
