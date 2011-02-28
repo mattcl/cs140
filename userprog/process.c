@@ -623,7 +623,6 @@ bool process_lock(pid_t pid, struct lock *lock_to_grab){
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
-	printf("prn\n");
 	intr_enable();
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
@@ -956,7 +955,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		lock_release(&filesys_lock);
 		unpin_frame_entry(kpage);
 		frame_clear_page (kpage);
-		printf("prin done\n");
 		return false;
 	}
 	memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -969,7 +967,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* remove this frame cause we failed*/
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
-		printf("prin done\n");
 		return false;
 	}
 
@@ -981,7 +978,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	unpin_frame_entry(kpage);
 
 	lock_release(&filesys_lock);
-	printf("prin done\n");
 
 	return true;
 }
