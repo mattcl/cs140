@@ -136,6 +136,7 @@ bool swap_read_in (void *faulting_addr){
 	/* Free the malloced swap entry */
 	free(hash_entry(slot_result, struct swap_entry, elem));
 
+	lock_release(&cur_process->swap_table_lock);
 
 	/* Disable interrupts while atomically setting medium
 	   dirty and clear bits*/
@@ -154,11 +155,6 @@ bool swap_read_in (void *faulting_addr){
 	intr_enable();
 
 	ASSERT(pagedir_get_medium(pd, (void*)masked_uaddr) != PTE_SWAP);
-
-	/* Signal that the swap is free to be used to those waiting on
-	   PTE_SWAP_WAIT in read in.*/
-	cond_broadcast(&swap_free_condition, &swap_slots_lock);
-	lock_release(&cur_process->swap_table_lock);
 
 	lock_acquire(&swap_slots_lock);
 	/* Set this swap slot to usable */
