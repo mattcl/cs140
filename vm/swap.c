@@ -120,23 +120,20 @@ bool swap_read_in (void *faulting_addr){
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 	kaddr_ptr = (uint8_t*)kaddr;
 
+	/* Free the malloced swap entry */
+	free(hash_entry(slot_result, struct swap_entry, elem));
 
-	/* Filesys lock needed to prevent race with syscall write*/
+	lock_release(&cur_process->swap_table_lock);
 
+	/* Necessary, to prevent other threads which are evicting
+	   to use the swap device*/
 	lock_acquire(&filesys_lock);
-
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
-
 	lock_release(&filesys_lock);
-
-	/* Free the malloced swap entry */
-	free(hash_entry(slot_result, struct swap_entry, elem));
-
-	lock_release(&cur_process->swap_table_lock);
 
 	/* Disable interrupts while atomically setting medium
 	   dirty and clear bits*/
@@ -226,17 +223,14 @@ bool swap_write_out (struct thread *cur, pid_t pid, void *uaddr, void *kaddr, me
 	/* Write this out to disk now so that it is saved */
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 
-	bool already_held = lock_held_by_current_thread(&filesys_lock);
-	if(already_held){
-		lock_acquire(&filesys_lock);
-	}
+	printf("fs so\n");
+	lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
-	if(already_held){
-		lock_release(&filesys_lock);
-	}
+	lock_release(&filesys_lock);
+	printf("fs so r\n");
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
