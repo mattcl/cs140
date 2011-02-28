@@ -392,15 +392,15 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		f->eax = 0;
 		return;
 	}
-	printf("pinning\n");
+	//printf("pinning\n");
 	pin_all_frames_for_buffer(buffer, size);
-	printf("pinned\n");
+	//printf("pinned\n");
 	lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
 	lock_release(&filesys_lock);
-	printf("unpinning\n");
+	//printf("unpinning\n");
 	unpin_all_frames_for_buffer(buffer, size);
-	printf("unpinned\n");
+	//printf("unpinned\n");
 	f->eax = bytes_read;
 }
 
@@ -1057,11 +1057,11 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
-		while(!pagedir_is_present(pd, masked) || !pin_frame_entry(pagedir_get_page(pd, masked))){
+		while(!pagedir_is_present(pd, masked) && !pin_frame_entry(pagedir_get_page(pd, masked))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
 			get_user(uaddr);
-			printf("looped\n");
+			//printf("looped %u kernel %p\n", pagedir_is_present(pd, masked));
 		}
 		intr_enable();
 		increment = (size > PGSIZE) ? PGSIZE : size;
