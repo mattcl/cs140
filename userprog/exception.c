@@ -181,7 +181,6 @@ static void page_fault (struct intr_frame *f){
 				/* Failed to read it in so fail*/
 				kill(f);
 			}
-			printf("read in\n");
 		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			/* Read in from mmaped file on disk */
 			if(!mmap_read_in(uaddr)){
@@ -242,7 +241,6 @@ static void page_fault (struct intr_frame *f){
 				   to the kernel code*/
 				f->eip = (void*)f->eax;
 				f->eax = 0xffffffff;
-				printf("k1\n");
 			}
 		}else{
 		    PANIC("unrecognized medium in page fault, check exception.c");
@@ -256,7 +254,6 @@ static void page_fault (struct intr_frame *f){
 		}else{
 			f->eip = (void*)f->eax;
 			f->eax = 0xffffffff;
-			printf("k2\n");
 		}
 	}
 }
