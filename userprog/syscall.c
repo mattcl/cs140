@@ -1035,14 +1035,16 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
    checking here, we assume that the buffer has already been passed to
    buffer_is_valid(_writable).*/
 static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
-	uint32_t increment;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
-	 /* Used to prevent trying to pin the same frame twice, because
-	    buffer is arbitrary and span multiple pages */
-	uint8_t *masked = NULL;
-	while(size != 0){
-		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
+	uint32_t i;
+	uint32_t front = (uint32_t)buffer % PGSIZE;
+	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	size += (front + back);
+
+	ASSERT(size % PGSIZE == 0);
+
+	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
 		/* pin_frame_entry returns false when the current frame
 		   in question is in the process of being evicted. We want
 		   the page address so we mask off the lower 12 bits*/
@@ -1050,41 +1052,28 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
-		while(!pagedir_is_present(pd, masked) || !pin_frame_entry(pagedir_get_page(pd, masked))){
+		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(pagedir_get_page(pd, uaddr))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
 			get_user(uaddr);
 		}
 		intr_enable();
-		increment = (size > PGSIZE) ? PGSIZE : size;
-		size -= increment;
-		uaddr += increment;
-		if(masked == (uint8_t*)((uint32_t)uaddr & PTE_ADDR)){
-			break;
-		}
 	}
 }
 
 /* Does the opposite of pin_all_frames_for_buffer. Assumes the buffer has
    already been passed to pin all frames of buffer.*/
 static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
-	uint32_t increment;
+	uint32_t i;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
-	uint8_t *masked = NULL;
-	while(size != 0){
-		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
-		/* Will kill kernel if the frames haven't been pinned
-		   we also know that the PTE bits will be the same as
-		   before because we could not be evicted while we had
-		   the frame pinned */
+	uint32_t front = (uint32_t)buffer % PGSIZE;
+	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	size += (front + back);
+	ASSERT(size % PGSIZE == 0);
+
+	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
 		unpin_frame_entry(pagedir_get_page(pd, masked));
-		increment = (size > PGSIZE) ? PGSIZE : size;
-		size -= increment;
-		uaddr += increment;
-		if(masked == (uint8_t*)((uint32_t)uaddr & PTE_ADDR)){
-			break;
-		}
 	}
 }
 
