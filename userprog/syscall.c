@@ -440,7 +440,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	lock_acquire(&filesys_lock);
 	bytes_written = file_write(open_file, buffer, size);
 	lock_release(&filesys_lock);
-	pin_all_frames_for_buffer(buffer, size);
+	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
 }
 
@@ -1044,7 +1044,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	 /* Used to prevent trying to pin the same frame twice, because
 	    buffer is arbitrary and span multiple pages */
 	uint8_t *masked = NULL;
-	while(size > 0){
+	while(size != 0){
 		masked = (uint8_t*)((uint32_t)uaddr & PTE_ADDR);
 		/* pin_frame_entry returns false when the current frame
 		   in question is in the process of being evicted. We want
