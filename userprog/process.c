@@ -106,7 +106,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 
 	/* The lock should be held, unless we are bootstraping the
 	   global process*/
-	ASSERT(lock_is_held_by_current_thread(&processes_hash_lock) || p->pid == 1);
+	ASSERT(lock_held_by_current_thread(&processes_hash_lock) || p->pid == 1);
 
 	p->parent_id = thread_current()->process->pid;
 	p->fd_count = 2;

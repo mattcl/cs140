@@ -40,8 +40,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id);
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
-static void pin_all_frames_for_buffer(void *buffer, unsigned int size);
-static void unpin_all_frames_for_buffer(void *buffer, unsigned int size);
+static void pin_all_frames_for_buffer(const void *buffer, unsigned int size);
+static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
 static unsigned int get_user_int(const uint32_t *masked_uaddr, int *error);
@@ -1038,7 +1038,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
    the page fault handler returns the frame is unpinned. We don't do error
    checking here, we assume that the buffer has already been passed to
    buffer_is_valid(_writable).*/
-static void pin_all_frames_for_buffer(void *buffer, unsigned int size){
+static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t increment;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
@@ -1058,13 +1058,16 @@ static void pin_all_frames_for_buffer(void *buffer, unsigned int size){
 
 /* Does the opposite of pin_all_frames_for_buffer. Assumes the buffer has
    already been passed to pin all frames of buffer.*/
-static void unpin_all_frames_for_buffer(void *buffer, unsigned int size){
+static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t increment;
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
 	while(size != 0){
 		/* Will kill kernel if the frames haven't been pinned */
 		unpin_frame_entry(pagedir_get_page(pd, uaddr));
+		increment = (size > PGSIZE) ? PGSIZE : size;
+		size -= increment;
+		uaddr += increment;
 	}
 }
 

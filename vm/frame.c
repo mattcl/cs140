@@ -262,7 +262,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
 			swap_write_out(old_frame_thread, old_process_id, old_uaddr, kaddr, medium);
 		}else if(medium == PTE_MMAP){
-			mmap_write_out(old_frame_thread, old_uaddr, kaddr);
+			mmap_write_out(old_frame_thread, old_process_id, old_uaddr, kaddr);
 		}
 	}
 
