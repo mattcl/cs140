@@ -63,8 +63,8 @@ void swap_init (void){
    frame_get_page function which might evict something else of the data that
    just got swapped back in. */
 bool swap_read_in (void *faulting_addr){
-	printf("sri\n");
 	struct process *cur_process = thread_current()->process;
+	printf("sri %u\n", cur_process->pid);
 	uint32_t *pd = thread_current()->pagedir;
 	uint32_t masked_uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	size_t start_sector;
@@ -160,7 +160,7 @@ bool swap_read_in (void *faulting_addr){
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
-	printf("sri done\n");
+	printf("sri done %u \n", cur_process->pid);
 	return true;
 }
 
@@ -168,8 +168,8 @@ bool swap_read_in (void *faulting_addr){
    medium and swap slot for the frame entry. */
 bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 		void *uaddr, void *kaddr, medium_t medium){
-	printf("swo\n");
 	struct process *cur_process = cur;
+	printf("swo %u cur %u\n", cur->pid, thread_current()->process->pid);
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
 	uint8_t *kaddr_ptr = (uint8_t*)kaddr;
@@ -247,7 +247,7 @@ bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 	cond_signal(&swap_free_condition, &cur_process->swap_table_lock);
 
 	lock_release(&cur_process->swap_table_lock);
-	printf("swo done\n");
+	printf("swo done evicting %u's frame %u\n", cur->pid, thread_current()->process->pid);
 	return true;
 }
 

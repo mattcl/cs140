@@ -192,7 +192,7 @@ void frame_init(void){
    also returns a kernel virtual address without mapping it to
    any pagedir*/
 static void *evict_page(void *new_uaddr, bool zero_out){
-	printf("evict\n");
+	printf("evict %u\n", thread_current()->process->pid);
 	enum intr_level old_level;
 	struct frame_entry *entry;
 	medium_t medium;
@@ -275,7 +275,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	printf("evict done\n");
+	printf("evict done %u\n", thread_current()->process->pid);
 	return kaddr;
 }
 
@@ -283,7 +283,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
    is full then it will return NULL, in which case you should evict
    something */
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
-	printf("first frame\n");
+	printf("first frame %u\n", thread_current()->process->pid);
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
@@ -301,7 +301,7 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
-		printf("first frame done 2\n");
+		printf("first frame done 2 %u\n", thread_current()->process->pid);
 		return entry;
 	}
 }
