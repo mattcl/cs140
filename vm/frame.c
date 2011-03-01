@@ -287,7 +287,6 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
-		printf("first frame done 1\n");
 		return frame_entry_at_kaddr(evict_page(new_uaddr, (flags & PAL_ZERO) != 0));
 	}else{
 		/* Setup frame entry */
@@ -322,7 +321,7 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    frame is currently pinned then we can not return from this
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
-	printf("Clear page\n");
+//	printf("Clear page\n");
 	if((uint32_t)kaddr < (uint32_t)f_table.base ||
 			(uint32_t)kaddr > ((uint32_t)f_table.base + (f_table.size * (PGSIZE-1)))){
 		PANIC("kaddr %p, base %p end %u size %u\n", kaddr, f_table.base,
@@ -337,7 +336,7 @@ void frame_clear_page (void *kaddr){
 		   of another thread and doesn't need its frame table
 		   entry updated here*/
 		lock_release(&f_table.frame_table_lock);
-		printf("clear page done 1\n");
+//		printf("clear page done 1\n");
 		return;
 	}
 
@@ -349,7 +348,7 @@ void frame_clear_page (void *kaddr){
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
 	lock_release(&f_table.frame_table_lock);
-	printf("clear page done 2\n");
+//	printf("clear page done 2\n");
 }
 
 /* Need to unpin after it is installed in the pagedir of your thread

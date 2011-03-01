@@ -386,7 +386,9 @@ void process_exit (void){
            that's been freed (and cleared). */
 		cur->pagedir = NULL;
 		pagedir_activate (NULL);
+		printf("clearing pages\n");
 		pagedir_destroy (pd);
+		printf("done clearing pages\n")
 	}
 
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
