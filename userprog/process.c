@@ -192,9 +192,6 @@ tid_t process_execute (const char *file_name){
 	}
 
 	lock_release(&processes_hash_lock);
-	/* processes_hash_lock is released by initialize process
-	   if we get to here */
-	ASSERT(!lock_held_by_current_thread(&processes_hash_lock));
 
 	/* wait until the child process is set up or fails. Must
 	   be after we know the thread is running that we wait on the
@@ -231,18 +228,6 @@ static void start_process (void *file_name_){
 	struct process *parent = parent_process_from_child(cur_process);
 	lock_release(&processes_hash_lock);
 
-	printf("1 start process %u\n", cur_process->pid);
-	/* Parent hasn't exited yet so we can grab their lock
-	   so that they wait until set up is done and so we can
-	   signal them when set up is finished
-	   Every process that is exec'd has a parent waiting on
-	   it to be initialized */
-	if(parent != NULL){
-		/* Signaling and releasing this lock will resume
-		   parent execution in process_execute */
-		lock_acquire(&parent->child_pid_tid_lock);
-	}
-
 	char *file_name = file_name_;
 	struct intr_frame if_;
 	bool success;
@@ -255,6 +240,19 @@ static void start_process (void *file_name_){
 	success = load (file_name, &if_.eip, &if_.esp);
 
 	palloc_free_page (file_name);
+
+	printf("1 start process %u\n", cur_process->pid);
+	/* Parent hasn't exited yet so we can grab their lock
+	   so that they wait until set up is done and so we can
+	   signal them when set up is finished
+	   Every process that is exec'd has a parent waiting on
+	   it to be initialized */
+	if(parent != NULL){
+		/* Signaling and releasing this lock will resume
+		   parent execution in process_execute */
+		lock_acquire(&parent->child_pid_tid_lock);
+	}
+
 
 	if(!success){
 		/* BAD TIMES Calls process Exit to clean up process and set error
@@ -411,13 +409,13 @@ void process_exit (void){
 	printf("handle parent %u\n", cur_process->pid);
 	if(parent != NULL){
 		/* Get our list entry */
-		printf("%u acquire child \n", cur_process->pid);
+		printf("%u acquire parent_child lock %u \n", cur_process->pid, parent->pid);
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
-		printf("%u release child \n", cur_process->pid);
+		printf("%u release parent_child %u\n", cur_process->pid, parent->pid);
 
 		lock_acquire(&parent->child_pid_tid_lock);
-		printf("%u acquire child2nd \n", cur_process->pid);
+		printf("%u acquired parent_child2nd %u\n", cur_process->pid, parent->pid);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);
