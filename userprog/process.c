@@ -411,10 +411,13 @@ void process_exit (void){
 	printf("handle parent %u\n", cur_process->pid);
 	if(parent != NULL){
 		/* Get our list entry */
+		printf("%u acquire child \n", cur_process->pid);
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
+		printf("%u release child \n", cur_process->pid);
 
 		lock_acquire(&parent->child_pid_tid_lock);
+		printf("%u acquire child2nd \n", cur_process->pid);
 		if(our_entry != NULL){
 			struct child_list_entry *entry =
 					list_entry(our_entry, struct child_list_entry, elem);

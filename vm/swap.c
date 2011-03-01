@@ -188,6 +188,7 @@ bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 
 	lock_release(&swap_slots_lock);
 
+	printf("swo %u cur %u try lock\n", cur->pid, thread_current()->process->pid);
 	if(!process_lock(pid, &cur_process->swap_table_lock)){
 		/* Process has exited so we know that we can't
 		   access any of the processes memory */
@@ -196,6 +197,7 @@ bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 		lock_release(&swap_slots_lock);
 		return false;
 	}
+	printf("swo %u cur %u locked\n", cur->pid, thread_current()->process->pid);
 
 	/* We set the page to not present in memory in evict so assert it*/
 	ASSERT(!pagedir_is_present(pd, uaddr));
