@@ -388,7 +388,7 @@ void process_exit (void){
 		pagedir_activate (NULL);
 		printf("clearing pages\n");
 		pagedir_destroy (pd);
-		printf("done clearing pages\n")
+		printf("done clearing pages\n");
 	}
 
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
