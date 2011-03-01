@@ -102,6 +102,7 @@ static pid_t allocate_pid(void){
    Initializes the process and sets the process pointer
    In the thread that is being created */
 bool initialize_process (struct process *p, struct thread *our_thread){
+
 	p->pid = allocate_pid();
 
 	/* The lock should be held, unless we are bootstraping the
@@ -152,9 +153,6 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 		hash_destroy(&p->open_files, NULL);
 		return false;
 	}
-	if(lock_held_by_current_thread(&processes_hash_lock)){
-		lock_release(&processes_hash_lock);
-	}
 	return true;
 }
 
@@ -163,6 +161,7 @@ bool initialize_process (struct process *p, struct thread *our_thread){
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute (const char *file_name){
+	printf("process execute %s\n", file_name);
 	char *fn_copy;
 	tid_t tid;
 
@@ -187,11 +186,11 @@ tid_t process_execute (const char *file_name){
 	if(tid == TID_ERROR){
 		palloc_free_page (fn_copy);
 		lock_release(&cur_process->child_pid_tid_lock);
-		/* Not released if we get a TID error */
 		lock_release(&processes_hash_lock);
 		return TID_ERROR;
 	}
 
+	lock_release(&processes_hash_lock);
 	/* processes_hash_lock is released by initialize process
 	   if we get to here */
 	ASSERT(!lock_held_by_current_thread(&processes_hash_lock));
@@ -212,7 +211,7 @@ tid_t process_execute (const char *file_name){
 	   of children for this thread */
 	cur_process->child_pid_created = false;
 	lock_release(&cur_process->child_pid_tid_lock);
-
+	printf("process execute done\n");
 	return tid;
 }
 
@@ -222,6 +221,7 @@ static void start_process (void *file_name_){
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
 
+	printf("start process %u\n", cur_process->pid);
 	/* Get parent process. We know that it is waiting on a
 	   signal if it called exec */
 	lock_acquire(&processes_hash_lock);
@@ -287,6 +287,7 @@ static void start_process (void *file_name_){
 		}
 	}
 
+	printf("process %u entering user space\n", cur_process->pid);
 	/* Start the user process by simulating a return from an
        interrupt, implemented by intr_exit (in
        threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -308,6 +309,7 @@ static void start_process (void *file_name_){
    does nothing. */
 int process_wait (tid_t child_tid){
 	struct process *cur = thread_current()->process;
+	printf("wait %u\n", child_tid);
 	/* Find pid and see if the process still exists. I.E.
 	   it hasn't removed itself from the processes hash
 	   if it has we know that it is dead and we can just
@@ -350,7 +352,7 @@ int process_wait (tid_t child_tid){
 	   is so much more useful, sigh */
 	child_entry->exit_code = -1;
 	lock_release(&cur->child_pid_tid_lock);
-
+	printf("wait %u done\n", child_tid);
 	return exit_code;
 }
 
@@ -362,6 +364,7 @@ void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
 	uint32_t *pd;
+	printf("process exit %u\n", cur_process->pid);
 
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
@@ -442,6 +445,7 @@ void process_exit (void){
 	lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
 	lock_release(&filesys_lock);
+	printf("process %u exited\n", cur_process->pid);
 	free(cur_process);
 }
 
@@ -623,6 +627,7 @@ bool process_lock(pid_t pid, struct lock *lock_to_grab){
 /* Reads in the appropriate page of the executable for this
    faulting address */
 bool process_exec_read_in(void *faulting_addr){
+	printf("pri start\n");
 	intr_enable();
 	struct thread *cur = thread_current();
 	struct process *cur_process = cur->process;
@@ -978,7 +983,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	unpin_frame_entry(kpage);
 
 	lock_release(&filesys_lock);
-
+	printf("pri done\n");
 	return true;
 }
 
