@@ -79,8 +79,6 @@ void process_init(void){
 
 	thread_current()->process = global;
 
-	lock_acquire(&processes_hash_lock);
-
 	/* Initializes this process with the parent process ID of 0 */
 	if(!initialize_process(global, thread_current())){
 		PANIC("ERROR initialzing the global process");
