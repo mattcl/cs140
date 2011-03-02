@@ -40,6 +40,8 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id);
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
 static bool buffer_is_valid_writable (void * buffer, unsigned int size);
+static void pin_all_frames_for_buffer(const void *buffer, unsigned int size);
+static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size);
 static bool string_is_valid(const char* str);
 
 static unsigned int get_user_int(const uint32_t *masked_uaddr, int *error);
@@ -253,18 +255,21 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if(!string_is_valid(cmd_line)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 	tid_t returned = process_execute(cmd_line);
 	if(returned == TID_ERROR){
+		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 		f->eax = -1;
 		return;
 	}
 	pid_t ret =  child_tid_to_pid(returned);
 	if(ret == PID_ERROR){
+		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 		f->eax = -1;
 		return;
-	}else{
-		f->eax = ret;
 	}
+	f->eax = ret;
+	unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 }
 
 /* Waits on the given pid to finish and returns that pid's
@@ -289,9 +294,11 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_create(file_name, initial_size);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 }
 
 /* removes a file by the name of file name returns the value from
@@ -300,9 +307,11 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	f->eax = filesys_remove(file_name);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 }
 
 /* Opens the file by the name of file_name returns -1 if the file
@@ -312,9 +321,11 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		system_exit(f, -1);
 	}
 	struct file *opened_file;
+	pin_all_frames_for_buffer(file_name, strlen(file_name));
 	lock_acquire(&filesys_lock);
 	opened_file = filesys_open(file_name);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(file_name, strlen(file_name));
 	if(opened_file  == NULL){
 		f->eax = -1;
 		return;
@@ -390,10 +401,11 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		f->eax = 0;
 		return;
 	}
-
+	pin_all_frames_for_buffer(buffer, size);
 	lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_read;
 }
 
@@ -433,9 +445,11 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 		return;
 	}
 
+	pin_all_frames_for_buffer(buffer, size);
 	lock_acquire(&filesys_lock);
 	bytes_written = file_write(open_file, buffer, size);
 	lock_release(&filesys_lock);
+	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
 }
 
@@ -531,10 +545,10 @@ static void system_close(struct intr_frame *f UNUSED, int fd ){
    Will look through the hash table to see if uaddr
    is between the bounds of the given mmaped region*/
 static struct mmap_hash_entry *uaddr_to_mmap_entry(
-	struct thread *cur, void *uaddr){
+		struct process *cur, void *uaddr){
 	struct hash_iterator i;
 	struct hash_elem *e;
-	hash_first (&i, &cur->process->mmap_table);
+	hash_first (&i, &cur->mmap_table);
 	while((e = hash_next(&i)) != NULL){
 		struct mmap_hash_entry *test =
 				hash_entry(e, struct mmap_hash_entry, elem);
@@ -658,12 +672,12 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
 
-	lock_acquire(&cur->process->mmap_table_lock);
+	lock_acquire(&process->mmap_table_lock);
 
 	struct hash_elem *returned =
 			hash_insert(&process->mmap_table, &mmap_entry->elem);
 
-	lock_release(&cur->process->mmap_table_lock);
+	lock_release(&process->mmap_table_lock);
 
 	if(returned != NULL){
 		/* We have just tried to put the mmap of an identical mmap into the hash
@@ -686,16 +700,16 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 	}
 
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
-	struct thread * cur = thread_current();
-	uint32_t *pd = cur->pagedir;
+	struct process * cur = thread_current()->process;
+	uint32_t *pd = thread_current()->pagedir;
 
-	lock_acquire(&cur->process->mmap_table_lock);
+	lock_acquire(&cur->mmap_table_lock);
 
 	mmap_save_all(entry);
 	pagedir_clear_pages(pd, (uint32_t*)entry->begin_addr, entry->num_pages);
 
 	struct hash_elem *returned =
-			hash_delete(&cur->process->mmap_table, &entry->elem);
+			hash_delete(&cur->mmap_table, &entry->elem);
 	if(returned == NULL){
 		/* We have just tried to delete a fd that was not in our fd table....
 		   This Is obviously a huge problem so system KILLLLLLL!!!! */
@@ -704,7 +718,7 @@ static void system_munmap (struct intr_frame *f, mapid_t map_id){
 
 	free(entry);
 
-	lock_release(&cur->process->mmap_table_lock);
+	lock_release(&cur->mmap_table_lock);
 
 	if(fd_entry->num_mmaps == 0  && fd_entry->is_closed){
 		fd_entry->is_closed = false;
@@ -727,8 +741,8 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
    can call this function, when it page faulted
    trying to access memory*/
 bool mmap_read_in(void *faulting_addr){
-	struct thread *cur = thread_current();
-	uint32_t *pd = cur->pagedir;
+	struct process *cur_process = thread_current()->process;
+	uint32_t *pd = thread_current()->pagedir;
 	/* Get the key into the hash, AKA the uaddr of this page*/
 	uint32_t masked_uaddr = (uint32_t)faulting_addr & PTE_ADDR;
 	uint32_t offset;
@@ -740,12 +754,12 @@ bool mmap_read_in(void *faulting_addr){
 
 	ASSERT(pagedir_get_medium(pd, faulting_addr) == PTE_MMAP);
 
-	lock_acquire(&cur->process->mmap_table_lock);
+	lock_acquire(&cur_process->mmap_table_lock);
 
 	/* Get hash entry if it exists */
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (uint32_t*)masked_uaddr);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur_process, (uint32_t*)masked_uaddr);
 
-	lock_release(&cur->process->mmap_table_lock);
+	lock_release(&cur_process->mmap_table_lock);
 
 	/* If this is not true we routed the wrong thing to
 	   mmap read in*/
@@ -798,9 +812,16 @@ bool mmap_read_in(void *faulting_addr){
 
 /* uaddr is expected to be page aligned, pointing to a page
    that is used for this mmapped file */
-bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
+bool mmap_write_out(struct process *cur_process, uint32_t *pd,
+		pid_t pid, void *uaddr, void *kaddr){
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));
-	uint32_t *pd = cur->pagedir;
+	if(!process_lock(pid, &cur_process->mmap_table_lock)){
+		/* Process has exited so we know that we can't
+		   access any of the processes memory */
+		return false;
+	}
+
+	ASSERT(lock_held_by_current_thread(&cur_process->mmap_table_lock));
 
 	/* We should have set this up atomically before being
 	   called */
@@ -812,8 +833,8 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   while the owning thread changes the structure of the mmap
 	   table, so both adding and removing data from the mmap table
 	   and reading it from this function must be locked */
-	lock_acquire(&cur->process->mmap_table_lock);
-	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur, (void*)masked_uaddr);
+	//lock_acquire(&cur->process->mmap_table_lock);
+	struct mmap_hash_entry *entry = uaddr_to_mmap_entry(cur_process, (void*)masked_uaddr);
 	if(entry == NULL){
 		/* Process has just deleted this entry meaning that it was
 		   not necessary to keep it. */
@@ -826,10 +847,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	   mmapping to it */
 	ASSERT(fd_entry != NULL);
 
-	bool already_held = lock_held_by_current_thread(&filesys_lock);
-	if(already_held){
-		lock_acquire(&filesys_lock);
-	}
+	lock_acquire(&filesys_lock);
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
@@ -842,11 +860,9 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 
-	if(already_held){
-		lock_release(&filesys_lock);
-	}
+	lock_release(&filesys_lock);
 
-	lock_release(&cur->process->mmap_table_lock);
+	lock_release(&cur_process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE
 	   back to on demand status*/
 	ASSERT(pagedir_setup_demand_page(pd, (void*)masked_uaddr, PTE_MMAP,
@@ -860,8 +876,7 @@ bool mmap_write_out(struct thread *cur, void *uaddr, void *kaddr){
 /* Saves all of the pages that are dirty for the given mmap_hash_entry
    and frees their frames. */
 static void mmap_save_all(struct mmap_hash_entry *entry){
-	struct thread * cur = thread_current();
-	uint32_t *pd = cur->pagedir;
+	uint32_t *pd =  thread_current()->pagedir;
 	struct fd_hash_entry *fd_entry = fd_to_fd_hash_entry(entry->fd);
 
 	/* The file should never be closed as long as there is a
@@ -877,7 +892,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 	off_t offset, original_position, write_bytes, f_length, last_page_length;
 
 	lock_acquire(&filesys_lock);
-	original_position = file_tell(fd_entry->open_file);
 	f_length = file_length(fd_entry->open_file);
 	lock_release(&filesys_lock);
 
@@ -902,13 +916,15 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 			if(pin_frame_entry(kaddr_for_pg)){
 				/* It is now pinned so it will not be evicted */
 				lock_acquire(&filesys_lock);
-
+				original_position = file_tell(fd_entry->open_file);
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
 				file_seek(fd_entry->open_file, offset);
 
 				write_bytes = (entry->num_pages -1 == j)  ? last_page_length : PGSIZE;
 
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
+				file_seek(fd_entry->open_file, original_position);
+
 				lock_release(&filesys_lock);
 				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
@@ -923,10 +939,6 @@ static void mmap_save_all(struct mmap_hash_entry *entry){
 		}
 	}
 	intr_enable();
-
-	lock_acquire(&filesys_lock);
-	file_seek(fd_entry->open_file, original_position);
-	lock_release(&filesys_lock);
 
 }
 
@@ -1017,6 +1029,65 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 		}
 	}
 	return true;
+}
+
+/* Because a page fault while doing IO may require a thread to acquire
+   the IDE locks multiple times we need to make sure that we don't page
+   fault. The only way to guarantee that we won't page fault during an
+   IO operation is to pin its frame. Because other threads may evict
+   this page immediately after reading it in (unlikely to happen) we need
+   to generate another page fault to get the data back in memory and then
+   try to pin it again. We know that we have to do this because as soon as
+   the page fault handler returns the frame is unpinned. We don't do error
+   checking here, we assume that the buffer has already been passed to
+   buffer_is_valid(_writable).*/
+static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
+	uint8_t *uaddr = (uint8_t*)buffer;
+	uint32_t *pd = thread_current()->pagedir;
+	uint32_t i;
+	uint32_t front = (uint32_t)buffer % PGSIZE;
+	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	size += (front + back);
+
+	uaddr -= front;
+
+	ASSERT(size % PGSIZE == 0);
+	ASSERT((uint32_t)uaddr % PGSIZE == 0);
+
+	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
+		/* pin_frame_entry returns false when the current frame
+		   in question is in the process of being evicted. We want
+		   the page address so we mask off the lower 12 bits*/
+		intr_disable();
+		/* only get complete changes to our PTE, if we page fault
+		   it should be read in and then we can continue. pin_frame_entry
+		   may reenable interrupts to acquire the frame lock*/
+		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(pagedir_get_page(pd, uaddr))){
+			/* Generate a page fault to get the page read
+			   in so that we can pin it's frame */
+			get_user(uaddr);
+		}
+		intr_enable();
+	}
+}
+
+/* Does the opposite of pin_all_frames_for_buffer. Assumes the buffer has
+   already been passed to pin all frames of buffer.*/
+static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
+	uint32_t i;
+	uint8_t *uaddr = (uint8_t*)buffer;
+	uint32_t *pd = thread_current()->pagedir;
+	uint32_t front = (uint32_t)buffer % PGSIZE;
+	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	size += (front + back);
+	uaddr -= front;
+
+	ASSERT(size % PGSIZE == 0);
+	ASSERT((uint32_t)uaddr % PGSIZE == 0);
+
+	for(i = 0; i < size / PGSIZE; i ++, uaddr += PGSIZE){
+		unpin_frame_entry(pagedir_get_page(pd, uaddr));
+	}
 }
 
 
