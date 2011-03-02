@@ -114,7 +114,16 @@ static void set_page_in_frame_as_accesed(uint32_t pos){
     pagedir_set_accessed(entry->cur_owner->pagedir, entry->uaddr, false);
 }
 
-
+/* This function is called within an interrupt
+   handler so it will not be interrupted.
+   Note:  We will have race condtions with this being
+   called in the middle of a timer interrupt, so
+   we have to consider this.
+*/
+void frame_zero_out_access_bits(void){
+  while(clear_hand + f_table.size
+    
+}
 /* Initializes the frame table by first allocating all of the
    the user pool and creating a bitmap that corresponds to the
    free or used frames that we currently have. Also initializes
