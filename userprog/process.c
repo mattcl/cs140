@@ -970,7 +970,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* remove this frame cause we failed*/
 		lock_release(&filesys_lock);
 		unpin_frame_entry(kpage);
-		frame_clear_page (kpage);
+		frame_clear_page(kpage);
 		return false;
 	}
 	memset (kpage + page_read_bytes, 0, page_zero_bytes);
