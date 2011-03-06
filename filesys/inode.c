@@ -55,6 +55,7 @@ static struct list open_inodes;
 /* Initializes the inode module. */
 void inode_init (void){
 	list_init (&open_inodes);
+	bcache_init();
 }
 
 /* Initializes an inode with LENGTH bytes of data and

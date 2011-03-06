@@ -293,7 +293,7 @@ static tid_t thread_create__ (const char *name, int priority,
    on this thread.*/
 tid_t thread_create (const char *name, int priority,
                      thread_func *function, void *aux){
-	thread_create__(name, priority, function, aux, false);
+	return thread_create__(name, priority, function, aux, false);
 }
 
 /* Creates a thread with no process running on it, used for only
@@ -301,7 +301,7 @@ tid_t thread_create (const char *name, int priority,
    no process can interfere with our kernel thread. K-UNIT!!!*/
 tid_t thread_create_kernel(const char *name, int priority,
 							thread_func *function, void *aux){
-	thread_create__(name, priority, function, aux, true);
+	return thread_create__(name, priority, function, aux, true);
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled

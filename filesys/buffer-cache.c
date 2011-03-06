@@ -2,6 +2,7 @@
 #include "filesys.h"
 #include "threads/thread.h"
 #include <debug.h>
+#include <string.h>
 
 /* If accesses are greater than (cur_pri)*PROMOTE_THRESHOLD
    then we will move the priority of this cache block up to
@@ -24,6 +25,14 @@ static struct lock eviction_lists_lock;
 static struct cache_entry cache[MAX_CACHE_SLOTS];
 
 static struct cache_entry *bcache_evict(void);
+
+/* Shortcuts for lots of typing and possible type errors */
+#define HASH_ELEM const struct hash_elem
+#define AUX void *aux UNUSED
+
+/* HASH table functions*/
+static unsigned bcache_entry_hash(HASH_ELEM *e, AUX);
+static bool bcache_entry_compare(HASH_ELEM *a, HASH_ELEM *b, AUX);
 
 void bcache_init(void){
 	uint32_t i;
@@ -66,7 +75,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   or the end of its new list if it gets promoted*/
 		lock_acquire(&eviction_lists_lock);
 		list_remove(&to_return->eviction_elem);
-		lock_acqurie(&eviction_lists_lock);
+		lock_release(&eviction_lists_lock);
 
 		/* Promote here if necessary
 		to_return->access_count ++;
@@ -84,7 +93,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_acquire(&eviction_lists_lock);
 		list_push_back(&eviction_lists[to_return->cur_pri],
 									&to_return->eviction_elem);
-		lock_acqurie(&eviction_lists_lock);
+		lock_release(&eviction_lists_lock);
 
 		/* Lock the cache entry and return it */
 		lock_acquire(&to_return.entry_lock);
@@ -169,4 +178,17 @@ static struct cache_entry *bcache_evict(void){
 	lock_release(&eviction_lists_lock);
 
 	return evicted;
+}
+
+/* HASH table functions*/
+static unsigned bcache_entry_hash(HASH_ELEM *e, AUX){
+	return hash_bytes(&hash_entry(e, struct cache_entry,
+				lookup_elem)->sector_num, sizeof(block_sector_t));
+}
+
+static bool bcache_entry_compare(HASH_ELEM *a, HASH_ELEM *b, AUX){
+	ASSERT(a != NULL);
+	ASSERT(b != NULL);
+	return (hash_entry(a, struct cache_entry, lookup_elem)->sector_num <
+			hash_entry(b, struct cache_entry, lookup_elem)->sector_num);
 }
