@@ -22,13 +22,13 @@ struct dir_entry{
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, size_t entry_cnt){
-	return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+	return inode_create (sector, entry_cnt * sizeof(struct dir_entry));
 }
 
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *dir_open (struct inode *inode){
-	struct dir *dir = calloc (1, sizeof *dir);
+	struct dir *dir = calloc (1, sizeof(*dir));
 	if(inode != NULL && dir != NULL){
 		dir->inode = inode;
 		dir->pos = 0;
@@ -78,8 +78,11 @@ static bool lookup (const struct dir *dir, const char *name,
 	ASSERT (dir != NULL);
 	ASSERT (name != NULL);
 
-	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-			ofs += sizeof e){
+	/* For loop checks all files in this directory and compares them to
+	   the file name to verify that there are no files with the same name
+	   in the directory*/
+	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof(e), ofs) == sizeof(e);
+			ofs += sizeof(e) ){
 		if(e.in_use && !strcmp (name, e.name)){
 			if(ep != NULL){
 				*ep = e;
@@ -143,17 +146,17 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
      inode_read_at() will only return a short read at end of file.
      Otherwise, we'd need to verify that we didn't get a short
      read due to something intermittent such as low memory. */
-	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-			ofs += sizeof e){
+	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof(e), ofs) == sizeof(e);
+			ofs += sizeof(e)){
 		if(!e.in_use){
 			break;
 		}
 	}
 	/* Write slot. */
 	e.in_use = true;
-	strlcpy (e.name, name, sizeof e.name);
+	strlcpy (e.name, name, sizeof(e.name));
 	e.inode_sector = inode_sector;
-	success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
+	success = inode_write_at (dir->inode, &e, sizeof(e), ofs) == sizeof(e);
 
 	done:
 	return success;
@@ -183,7 +186,7 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	/* Erase directory entry. */
 	e.in_use = false;
-	if(inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e){
+	if(inode_write_at (dir->inode, &e, sizeof(e), ofs) != sizeof(e)){
 		goto done;
 	}
 
@@ -202,8 +205,8 @@ bool dir_remove (struct dir *dir, const char *name){
 bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1]){
 	struct dir_entry e;
 
-	while(inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e){
-		dir->pos += sizeof e;
+	while(inode_read_at (dir->inode, &e, sizeof(e), dir->pos) == sizeof(e)){
+		dir->pos += sizeof(e);
 		if(e.in_use){
 			strlcpy (name, e.name, NAME_MAX + 1);
 			return true;

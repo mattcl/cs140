@@ -155,7 +155,7 @@ void thread_start (void){
 	/* Create the idle thread. */
 	struct semaphore idle_started;
 	sema_init (&idle_started, 0);
-	thread_create ("idle", PRI_MIN, idle, &idle_started);
+	thread_create_kernel ("idle", PRI_MIN, idle, &idle_started);
 
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
@@ -215,8 +215,8 @@ void thread_print_stats (void){
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t thread_create (const char *name, int priority,
-                     thread_func *function, void *aux){
+static tid_t thread_create__ (const char *name, int priority,
+                     thread_func *function, void *aux, bool kernel){
 
 	if(thread_mlfqs) priority = PRI_MAX;
 
@@ -246,16 +246,18 @@ tid_t thread_create (const char *name, int priority,
 
 #ifdef USERPROG
 	/* Initialize the user process */
-	struct process *p = calloc (1, sizeof(struct process));
-	if(p == NULL){
-		intr_set_level (old_level);
-		return TID_ERROR;
-	}
+	if(!kernel){
+		struct process *p = calloc (1, sizeof(struct process));
+		if(p == NULL){
+			intr_set_level (old_level);
+			return TID_ERROR;
+		}
 
-	if( initialize_process (p, t) == false){
-		free(p);
-		intr_set_level (old_level);
-		return TID_ERROR;
+		if(initialize_process (p, t) == false){
+			free(p);
+			intr_set_level (old_level);
+			return TID_ERROR;
+		}
 	}
 #endif
 	/* Stack frame for kernel_thread(). */
@@ -284,6 +286,22 @@ tid_t thread_create (const char *name, int priority,
 	thread_preempt();
 
 	return tid;
+}
+
+/* Creates a thread with a process running on it. This will be
+   a user kernel thread because a user's process will be running
+   on this thread.*/
+tid_t thread_create (const char *name, int priority,
+                     thread_func *function, void *aux){
+	thread_create__(name, priority, function, aux, false);
+}
+
+/* Creates a thread with no process running on it, used for only
+   calling kernel code. This increases security of our kernel because
+   no process can interfere with our kernel thread. K-UNIT!!!*/
+tid_t thread_create_kernel(const char *name, int priority,
+							thread_func *function, void *aux){
+	thread_create__(name, priority, function, aux, true);
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
