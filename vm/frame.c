@@ -193,7 +193,6 @@ void frame_init(void){
    also returns a kernel virtual address without mapping it to
    any pagedir*/
 static void *evict_page(void *new_uaddr, bool zero_out){
-	//printf("evict %u\n", thread_current()->process->pid);
 	enum intr_level old_level;
 	struct frame_entry *entry;
 	medium_t medium;
@@ -276,7 +275,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	if(zero_out){
 		memset(kaddr, 0, PGSIZE);
 	}
-	//printf("evict done %u\n", thread_current()->process->pid);
 	return kaddr;
 }
 
@@ -284,7 +282,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
    is full then it will return NULL, in which case you should evict
    something */
 static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_uaddr){
-	//printf("first frame %u\n", thread_current()->process->pid);
 	lock_acquire(&f_table.frame_table_lock);
 	size_t frame_idx = bitmap_scan (f_table.used_frames, 0, 1 , false);
 	if(frame_idx == BITMAP_ERROR){
@@ -302,14 +299,18 @@ static struct frame_entry *frame_first_free(enum palloc_flags flags, void *new_u
 		if((flags&PAL_ZERO) != 0){
 			memset(entry_to_kaddr(entry), 0, PGSIZE);
 		}
-		//printf("first frame done 2 %u\n", thread_current()->process->pid);
 		return entry;
 	}
 }
 
 /* If there are no frames that are free it will evict a frame
    and return that evicted frame to the user, otherwise it will
-   return the first frame in the frame table that is free */
+   return the first frame in the frame table that is free.
+   Do not call this function with any of the following locks
+   held: process_hash_lock, filesys_lock, any of the child_pid_tid_locks,
+   of the frame table lock. Calling this with a child pid_tid_lock held
+   will result in deadlock because it acquires the processes_hash_lock
+   in a call to process_lock in process.c. */
 void *frame_get_page(enum palloc_flags flags, void *uaddr){
 	ASSERT((flags & PAL_USER) != 0);
 	struct frame_entry *entry = frame_first_free(flags, uaddr);
@@ -322,7 +323,6 @@ void *frame_get_page(enum palloc_flags flags, void *uaddr){
    frame is currently pinned then we can not return from this
    function until it becomes unpinned*/
 void frame_clear_page (void *kaddr){
-//	//printf("Clear page\n");
 	if((uint32_t)kaddr < (uint32_t)f_table.base ||
 			(uint32_t)kaddr > ((uint32_t)f_table.base + (f_table.size * (PGSIZE-1)))){
 		PANIC("kaddr %p, base %p end %u size %u\n", kaddr, f_table.base,
@@ -337,7 +337,6 @@ void frame_clear_page (void *kaddr){
 		   of another thread and doesn't need its frame table
 		   entry updated here*/
 		lock_release(&f_table.frame_table_lock);
-//		//printf("clear page done 1\n");
 		return;
 	}
 
@@ -349,13 +348,11 @@ void frame_clear_page (void *kaddr){
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
 
 	lock_release(&f_table.frame_table_lock);
-//	//printf("clear page done 2\n");
 }
 
 /* Need to unpin after it is installed in the pagedir of your thread
    will unpin the frame*/
 void unpin_frame_entry(void *kaddr){
-	//printf("unpin\n");
 	ASSERT(kaddr >= f_table.base &&
 			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
@@ -364,30 +361,25 @@ void unpin_frame_entry(void *kaddr){
 
 	entry->is_pinned = false;
 	lock_release(&f_table.frame_table_lock);
-	//printf("unpin done\n");
 }
 
 /* Returns if this frame was pinned, false if the
    current thread is not in the frame or if the frame
    is allready pinned */
 bool pin_frame_entry(void *kaddr){
-	//printf("pin\n");
 	ASSERT(kaddr >= f_table.base &&
 			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){
 		lock_release(&f_table.frame_table_lock);
-		//printf("pin done 1\n");
 		return false;
 	}
 	if(entry->cur_owner != thread_current()->process){
 		lock_release(&f_table.frame_table_lock);
-		//printf("pin done 2\n");
 		return false;
 	}
 	entry->is_pinned = true;
 	lock_release(&f_table.frame_table_lock);
-	//printf("pin done 3\n");
 	return true;
 }
