@@ -190,8 +190,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	printf("size %u, offset %u\n", size, offset);
-
+	printf("size %u, offset %u ino length %u\n", size, offset, inode->data.length);
 
 	while (size > 0){
 		/* Disk sector to read, starting byte offset within sector. */
@@ -238,6 +237,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    growth is not yet implemented.) */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
+	printf("inode write\n");
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
@@ -275,6 +275,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		bytes_written += chunk_size;
 	}
 
+	printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
