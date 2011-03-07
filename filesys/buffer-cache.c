@@ -181,6 +181,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
 			printf("Wait on sector to be evicted %u\n", sector);
+			uint_set_print_all(&evicted_sectors);
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 

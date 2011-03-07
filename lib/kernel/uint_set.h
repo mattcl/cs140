@@ -27,5 +27,6 @@ void uint_set_remove(struct uint_set *set, uint32_t key);
 
 void uint_set_destroy(struct uint_set *set);
 
+void uint_set_print_all(struct uint_set *set);
 
 #endif /* INT_SET_H_ */

@@ -55,4 +55,16 @@ void uint_set_destroy(struct uint_set *set){
 	hash_destroy(&set->set_hash, &int_set_hash_destroy);
 }
 
+void uint_set_print_all(struct uint_set *set){
+	struct hash_iterator iter;
+	hash_first(&iter, &set->set_hash);
+	struct hash_elem * elem;
+	while (hash_next (&iter)){
+		struct uint_set_entry *entry = hash_entry (hash_cur (&iter),
+				struct uint_set_entry, e);
+		printf("entry->key %u\n",entry->key);
+	}
+}
+
+
 
