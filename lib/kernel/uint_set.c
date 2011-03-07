@@ -61,6 +61,7 @@ void uint_set_print_all(struct uint_set *set){
 	while (hash_next (&iter)){
 		struct uint_set_entry *entry = hash_entry (hash_cur (&iter),
 				struct uint_set_entry, e);
+		printf("entry->key %u\n", entry->key);
 	}
 }
 
