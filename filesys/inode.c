@@ -80,7 +80,7 @@ bool inode_create (block_sector_t sector, off_t length){
 		disk_inode->magic = INODE_MAGIC;
 		if (free_map_allocate (sectors, &disk_inode->start)){
 
-			printf("Inode created at sector %u\n", sector);
+			printf("Inode created at sector %u disk_inode length %u\n", sector, disk_inode->length);
 			block_write (fs_device, sector, disk_inode);
 
 
@@ -91,7 +91,7 @@ bool inode_create (block_sector_t sector, off_t length){
 				for (i = 0; i < sectors; i++){
 
 
-					printf("writing sector %u\n", disk_inode->start+i);
+					printf("writing sector %u \n", disk_inode->start+i);
 					block_write (fs_device, disk_inode->start + i, zeros);
 
 
