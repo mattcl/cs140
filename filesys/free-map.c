@@ -25,6 +25,7 @@ void free_map_init (void){
    written. */
 bool free_map_allocate (size_t cnt, block_sector_t *sectorp){
 	block_sector_t sector = bitmap_scan_and_flip (free_map, 0, cnt, false);
+	printf("free map allocate\n");
 	if(sector != BITMAP_ERROR
 			&& free_map_file != NULL
 			&& !bitmap_write (free_map, free_map_file)){
@@ -42,11 +43,13 @@ bool free_map_allocate (size_t cnt, block_sector_t *sectorp){
 void free_map_release (block_sector_t sector, size_t cnt){
 	ASSERT (bitmap_all (free_map, sector, cnt));
 	bitmap_set_multiple (free_map, sector, cnt, false);
+	printf("free map release");
 	bitmap_write (free_map, free_map_file);
 }
 
 /* Opens the free map file and reads it from disk. */
 void free_map_open (void){
+	printf("freemap open");
 	struct inode *i = inode_open (FREE_MAP_SECTOR);
 	ASSERT(i != NULL);
 	free_map_file = file_open (i);
@@ -60,12 +63,14 @@ void free_map_open (void){
 
 /* Writes the free map to disk and closes the free map file. */
 void free_map_close (void){
+	printf("freemap close\n");
 	file_close (free_map_file);
 }
 
 /* Creates a new free map file on disk and writes the free map to
    it. */
 void free_map_create (void){
+	printf("freemap create\n");
 	/* Create inode. */
 	if(!inode_create (FREE_MAP_SECTOR, bitmap_file_size (free_map))){
 		PANIC ("free map creation failed");
