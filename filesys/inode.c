@@ -80,7 +80,7 @@ bool inode_create (block_sector_t sector, off_t length){
 		disk_inode->magic = INODE_MAGIC;
 		if (free_map_allocate (sectors, &disk_inode->start)){
 
-
+			printf("Inode created at sector %u\n", sector);
 			block_write (fs_device, sector, disk_inode);
 
 
@@ -91,7 +91,7 @@ bool inode_create (block_sector_t sector, off_t length){
 				for (i = 0; i < sectors; i++){
 
 
-
+					printf("writing sector %u\n", disk_inode->start+i);
 					block_write (fs_device, disk_inode->start + i, zeros);
 
 
@@ -112,12 +112,14 @@ struct inode *inode_open (block_sector_t sector){
 	struct list_elem *e;
 	struct inode *inode;
 
+	printf("opening inode at sector %u\n", sector);
+
 	/* Check whether this inode is already open. */
 	for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
 			e = list_next (e)){
 		inode = list_entry (e, struct inode, elem);
 		if (inode->sector == sector){
-
+			printf("Reoppend\n");
 			inode_reopen (inode);
 			return inode;
 		}
