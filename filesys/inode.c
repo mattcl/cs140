@@ -161,6 +161,7 @@ void inode_close (struct inode *inode){
 	if (inode == NULL){
 		return;
 	}
+	printf("closing inode\n");
 
 	/* Release resources if this was the last opener. */
 	if (--inode->open_cnt == 0){
@@ -169,6 +170,7 @@ void inode_close (struct inode *inode){
 
 		/* Deallocate blocks if removed. */
 		if (inode->removed){
+			printf("removed and freeing entries in freemap\n");
 			free_map_release (inode->sector, 1);
 			free_map_release (inode->data.start,
 					bytes_to_sectors (inode->data.length));
@@ -214,6 +216,8 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		}
 
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
+
+		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 
 		memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
@@ -265,6 +269,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
+		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
 		entry->flags |= CACHE_ENTRY_DIRTY;
