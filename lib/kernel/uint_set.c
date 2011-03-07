@@ -38,14 +38,14 @@ void uint_set_add_member(struct uint_set *set, uint32_t key){
 	if(!uint_set_is_member(set, key)){
 		struct uint_set_entry *e = calloc(1, sizeof(struct uint_set_entry));
 		e->key = key;
-		hash_insert(&set->set_hash, e->e);
+		hash_insert(&set->set_hash, &e->e);
 	}
 }
 
 void uint_set_remove(struct uint_set *set, uint32_t key){
 	struct uint_set_entry entry;
 	entry.key = key;
-	struct hash_elem *del = hash_delete(&set->set_hash, entry.e);
+	struct hash_elem *del = hash_delete(&set->set_hash, &entry.e);
 	if(del != NULL){
 		free(hash_entry(del, struct uint_set_entry, e));
 	}
