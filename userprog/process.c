@@ -383,7 +383,7 @@ void process_exit (void){
 	struct hash_elem *deleted = hash_delete(&processes, &cur_process->elem);
 
 
-	if( deleted != &cur_process->elem){
+	if(deleted != &cur_process->elem){
 		/* We pulled out a different proccess with the same pid... uh oh */
 		PANIC("WEIRD SHIT WITH HASH TABLE!!!");
 	}

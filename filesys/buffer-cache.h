@@ -36,10 +36,23 @@ struct cache_entry{
 										 access this entry at any given time */
 	struct list_elem eviction_elem;   /* list elem for one of the eviction lists*/
 	struct hash_elem lookup_elem;     /* hash_elem to quickly look up this entry */
-	uint32_t access_count;			  /* A count to be incremented in bcache_get
+	uint32_t num_hits;			      /* A count to be incremented in bcache_get
 										 and used to premote the priority of the
 										 cache entry if necessary */
 	enum meta_priority cur_pri;		  /* The current priority of this cache entry*/
+
+	uint32_t num_accessors;			  /* The number of threads that are actively
+										 trying to access this cache block,
+										 incremented in bcache_get. This is to
+										 make sure that one thread does not read
+										 new data because it's data got evicted*/
+	struct condition num_accessors_dec;/*Condition that is signaled on in bcache
+										 unlock. Wakes up the evicting thread so
+										 that it may finish evicting the cache
+										 block*/
+
+	bool evicting;
+	struct condition eviction_done;
 };
 
 void bcache_init(void);
