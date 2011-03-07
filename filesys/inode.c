@@ -190,9 +190,14 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
+	printf("size %u, offset %u\n", size, offset);
+
+
 	while (size > 0){
 		/* Disk sector to read, starting byte offset within sector. */
 		block_sector_t sector_idx = byte_to_sector (inode, offset);
+
+		printf("sector %u\n", sector_idx);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
 		/* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -203,6 +208,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		/* Number of bytes to actually copy out of this sector. */
 		int chunk_size = size < min_left ? size : min_left;
 		if (chunk_size <= 0){
+			printf("broke\n");
 			break;
 		}
 
