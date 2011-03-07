@@ -94,5 +94,4 @@ static void do_format (void){
 		PANIC ("root directory creation failed");
 	}
 	free_map_close ();
-	printf ("done.\n");
 }

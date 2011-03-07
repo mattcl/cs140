@@ -162,6 +162,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		while(to_return->num_accessors != 0){
 			/* Need to disallow this sector_to_save from being read in somehow*/
+			printf("Wait on accessors\n");
 			cond_wait(&to_return->num_accessors_dec, &cache_lock);
 		}
 
@@ -178,6 +179,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the process of being written out wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
+			printf("Wait on sector to be evicted");
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 
@@ -217,6 +219,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 void bcache_unlock(struct cache_entry *entry){
 	lock_acquire(&cache_lock);
 	entry->num_accessors--;
+	printf("Accessors for %u decremented to %u\n", entry->sector_num, entry->num_accessors);
 	/* Signal??? Only one thread can evict this entry...*/
 	cond_broadcast(&entry->num_accessors_dec, &cache_lock);
 	lock_release(&entry->entry_lock);
