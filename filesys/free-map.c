@@ -47,7 +47,9 @@ void free_map_release (block_sector_t sector, size_t cnt){
 
 /* Opens the free map file and reads it from disk. */
 void free_map_open (void){
-	free_map_file = file_open (inode_open (FREE_MAP_SECTOR));
+	struct inode *i = inode_open (FREE_MAP_SECTOR);
+	ASSERT(i != NULL);
+	free_map_file = file_open (i);
 	if(free_map_file == NULL){
 		PANIC ("can't open free map");
 	}
