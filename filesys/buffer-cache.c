@@ -90,6 +90,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		to_return = hash_entry(return_entry, struct cache_entry, lookup_elem);
 
 
+		/* While this frame is in the middle of being switched
+		   wait, while(evicting == true)*/
 		while(to_return->flags & CACHE_ENTRY_EVICTING){
 			cond_wait(&to_return->eviction_done, &cache_lock);
 		}
@@ -123,7 +125,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		struct hash_elem *check;
 		to_return = bcache_evict();
 
-		if(to_return->sector_num != 0){
+		if(to_return->flags & CACHE_ENTRY_INITIALIZED){
 			check =	hash_delete(&lookup_hash, &to_return->lookup_elem);
 			ASSERT(check != NULL);
 			ASSERT(hash_entry(check, struct cache_entry, lookup_elem)==to_return);
@@ -134,7 +136,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		block_sector_t sector_to_save = to_return->sector_num;
 
 		to_return->sector_num = sector;
-		to_return->flags |= (CACHE_ENTRY_EVICTING);
+		to_return->flags |= (CACHE_ENTRY_EVICTING); /*Evicting = true*/
 
 		check = hash_insert(&lookup_hash, &to_return->lookup_elem);
 		if(check != NULL){
@@ -183,7 +185,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wake any thread that is waiting on their sector to be
 		   written out to disk before reading it in from disk*/
-		uint_set_remove(&evicted_sectors, sector_to_save);
+		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
+			uint_set_remove(&evicted_sectors, sector_to_save);
+		}
 		cond_broadcast(&evicted_sector_wait, &cache_lock);
 
 		list_push_back(&eviction_lists[to_return->cur_pri],
@@ -194,9 +198,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_acquire(&to_return->entry_lock);
 
 		/* Set my flags */
-		to_return->flags &= ~(CACHE_ENTRY_DIRTY);
-		to_return->flags &= ~(CACHE_ENTRY_EVICTING);
-		to_return->flags |= CACHE_ENTRY_INITIALIZED;
+		to_return->flags &= ~(CACHE_ENTRY_DIRTY);   /*Dirty = false*/
+		to_return->flags &= ~(CACHE_ENTRY_EVICTING);/*evicting = false*/
+		to_return->flags |= CACHE_ENTRY_INITIALIZED;/*Initialized = true*/
 
 		cond_broadcast(&evict_list_changed, &cache_lock);
 
