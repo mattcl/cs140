@@ -62,8 +62,7 @@ void bcache_init(void){
 	/* Initialize all of the cache entries*/
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		cache[i].sector_num = 0;
-		cache[i].dirty = false;
-		cache[i].evicting = false;
+		cache[i].flags = 0;
 		cache[i].num_accessors = 0;
 		lock_init(&cache[i].entry_lock);
 		cond_init(&cache[i].num_accessors_dec);
@@ -82,18 +81,16 @@ void bcache_init(void){
    field of the cache entry. At this point the meta_priority will be used to determine
    how important this cache entry is, otherwise the parameter is ignored. */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	//printf("get %u\n", sector);
 	struct cache_entry key, *to_return;
 	struct hash_elem *return_entry;
 	key.sector_num = sector;
 	lock_acquire(&cache_lock);
 	return_entry = hash_find(&lookup_hash, &key.lookup_elem);
 	if(return_entry != NULL){
-		//printf("If\n");
 		to_return = hash_entry(return_entry, struct cache_entry, lookup_elem);
 
 
-		while(to_return->evicting){
+		while(to_return->flags & CACHE_ENTRY_EVICTING){
 			cond_wait(&to_return->eviction_done, &cache_lock);
 		}
 
@@ -104,18 +101,15 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   or the end of its new list if it gets promoted*/
 		list_remove(&to_return->eviction_elem);
 
-		/* Promote here if necessary
-		to_return->access_count ++;
+		/* Promote here if necessary */
+		to_return->num_hits ++;
 		if(to_return->cur_pri != CACHE_INODE){
-			if(to_return->access_count >
+			if(to_return->num_hits >
 					(to_return->cur_pri * PROMOTE_THRESHOLD)){
 				to_return->cur_pri --;
-				to_return->access_count = 0;
+				to_return->num_hits = 0;
 			}
 		}
-		Looks like it will work will add in after initial
-		testing
-		*/
 
 		list_push_back(&eviction_lists[to_return->cur_pri],
 									&to_return->eviction_elem);
@@ -126,14 +120,10 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_acquire(&to_return->entry_lock);
 		return to_return;
 	}else{
-		//printf("Else\n");
 		struct hash_elem *check;
 		to_return = bcache_evict();
 
-		//printf("Sector being evicted %u\n", to_return->sector_num);
-
 		if(to_return->sector_num != 0){
-			//printf("Was not sector 0\n");
 			check =	hash_delete(&lookup_hash, &to_return->lookup_elem);
 			ASSERT(check != NULL);
 			ASSERT(hash_entry(check, struct cache_entry, lookup_elem)==to_return);
@@ -144,7 +134,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		block_sector_t sector_to_save = to_return->sector_num;
 
 		to_return->sector_num = sector;
-		to_return->evicting = true;
+		to_return->flags |= (CACHE_ENTRY_EVICTING);
 
 		check = hash_insert(&lookup_hash, &to_return->lookup_elem);
 		if(check != NULL){
@@ -154,14 +144,11 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* Make any threads that want the sector that we are right
 		   now evicting wait until we are done writing the sector
 		   to disk. */
-		if(sector_to_save != 0){
-			//printf("Add %u to set\n", sector_to_save);
+		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
 			uint_set_add_member(&evicted_sectors, sector_to_save);
 		}
 
 		while(to_return->num_accessors != 0){
-			/* Need to disallow this sector_to_save from being read in somehow*/
-			//printf("Wait on accessors\n");
 			cond_wait(&to_return->num_accessors_dec, &cache_lock);
 		}
 
@@ -171,24 +158,24 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   the old data. Can now finish changing the meta data
 		   in the cache entry*/
 		to_return->num_hits = 1; /* Brand new cache entry caller first access*/
-		to_return->num_accessors = 1; /*The caller will be the sole accessor*/
+		to_return->num_accessors = 1;  /*The caller will be the sole accessor*/
 		to_return->cur_pri = pri;
 
 		/* While we are trying to read in a sector that is
-		   in the process of being written out wait, because
+		   in the middle of being written out we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			//printf("Wait on sector to be evicted %u\n", sector);
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 
 		lock_release(&cache_lock);
 
-		if(sector_to_save != 0){
+		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
 			/* Write the old block out and read in the new block
 			   except when the cache entry is brand new.*/
 			block_write(fs_device, sector_to_save, to_return->data);
 		}
+
 		/* Read data into the cache data section*/
 		block_read (fs_device, to_return->sector_num, to_return->data);
 
@@ -196,17 +183,22 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wake any thread that is waiting on their sector to be
 		   written out to disk before reading it in from disk*/
-		//printf("set remove %u\n", sector_to_save);
 		uint_set_remove(&evicted_sectors, sector_to_save);
 		cond_broadcast(&evicted_sector_wait, &cache_lock);
 
 		list_push_back(&eviction_lists[to_return->cur_pri],
 									&to_return->eviction_elem);
-		to_return->evicting = false;
-		cond_broadcast(&evict_list_changed, &cache_lock);
 
+		/* prevent other threads from getting in to this
+		   entry */
 		lock_acquire(&to_return->entry_lock);
-		to_return->dirty = false;
+
+		/* Set my flags */
+		to_return->flags &= ~(CACHE_ENTRY_DIRTY);
+		to_return->flags &= ~(CACHE_ENTRY_EVICTING);
+		to_return->flags |= CACHE_ENTRY_INITIALIZED;
+
+		cond_broadcast(&evict_list_changed, &cache_lock);
 
 		lock_release(&cache_lock);
 
@@ -219,16 +211,16 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 void bcache_unlock(struct cache_entry *entry){
 	lock_acquire(&cache_lock);
 	entry->num_accessors--;
-	//printf("Accessors for %u decremented to %u\n", entry->sector_num, entry->num_accessors);
-	/* Signal??? Only one thread can evict this entry...*/
-	cond_broadcast(&entry->num_accessors_dec, &cache_lock);
+
+	/* Wake up the evictor of this thread*/
+	cond_signal(&entry->num_accessors_dec, &cache_lock);
 	lock_release(&entry->entry_lock);
 	lock_release(&cache_lock);
 }
 
 static void bcache_asynch_func(void *sector){
 	struct cache_entry *e =
-			bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
+	bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
 	bcache_unlock(e);
 }
 
@@ -243,9 +235,9 @@ void bcache_flush(void){
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		lock_acquire(&cache[i].entry_lock);
-		if(cache[i].dirty){
+		if(cache[i].flags & CACHE_ENTRY_DIRTY){
 			block_write(fs_device, cache[i].sector_num, cache[i].data);
-			cache[i].dirty = false;
+			cache[i].flags &= ~(CACHE_ENTRY_DIRTY);
 		}
 		lock_release(&cache[i].entry_lock);
 	}

@@ -25,11 +25,19 @@ enum meta_priority{
 						   are major accesses to it */
 };
 
+#define CACHE_ENTRY_DIRTY  1          /* Whether this cache entry is dirty
+							             set by the caller of bcache_get_lock*/
+#define CACHE_ENTRY_EVICTING  (1<<1)  /* Whether this cache entry is in the
+										 the middle of being evicted*/
+#define CACHE_ENTRY_INITIALIZED (1<<2)/* Whether this cache entry has been used
+										 before */
+
 struct cache_entry{
 	block_sector_t sector_num;        /* The sector that this entry holds*/
 	uint8_t data [BLOCK_SECTOR_SIZE]; /* The almighty DATA */
-	bool dirty;						  /* Whether this cache entry is dirty
-										 set by the caller of bcache_get_lock*/
+
+	uint8_t flags;					  /* Flags for the cache_entry */
+
 	struct lock entry_lock;           /* Lock on the cache_entry, this is valid
 										 because we must guarantee atomicity on
 										 the block level so only one thread can
@@ -51,8 +59,8 @@ struct cache_entry{
 										 that it may finish evicting the cache
 										 block*/
 
-	bool evicting;
 	struct condition eviction_done;
+
 };
 
 void bcache_init(void);
