@@ -12,7 +12,7 @@ static bool int_set_hash_comp(const struct hash_elem *a,
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
 	return (hash_entry(a, struct uint_set_entry, e)->key <
-			hash_entry(a, struct uint_set_entry, e)->key);
+			hash_entry(b, struct uint_set_entry, e)->key);
 }
 
 static void int_set_hash_destroy(struct hash_elem *e, void *aux UNUSED){
