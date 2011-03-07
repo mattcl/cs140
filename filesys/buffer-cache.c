@@ -84,14 +84,14 @@ void bcache_init(void){
    field of the cache entry. At this point the meta_priority will be used to determine
    how important this cache entry is, otherwise the parameter is ignored. */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	printf("get\n");
+	printf("get %u\n", sector);
 	struct cache_entry key, *to_return;
 	struct hash_elem *return_entry;
 	key.sector_num = sector;
 	lock_acquire(&cache_lock);
 	return_entry = hash_find(&lookup_hash, &key.lookup_elem);
 	if(return_entry != NULL){
-		printf("If");
+		printf("If\n");
 		to_return = hash_entry(return_entry, struct cache_entry, lookup_elem);
 
 
