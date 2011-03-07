@@ -36,7 +36,7 @@ static bool bcache_entry_compare(HASH_ELEM *a, HASH_ELEM *b, AUX);
 
 void bcache_init(void){
 	uint32_t i;
-	hash_init(&lookup_hash);
+	hash_init(&lookup_hash, bcache_entry_hash, bcache_entry_compare, NULL);
 	for(i = 0; i < NUM_PRIORITIES; i ++){
 		list_init(&eviction_lists[i]);
 	}
@@ -100,12 +100,12 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_release(&lookup_hash_lock);
 		return to_return;
 	}else{
+		struct hash_elem *check;
 		to_return = bcache_evict();
 		if(to_return->sector_num != 0){
-			struct list_elem *del =
-					hash_delete(&lookup_hash, &to_return->lookup_elem);
-			ASSERT(del != NULL);
-			ASSERT(hash_entry(del, struct cache_entry, lookup_elem)==to_return);
+			check =	hash_delete(&lookup_hash, &to_return->lookup_elem);
+			ASSERT(check != NULL);
+			ASSERT(hash_entry(check, struct cache_entry, lookup_elem)==to_return);
 		}
 
 		to_return->sector_num = sector;
@@ -118,8 +118,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 									&to_return->eviction_elem);
 		lock_release(&eviction_lists_lock);
 
-		to_return = hash_insert(&lookup_hash, &to_return->lookup_elem);
-		if(to_return != NULL){
+		check = hash_insert(&lookup_hash, &to_return->lookup_elem);
+		if(check != NULL){
 			PANIC("Collision using sector numbers as keys");
 		}
 
@@ -137,7 +137,7 @@ void bcache_unlock(struct cache_entry *entry){
 
 static void bcache_asynch_func(void *sector){
 	struct cache_entry *e =
-			bcache_get_and_lock(&((block_sector_t*)sector), CACHE_DATA);
+			bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
 	bcache_unlock(e);
 }
 
