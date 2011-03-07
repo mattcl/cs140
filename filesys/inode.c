@@ -259,7 +259,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
-		entry->dirty = true;
+		entry->flags |= CACHE_ENTRY_DIRTY;
 
 		bcache_unlock(entry);
 
