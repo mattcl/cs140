@@ -28,7 +28,6 @@ bool uint_set_is_member(struct uint_set *set, uint32_t key){
 	entry.key = key;
 	struct hash_elem *res = hash_find(&set->set_hash, &entry.e);
 	if(res != NULL){
-		printf("Not null with %u key is %u\n",hash_entry(res, struct uint_set_entry, e)->key, key);
 		return true;
 	}else{
 		return false;
@@ -62,7 +61,6 @@ void uint_set_print_all(struct uint_set *set){
 	while (hash_next (&iter)){
 		struct uint_set_entry *entry = hash_entry (hash_cur (&iter),
 				struct uint_set_entry, e);
-		printf("entry->key %u\n",entry->key);
 	}
 }
 
