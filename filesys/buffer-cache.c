@@ -96,16 +96,16 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_release(&eviction_lists_lock);
 
 		/* Lock the cache entry and return it */
-		lock_acquire(&to_return.entry_lock);
+		lock_acquire(&to_return->entry_lock);
 		lock_release(&lookup_hash_lock);
 		return to_return;
 	}else{
 		to_return = bcache_evict();
 		if(to_return->sector_num != 0){
-			to_return = hash_delete(&lookup_hash, &to_return->lookup_elem);
-			ASSERT(to_return != NULL);
-			ASSERT(hash_entry(to_return, struct cache_entry, lookup_elem)
-					== to_return);
+			struct list_elem *del =
+					hash_delete(&lookup_hash, &to_return->lookup_elem);
+			ASSERT(del != NULL);
+			ASSERT(hash_entry(del, struct cache_entry, lookup_elem)==to_return);
 		}
 
 		to_return->sector_num = sector;
@@ -137,7 +137,7 @@ void bcache_unlock(struct cache_entry *entry){
 
 static void bcache_asynch_func(void *sector){
 	struct cache_entry *e =
-			bcache_get_and_lock(&(block_sector_t*)sector, CACHE_DATA);
+			bcache_get_and_lock(&((block_sector_t*)sector), CACHE_DATA);
 	bcache_unlock(e);
 }
 
@@ -165,8 +165,8 @@ static struct cache_entry *bcache_evict(void){
 	   lookup hash lock. This can be moved to new function*/
 	struct cache_entry *evicted;
 	lock_acquire(&eviction_lists_lock);
-	uint32_t i;
-	for(i = NUM_PRIORITIES; i >= 0; i--){
+	int32_t i;
+	for(i = (NUM_PRIORITIES - 1); i >= 0; i--){
 		if(list_empty(&eviction_lists[i])){
 			continue;
 		}else{
