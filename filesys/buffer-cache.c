@@ -69,7 +69,7 @@ void bcache_init(void){
 		cache[i].num_accessors = 0;
 		lock_init(&cache[i].entry_lock);
 		cond_init(&cache[i].num_accessors_dec);
-		cond_inti(&cache[i].eviction_done);
+		cond_init(&cache[i].eviction_done);
 		memset(&cache[i].data, 0, BLOCK_SECTOR_SIZE);
 		list_push_back(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
 	}
@@ -263,7 +263,7 @@ static struct cache_entry *bcache_evict(void){
 
 	/* There is a non empty list we can evict
 	   something*/
-	struct cache_entry *evicted;
+	struct cache_entry *evicted = NULL;
 	int32_t i;
 	for(i = (NUM_PRIORITIES - 1); i >= 0; i--){
 		if(list_empty(&eviction_lists[i])){
@@ -274,6 +274,7 @@ static struct cache_entry *bcache_evict(void){
 			break;
 		}
 	}
+	ASSERT(evicted != NULL);
 	return evicted;
 }
 
