@@ -1,4 +1,6 @@
 #include "uint_set.h"
+#include "threads/malloc.h"
+
 
 static unsigned int_set_hash_func(const struct hash_elem*a, void *aux UNUSED){
 	uint32_t key = hash_entry(a, struct uint_set_entry, e)->key;
@@ -18,7 +20,7 @@ static void int_set_hash_destroy(struct hash_elem *e, void *aux UNUSED){
 }
 
 bool uint_set_init(struct uint_set *set){
-	return hash_init(set->set_hash, int_set_hash_func, int_set_hash_comp);
+	return hash_init(&set->set_hash, int_set_hash_func, int_set_hash_comp);
 }
 
 bool uint_set_is_member(struct uint_set *set, uint32_t key){
@@ -50,7 +52,7 @@ void uint_set_remove(struct uint_set *set, uint32_t key){
 }
 
 void uint_set_destroy(struct uint_set *set){
-	hash_destroy(set, &int_set_hash_destroy);
+	hash_destroy(&set->set_hash, &int_set_hash_destroy);
 }
 
 

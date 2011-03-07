@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "hash.h"
-#include <debug.h>
+#include "../debug.h"
 
 struct uint_set{
 	struct hash set_hash;
