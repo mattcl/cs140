@@ -275,7 +275,9 @@ bool bitmap_read (struct bitmap *b, struct file *file){
 	bool success = true;
 	if(b->bit_cnt > 0){
 		off_t size = byte_cnt (b->bit_cnt);
-		success = file_read_at (file, b->bits, size, 0) == size;
+		off_t read = file_read_at (file, b->bits, size, 0);
+		success = (read == size);
+		printf("success %u %u %u\n", success, size, read);
 		b->bits[elem_cnt (b->bit_cnt) - 1] &= last_mask (b);
 	}
 	return success;
