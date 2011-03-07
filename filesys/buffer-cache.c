@@ -152,7 +152,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* Make any threads that want the sector that we are right
 		   now evicting wait until we are done writing the sector
 		   to disk. */
-		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
+		if(to_return->flags & CACHE_ENTRY_INITIALIZED){
 			uint_set_add_member(&evicted_sectors, sector_to_save);
 		}
 
@@ -178,20 +178,22 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		lock_release(&cache_lock);
 
-		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
+		if(to_return->flags & CACHE_ENTRY_INITIALIZED){
 			/* Write the old block out and read in the new block
 			   except when the cache entry is brand new.*/
+			printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, to_return->data);
 		}
 
 		/* Read data into the cache data section*/
+		printf("bcache read sector %u\n", to_return->sector_num);
 		block_read (fs_device, to_return->sector_num, to_return->data);
 
 		lock_acquire(&cache_lock);
 
 		/* Wake any thread that is waiting on their sector to be
 		   written out to disk before reading it in from disk*/
-		if(!(to_return->flags & CACHE_ENTRY_INITIALIZED)){
+		if(to_return->flags & CACHE_ENTRY_INITIALIZED){
 			uint_set_remove(&evicted_sectors, sector_to_save);
 		}
 		cond_broadcast(&evicted_sector_wait, &cache_lock);
