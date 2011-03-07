@@ -73,6 +73,7 @@ void bcache_init(void){
 		memset(&cache[i].data, 0, BLOCK_SECTOR_SIZE);
 		list_push_back(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
 	}
+	printf("Bcache inited\n");
 }
 
 /* This function looks up the sector in our buffer cache, if it finds it it will
@@ -241,7 +242,7 @@ void bcache_flush(void){
 /* Returns true if all the eviction lists are empty
    returns false if at least one list has an entry
    in it*/
-static bool all_evict_lists_empty(){
+static bool all_evict_lists_empty(void){
 	bool empty = true;
 	uint32_t i;
 	for(i = 0; i < NUM_PRIORITIES; i ++){
