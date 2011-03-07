@@ -277,7 +277,6 @@ bool bitmap_read (struct bitmap *b, struct file *file){
 		off_t size = byte_cnt (b->bit_cnt);
 		off_t read = file_read_at (file, b->bits, size, 0);
 		success = (read == size);
-		printf("success %u %u %u\n", success, size, read);
 		b->bits[elem_cnt (b->bit_cnt) - 1] &= last_mask (b);
 	}
 	return success;
@@ -287,7 +286,6 @@ bool bitmap_read (struct bitmap *b, struct file *file){
    otherwise. */
 bool bitmap_write (const struct bitmap *b, struct file *file){
 	off_t size = byte_cnt (b->bit_cnt);
-	printf("bitmapwrite\n");
 	return file_write_at (file, b->bits, size, 0) == size;
 }
 //#endif /* FILESYS */
