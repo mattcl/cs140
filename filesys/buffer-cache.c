@@ -157,6 +157,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   now evicting wait until we are done writing the sector
 		   to disk. */
 		if(sector_to_save != 0){
+			printf("Add %u to set\n", sector_to_save);
 			uint_set_add_member(&evicted_sectors, sector_to_save);
 		}
 
@@ -179,7 +180,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the process of being written out wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			printf("Wait on sector to be evicted");
+			printf("Wait on sector to be evicted %u\n", sector);
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 
@@ -197,6 +198,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wake any thread that is waiting on their sector to be
 		   written out to disk before reading it in from disk*/
+		printf("set remove %u\n", sector_to_save);
 		uint_set_remove(&evicted_sectors, sector_to_save);
 		cond_broadcast(&evicted_sector_wait, &cache_lock);
 
