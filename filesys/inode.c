@@ -255,8 +255,9 @@ void inode_init (void){
 }
 
 /* Creates a new inode, writing the inode itself immediately
-   to the system. The inode is created with length, so length
-   is completely ignored. Files grow with writes only.
+   to the system. The inode is created with length,
+   however nothing is allocated, when things get read in they
+   will be all zeroes Files grow with writes only.
    When a seek/write combo creates empty sectors between the
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
@@ -560,7 +561,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 	lock_release(&inode->meta_data_lock);
 
-	//printf("Acquire eof locks\n");
+	printf("Acquire eof locks\n");
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -627,7 +628,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	//printf("inode write end %u\n", bytes_written);
+	printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
