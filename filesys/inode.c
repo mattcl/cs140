@@ -262,6 +262,8 @@ void inode_init (void){
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
 bool inode_create (block_sector_t sector, off_t length){
+	printf("create\n");
+
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
 		return false;
