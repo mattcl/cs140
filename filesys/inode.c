@@ -74,19 +74,19 @@ static inline size_t bytes_to_sectors (off_t size){
 static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool create){
 	block_sector_t alloc;
 	if(array[idx] == ZERO_SECTOR){
-		printf("Array index ZERO\n");
+		//printf("Array index ZERO\n");
 		if(!create){
-			printf("not create\n");
+			//printf("not create\n");
 			return ZERO_SECTOR;
 		}
 		if(!free_map_allocate (1, &alloc)){
-			printf("not alloc\n");
+			//printf("not alloc\n");
 			return ZERO_SECTOR;
 		}
 		array[idx] = alloc;
-	}else{
+	}/*else{
 		printf("Array index nonZERO\n");
-	}
+	}*/
 	return array[idx];
 }
 
@@ -173,7 +173,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	uint32_t file_sector = pos / BLOCK_SECTOR_SIZE;
 
-	printf("Byte to sector File sector %u create %u\n", file_sector, create);
+	//printf("Byte to sector File sector %u create %u\n", file_sector, create);
 
 	block_sector_t ret = ZERO_SECTOR;
 
@@ -187,7 +187,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		/* Read directly from inode */
 		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
 		bcache_unlock(entry, UNLOCK_NORMAL);
-		printf("byte to sector ret reg block sector %u\n", ret);
+		//printf("byte to sector ret reg block sector %u\n", ret);
 		return ret; /* May be zero sector still ;) */
 	}else{
 		/* The number of the indirect sector that the data resides on*/
@@ -203,7 +203,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 									i_sec_offset, create);
 
 			bcache_unlock(entry, UNLOCK_NORMAL);
-			printf("byte to sector ret ind block sector %u\n", ret);
+			//printf("byte to sector ret ind block sector %u\n", ret);
 			return ret; /* May be ZERO_SECTOR */
 		}else{
 
@@ -220,7 +220,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 						    				 d_sec_offset, i_sec_offset, create);
 
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				printf("byte to sector ret dbl block sector %u\n", ret);
+				//printf("byte to sector ret dbl block sector %u\n", ret);
 				return ret;
 			}else{
 
@@ -234,13 +234,13 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 					   so the request for this offset is greater than 1 GB and can
 					   not be satisfied*/
 					bcache_unlock(entry, UNLOCK_NORMAL);
-					printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
+					//printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
 					return ZERO_SECTOR;
 				}
 				ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
 						t_sec_offset, d_sec_offset, i_sec_offset, create);
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				printf("byte to sector ret trip block sector %u\n", ret);
+				//printf("byte to sector ret trip block sector %u\n", ret);
 				return ret;
 			}
 		}
@@ -547,12 +547,12 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    growth is not yet implemented.) */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	printf("inode write\n");
+	//printf("inode write\n");
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
 	bool extending = false;
-	printf("Acquire meta\n");
+	//printf("Acquire meta\n");
 	lock_acquire(&inode->meta_data_lock);
 	if (inode->deny_write_cnt){
 		lock_release(&inode->meta_data_lock);
@@ -560,7 +560,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 	lock_release(&inode->meta_data_lock);
 
-	printf("Acquire eof locks\n");
+	//printf("Acquire eof locks\n");
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -572,7 +572,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	printf("locks acquired\n");
+	//printf("locks acquired\n");
 	/* We do nothing special for the sectors between
 	   eof and the write that we are making, this means
 	   that the block pointers for them will still be
@@ -584,7 +584,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		/* Sector to write, starting byte offset within sector.
 		   byte_to_sector will allocate and install the sector in
 		   the inode for us! It will not, however, be in the cache*/
-		printf("Byte to sector\n");
+		//printf("Byte to sector\n");
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
@@ -599,13 +599,13 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		printf("bcache get sector %u\n", sector_idx);
+		//printf("bcache get sector %u\n", sector_idx);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
-		printf("Change flag\n");
+		//printf("Change flag\n");
 		entry->flags |= CACHE_ENTRY_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
