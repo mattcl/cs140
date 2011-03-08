@@ -402,7 +402,7 @@ void inode_close (struct inode *inode){
 	if(inode == NULL){
 		return;
 	}
-	//printf("closing inode\n");
+	printf("closing inode\n");
 
 
 	/* Acquire both locks, make sure no IO occurs
@@ -482,7 +482,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	//printf("size %u, offset %u ino length %u\n", size, offset, inode->data.length);
+	printf("size %u, offset %u ino length %u\n", size, offset, inode->data.length);
 
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -552,7 +552,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    growth is not yet implemented.) */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	//printf("inode write\n");
+	printf("inode write %u %u\n", size, offset);
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
