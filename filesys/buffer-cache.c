@@ -81,7 +81,7 @@ void bcache_init(void){
 		memset(&cache[i].data, 0, BLOCK_SECTOR_SIZE);
 		list_push_back(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
 	}
-	//spawn_daemon_thread();
+	spawn_daemon_thread();
 }
 
 /* This function looks up the sector in our buffer cache, if it finds it it will
@@ -370,7 +370,7 @@ void bcache_asynch_read(block_sector_t sector){
 	block_sector_t *sector_to_send = (block_sector_t*)malloc(sizeof(block_sector_t));
 	ASSERT(sector_to_send != NULL);
 	*sector_to_send = sector;
-	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, sector_to_send);
+	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, (void*)sector_to_send);
 }
 
 /* Flushes the buffer cache to disk */
