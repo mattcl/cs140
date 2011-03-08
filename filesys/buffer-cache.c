@@ -353,6 +353,7 @@ static void spawn_daemon_thread(void){
 
 /* Reads in the sector */
 static void bcache_asynch_read_(void *sector){
+	printf("asynch got here\n");
 	struct cache_entry *e =
 			bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
 	if(e != NULL){
@@ -365,6 +366,7 @@ static void bcache_asynch_read_(void *sector){
    cache entry. Will give the block the CACHE_DATA priority*/
 void bcache_asynch_read(block_sector_t sector){
 	block_sector_t *sector_to_send = (block_sector_t*)malloc(sizeof(block_sector_t));
+	ASSERT(sector_to_send != NULL);
 	*sector_to_send = sector;
 	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, sector_to_send);
 }
