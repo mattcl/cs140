@@ -11,7 +11,7 @@ static struct bitmap *free_map;      /* Free map, one bit per sector. */
 /* Initializes the free map. */
 void free_map_init (void){
 	free_map = bitmap_create (block_size (fs_device));
-	printf("Freemap %p and %d\n", free_map, *(uint8_t*)free_map);
+	printf("Freemap %p and %d\n", free_map, free_map->bit_cnt);
 	if(free_map == NULL){
 		PANIC ("bitmap creation failed--file system device is too large");
 	}
