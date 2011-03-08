@@ -914,19 +914,26 @@ static void system_inumber(struct intr_frame *f, int fd){
 }
 
 static void system_readdir(struct intr_frame *f, int fd, char *name){
-  if(!bugger_is_valid(name, READDIR_MAX_LEN + 1)){
-      system_exit(f, -1);
-  }
+    if(!bugger_is_valid(name, READDIR_MAX_LEN + 1)){
+        system_exit(f, -1);
+    }
 
-  struct file *file = file_for_fd(fd, false);
-  
-  if(file != NULL && inode_is_dir(file_get_inode(file))){
-    struct dir
-  }
+    struct file *file; 
+    struct inode *inode;
+    struct dir *dir;
 
-  f->eax = (int) false;
+    if((file = file_for_fd(fd, false))  && (inode = file_get_inode(file))
+       && inode_is_dir(inode) && (dir = dir_open(inode)) &&
+         dir_readdir(dir, name)){
+                 dir_close(dir);
+		 f->eax = (int) true;
+		 return;
+    }
+    
+    f->eax = (int) false;
     
 }
+
 /* System call helpers */
 
 /* Saves all of the pages that are dirty for the given mmap_hash_entry
