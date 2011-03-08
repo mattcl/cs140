@@ -84,10 +84,10 @@ void bcache_init(void){
    how important this cache entry is, otherwise the parameter is ignored.
    Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
+	printf("get sector %u\n", sector);
 	if(sector == ZERO_SECTOR){
 		return NULL;
 	}
-	printf("get sector %u\n", sector);
 
 	struct cache_entry key, *to_return;
 	struct hash_elem *return_entry;

@@ -164,6 +164,9 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	ASSERT (inode != NULL);
 
 	uint32_t file_sector = pos / BLOCK_SECTOR_SIZE;
+
+	printf("Byte to sector File sector %u", file_sector);
+
 	block_sector_t ret = ZERO_SECTOR;
 
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
@@ -582,7 +585,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		printf("bcache get\n");
+		printf("bcache get sector %u\n", sector_idx);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
