@@ -522,7 +522,6 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 			   pointers that point to ZERO_SECTOR don't actually have that
 			   sector allocated.*/
 			memcpy(buffer + bytes_read, zeroed_sector, chunk_size);
-			continue;
 		}else{
 			struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
