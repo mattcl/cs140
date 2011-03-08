@@ -94,7 +94,7 @@ void bcache_init(void){
    how important this cache entry is, otherwise the parameter is ignored.
    Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	printf("bcache get sector %u\n", sector);
+	//printf("bcache get sector %u\n", sector);
 	/* Requests for the zero sector will return NULL */
 	if(sector == ZERO_SECTOR){
 		return NULL;
@@ -109,7 +109,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			struct cache_entry, lookup_e)->flags & CACHE_E_INVALID)){
 		c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 
-		printf("Exists and %u\n", c_entry->flags & CACHE_E_EVICTING);
+		//printf("Exists and %u\n", c_entry->flags & CACHE_E_EVICTING);
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
@@ -159,7 +159,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 		}
 
-		printf("Doesn't exist choosing %u to delete %u\n", c_entry->sector_num,
+		//printf("Doesn't exist choosing %u to delete %u\n", c_entry->sector_num,\
 				(c_entry->flags & CACHE_E_INITIALIZED));
 
 		if(c_entry->flags & CACHE_E_INITIALIZED){
@@ -353,14 +353,14 @@ static void spawn_daemon_thread(void){
 
 /* Reads in the sector */
 static void bcache_asynch_read_(block_sector_t *sector){
-	printf("asynch got here %u\n", *sector);
+	//printf("asynch got here %u\n", *sector);
 	struct cache_entry *e =
 			bcache_get_and_lock(*sector, CACHE_DATA);
-	printf("asynch got here p2\n");
+	//printf("asynch got here p2\n");
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
-	printf("asynch got here p3\n");
+	//printf("asynch got here p3\n");
 	free(sector);
 }
 
@@ -375,10 +375,10 @@ void bcache_asynch_read(block_sector_t sector){
 
 /* Flushes the buffer cache to disk */
 void bcache_flush(void){
-	printf("flush\n");
+	//printf("flush\n");
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
-		printf("acquire\n");
+		//printf("acquire\n");
 		lock_acquire(&cache[i].entry_lock);
 		/* We only flush if the following conditions apply:
 		   the entry must be initialized, dirty, not in the middle
@@ -389,12 +389,12 @@ void bcache_flush(void){
 				!(cache[i].flags & CACHE_E_EVICTING) &&
 				!(cache[i].flags & CACHE_E_INVALID) &&
 				(cache[i].flags & CACHE_E_INITIALIZED)){
-			printf("write\n");
+			//printf("write\n");
 			block_write(fs_device, cache[i].sector_num, cache[i].data);
 			cache[i].flags &= ~(CACHE_E_DIRTY);
 		}
 		lock_release(&cache[i].entry_lock);
-		printf("release\n");
+		//printf("release\n");
 	}
 }
 
