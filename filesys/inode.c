@@ -527,6 +527,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 		/* REad ahead the next sector if it isn't all zeroes*/
 		if(next_sector != ZERO_SECTOR){
+			printf("bef read ahead\n");
 			bcache_asynch_read(next_sector);
 			printf("read ahead\n");
 		}
