@@ -357,13 +357,15 @@ static void bcache_asynch_read_(void *sector){
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
+	free(sector);
 }
 
 /* Fetches the given sector and puts it in the cache. Will evict a current
    cache entry. Will give the block the CACHE_DATA priority*/
 void bcache_asynch_read(block_sector_t sector){
-	block_sector_t sector_to_send = sector;
-	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, &sector_to_send);
+	block_sector_t *sector_to_send = (block_sector_t*)malloc(sizeof(block_sector_t));
+	*sector_to_send = sector;
+	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, sector_to_send);
 }
 
 /* Flushes the buffer cache to disk */
