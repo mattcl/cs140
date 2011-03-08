@@ -14,7 +14,7 @@ static struct lock free_map_lock;
 /* Initializes the free map. */
 void free_map_init (void){
 	free_map = bitmap_create (block_size (fs_device));
-	lock_init(free_map_lock);
+	lock_init(&free_map_lock);
 	//printf("Freemap %p and %d\n", free_map, free_map->bit_cnt);
 	if(free_map == NULL){
 		PANIC ("bitmap creation failed--file system device is too large");
