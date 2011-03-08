@@ -25,13 +25,13 @@ enum meta_priority{
 						   are major accesses to it */
 };
 
-#define CACHE_ENTRY_DIRTY  1          /* Whether this cache entry is dirty
+#define CACHE_E_DIRTY  1          /* Whether this cache entry is dirty
 							             set by the caller of bcache_get_lock*/
-#define CACHE_ENTRY_EVICTING  (1<<1)  /* Whether this cache entry is in the
+#define CACHE_E_EVICTING  (1<<1)  /* Whether this cache entry is in the
 										 the middle of being evicted*/
-#define CACHE_ENTRY_INITIALIZED (1<<2)/* Whether this cache entry has been used
+#define CACHE_E_INITIALIZED (1<<2)/* Whether this cache entry has been used
 										 before */
-#define CACHE_ENTRY_INVALID (1<<3) 	  /* The cache entry is invalid */
+#define CACHE_E_INVALID (1<<3) 	  /* The cache entry is invalid */
 /* The zero sector counts toward our size of the cache*/
 uint8_t zeroed_sector[BLOCK_SECTOR_SIZE];
 
@@ -46,7 +46,7 @@ struct cache_entry{
 										 the block level so only one thread can
 										 access this entry at any given time */
 	struct list_elem eviction_elem;   /* list elem for one of the eviction lists*/
-	struct hash_elem lookup_elem;     /* hash_elem to quickly look up this entry */
+	struct hash_elem lookup_e;     /* hash_elem to quickly look up this entry */
 	uint32_t num_hits;			      /* A count to be incremented in bcache_get
 										 and used to premote the priority of the
 										 cache entry if necessary */

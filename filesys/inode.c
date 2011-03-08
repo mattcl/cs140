@@ -368,7 +368,7 @@ static void free_block_sectors(uint32_t *array, uint32_t size){
 	for(i = 0; i < size; i++){
 		if(array[i] != ZERO_SECTOR){
 			/* These blocks have already been invalidated in
-			   our cache*/
+			   our cache as long as we don't get them here*/
 			free_map_release (array[i], 1);
 		}
 	}
@@ -507,6 +507,9 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		/* Disk sector to read, starting byte offset within sector. */
 		block_sector_t sector_idx = byte_to_sector (inode, offset, false);
 
+		block_sector_t next_sector =
+				byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE, false);
+
 		//printf("sector %u\n", sector_idx);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
@@ -519,6 +522,11 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		int chunk_size = size < min_left ? size : min_left;
 		if (chunk_size <= 0){
 			break;
+		}
+
+		/* REad ahead the next sector if it isn't all zeroes*/
+		if(next_sector != ZERO_SECTOR){
+			bcache_asynch_read(next_sector);
 		}
 
 		if(sector_idx == ZERO_SECTOR){
@@ -535,9 +543,6 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 			bcache_unlock(entry, UNLOCK_NORMAL);
 
-			/* Need to call this here
-			bcache_asynch_sector_fetch();
-			 */
 		}
 		/* Advance. */
 		size -= chunk_size;
@@ -619,7 +624,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
 		//printf("Change flag\n");
-		entry->flags |= CACHE_ENTRY_DIRTY;
+		entry->flags |= CACHE_E_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
 
