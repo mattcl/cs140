@@ -304,7 +304,7 @@ void bcache_invalidate(void){
 	lock_release(&cache_lock);
 }
 
-static void bcache_asynch_func(void *sector){
+static void bcache_asynch_read(void *sector){
 	struct cache_entry *e =
 	bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
 	bcache_unlock(e, UNLOCK_NORMAL);
@@ -314,10 +314,10 @@ static void bcache_asynch_func(void *sector){
    cache entry. Will give the block the CACHE_DATA priority*/
 void bcache_asynch_sector_fetch(block_sector_t sector){
 	block_sector_t sector_to_send = sector;
-	thread_create_kernel("extra", PRI_MAX, bcache_asynch_func, &sector_to_send);
+	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read, &sector_to_send);
 }
 
-void bcache_flush(void){
+static void bcache_asynch_flush(void *none UNUSED){
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		lock_acquire(&cache[i].entry_lock);
@@ -327,6 +327,10 @@ void bcache_flush(void){
 		}
 		lock_release(&cache[i].entry_lock);
 	}
+}
+
+void bcache_flush(void){
+	thread_create_kernel("flush", PRI_MAX, bcache_asynch_flush, NULL);
 }
 
 /* Returns true if all the eviction lists are empty
