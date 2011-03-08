@@ -352,10 +352,10 @@ static void spawn_daemon_thread(void){
 }
 
 /* Reads in the sector */
-static void bcache_asynch_read_(void *sector){
-	printf("asynch got here\n");
+static void bcache_asynch_read_(block_sector_t *sector){
+	printf("asynch got here %u\n", *sector);
 	struct cache_entry *e =
-			bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
+			bcache_get_and_lock(*sector, CACHE_DATA);
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
