@@ -260,7 +260,7 @@ void inode_init (void){
    When a seek/write combo creates empty sectors between the
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
-bool inode_create (block_sector_t sector, off_t length UNUSED){
+bool inode_create (block_sector_t sector, off_t length){
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
 		return false;
@@ -276,7 +276,7 @@ bool inode_create (block_sector_t sector, off_t length UNUSED){
 	memset(disk_inode, 0, BLOCK_SECTOR_SIZE);
 
 	/* Allocate as writes come in */
-	disk_inode->file_length = 0;
+	disk_inode->file_length = length;
 	disk_inode->magic = INODE_MAGIC;
 	bcache_unlock(e, UNLOCK_FLUSH);
 
