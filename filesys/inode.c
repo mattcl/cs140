@@ -104,7 +104,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 
 	ret = check_alloc_install(i_block->ptrs, sector_off, create);
 
-	bcache_unlock(i_entry, false);
+	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
 }
 
@@ -131,7 +131,7 @@ static block_sector_t d_read_sector(uint32_t *array, uint32_t d_off,
 
 	ret = i_read_sector(d_block->ptrs, i_off, sector_off, create);
 
-	bcache_unlock(d_entry, false);
+	bcache_unlock(d_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
 }
 
@@ -151,7 +151,7 @@ static block_sector_t t_read_sector(uint32_t *array, uint32_t t_off,
 
 	/* read sector from double indirect block */
 	ret = d_read_sector(t_block->ptrs, d_off, i_off, sector_off, create);
-	bcache_unlock(t_entry, false);
+	bcache_unlock(t_entry, UNLOCK_NORMAL);
 	return ret;
 }
 
@@ -165,7 +165,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	uint32_t file_sector = pos / BLOCK_SECTOR_SIZE;
 
-	printf("Byte to sector File sector %u", file_sector);
+	printf("Byte to sector File sector %u\n", file_sector);
 
 	block_sector_t ret = ZERO_SECTOR;
 
@@ -178,7 +178,8 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	if(file_sector < NUM_REG_BLK){
 		/* Read directly from inode */
 		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
-		bcache_unlock(entry, false);
+		bcache_unlock(entry, UNLOCK_NORMAL);
+		printf("byte to sector ret reg block sector %u\n", ret);
 		return ret; /* May be zero sector still ;) */
 	}else{
 		/* The number of the indirect sector that the data resides on*/
@@ -193,7 +194,8 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 			ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
 									i_sec_offset, create);
 
-			bcache_unlock(entry, false);
+			bcache_unlock(entry, UNLOCK_NORMAL);
+			printf("byte to sector ret ind block sector %u\n", ret);
 			return ret; /* May be ZERO_SECTOR */
 		}else{
 
@@ -209,7 +211,8 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 				ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
 						    				 d_sec_offset, i_sec_offset, create);
 
-				bcache_unlock(entry, false);
+				bcache_unlock(entry, UNLOCK_NORMAL);
+				printf("byte to sector ret dbl block sector %u\n", ret);
 				return ret;
 			}else{
 
@@ -222,12 +225,14 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 					/* our inodes only support at most one triple indirect sector
 					   so the request for this offset is greater than 1 GB and can
 					   not be satisfied*/
-					bcache_unlock(entry, false);
+					bcache_unlock(entry, UNLOCK_NORMAL);
+					printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
 					return ZERO_SECTOR;
 				}
 				ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
 						t_sec_offset, d_sec_offset, i_sec_offset, create);
-				bcache_unlock(entry, false);
+				bcache_unlock(entry, UNLOCK_NORMAL);
+				printf("byte to sector ret trip block sector %u\n", ret);
 				return ret;
 			}
 		}
