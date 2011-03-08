@@ -90,6 +90,7 @@ shutdown_power_off (void)
   const char s[] = "Shutdown";
   const char *p;
 
+  printf("Shutdown Power OFF\n");
 #ifdef FILESYS
   filesys_done ();
 #endif

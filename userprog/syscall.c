@@ -200,7 +200,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	case SYS_MKDIR:{
-		printf("SYS_MKDIR called\n");
+		//printf("SYS_MKDIR called\n");
 		break;
 	}
 	case SYS_READDIR:{
@@ -474,20 +474,6 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 	}
 
 	if(fd == STDIN_FILENO){
-		f->eax = -1;
-		return;
-	}
-
-	lock_acquire(&filesys_lock);
-	off_t f_size = file_length(file);
-	lock_release(&filesys_lock);
-
-	if(f_size < 0){
-		f->eax = -1;
-		return;
-	}
-
-	if((unsigned int) f_size < position){
 		f->eax = -1;
 		return;
 	}

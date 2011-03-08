@@ -353,6 +353,10 @@ int process_wait (tid_t child_tid){
 void process_exit (void){
 	struct thread *cur = thread_current ();
 	struct process *cur_process = cur->process;
+	if(cur_process == NULL){
+		/* Kernel thread has just exited do nothing */
+		return;
+	}
 	uint32_t *pd;
 
 	/* We are no longer viable processes and are being removed from the
