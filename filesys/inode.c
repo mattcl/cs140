@@ -296,7 +296,7 @@ struct inode *inode_open (block_sector_t sector){
 		return NULL;
 	}
 
-	//printf("opening inode at sector %u\n", sector);
+	printf("opening inode at sector %u\n", sector);
 
 	/* Inodes need the open_inodes_lock to close and
 	   remove the inode */
@@ -308,7 +308,7 @@ struct inode *inode_open (block_sector_t sector){
 		lock_acquire(&inode->meta_data_lock);
 
 		if (inode->sector == sector && !inode->removed){
-			//printf("Reoppend\n");
+			printf("Reoppend\n");
 			inode->open_cnt++;
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -344,7 +344,7 @@ struct inode *inode_open (block_sector_t sector){
 	lock_acquire(&open_inodes_lock);
 	list_push_front (&open_inodes, &inode->elem);
 	lock_release(&open_inodes_lock);
-
+	printf("Return\n");
 	return inode;
 }
 
