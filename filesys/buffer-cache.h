@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 /* Max number of cache slots */
-#define MAX_CACHE_SLOTS 64
+#define MAX_CACHE_SLOTS 63
 
 /* The number of meta priorities */
 #define NUM_PRIORITIES 3
@@ -31,6 +31,9 @@ enum meta_priority{
 										 the middle of being evicted*/
 #define CACHE_ENTRY_INITIALIZED (1<<2)/* Whether this cache entry has been used
 										 before */
+
+/* The zero sector counts toward our size of the cache*/
+uint8_t zeroed_sector[BLOCK_SECTOR_SIZE];
 
 struct cache_entry{
 	block_sector_t sector_num;        /* The sector that this entry holds*/
@@ -65,7 +68,7 @@ struct cache_entry{
 
 void bcache_init(void);
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri);
-void bcache_unlock(struct cache_entry *entry);
+void bcache_unlock(struct cache_entry *entry, bool flush_now);
 
 void bcache_asynch_sector_fetch(block_sector_t sector);
 void bcache_flush(void);

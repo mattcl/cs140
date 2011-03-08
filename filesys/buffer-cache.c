@@ -59,6 +59,8 @@ void bcache_init(void){
 	cond_init(&evict_list_changed);
 	cond_init(&evicted_sector_wait);
 
+	memset(zeroed_sector, 0, BLOCK_SECTOR_SIZE);
+
 	/* Initialize all of the cache entries*/
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		cache[i].sector_num = 0;
@@ -79,9 +81,12 @@ void bcache_init(void){
    If the cache entry was not located then this call will get an evict a cache entry,
    move it's data to disk if necessary, and then read in the sector to the data
    field of the cache entry. At this point the meta_priority will be used to determine
-   how important this cache entry is, otherwise the parameter is ignored. */
+   how important this cache entry is, otherwise the parameter is ignored.
+   Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-
+	if(sector == ZERO_SECTOR){
+		return NULL;
+	}
 	//printf("get sector %u\n", sector);
 
 	struct cache_entry key, *to_return;
@@ -178,14 +183,15 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		lock_release(&cache_lock);
 
-		if(to_return->flags & CACHE_ENTRY_INITIALIZED){
-			/* Write the old block out and read in the new block
-			   except when the cache entry is brand new.*/
+		if((to_return->flags & CACHE_ENTRY_INITIALIZED) &&
+		            (to_return->flags & CACHE_ENTRY_DIRTY)){
+			/* Write the dirty old block out except when the
+			   cache entry is brand new.*/
 			//printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, to_return->data);
 		}
 
-		/* Read data into the cache data section*/
+		/* Read the new data from disk into the cache data section*/
 		//printf("bcache read sector %u\n", to_return->sector_num);
 		block_read (fs_device, to_return->sector_num, to_return->data);
 
@@ -219,8 +225,23 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 }
 
-/* Unlocks the cache_entry so that another thread can use it */
-void bcache_unlock(struct cache_entry *entry){
+/* Unlocks the cache_entry so that another thread can use it,
+   if flush_now == true will write the data out to disk immediately
+   and keep the entry in the cache. This is useful when writing data
+   to an inode. Another approach would be to implement journaling for
+   inodes and directories.*/
+void bcache_unlock(struct cache_entry *entry, bool flush_now){
+
+	/* This is the only IO that is performed with the cache_entry
+	   lock held. This is the reason whe we can only acquire the
+	   cache_entry lock while holding the cache lock at the end
+	   of eviction, when we know that no other thread is about to
+	   call this function with flush now == true. Otherwise we would
+	   be holding the cache lock while doing IO which is a no-no */
+	if(flush_now){
+		block_write(fs_device, entry->sector_num, entry->data);
+	}
+
 	lock_acquire(&cache_lock);
 	entry->num_accessors--;
 
@@ -228,6 +249,11 @@ void bcache_unlock(struct cache_entry *entry){
 	cond_signal(&entry->num_accessors_dec, &cache_lock);
 	lock_release(&entry->entry_lock);
 	lock_release(&cache_lock);
+}
+
+/* Clear the entry and set it to uninitialized */
+void bcache_clear_entry(struct cache_entry *entry){
+
 }
 
 static void bcache_asynch_func(void *sector){

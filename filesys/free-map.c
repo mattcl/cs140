@@ -14,6 +14,7 @@ void free_map_init (void){
 	if(free_map == NULL){
 		PANIC ("bitmap creation failed--file system device is too large");
 	}
+	bitmap_mark (free_map, ZERO_SECTOR);
 	bitmap_mark (free_map, FREE_MAP_SECTOR);
 	bitmap_mark (free_map, ROOT_DIR_SECTOR);
 }
@@ -38,6 +39,10 @@ bool free_map_allocate (size_t cnt, block_sector_t *sectorp){
 	}
 	//printf("free map allocate end\n");
 	return sector != BITMAP_ERROR;
+}
+
+bool free_map_is_allocated(block_sector_t sector){
+	return bitmap_test(free_map, sector);
 }
 
 /* Makes CNT sectors starting at SECTOR available for use. */
