@@ -262,7 +262,7 @@ void inode_init (void){
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
 bool inode_create (block_sector_t sector, off_t length){
-	//printf("create\n");
+	printf("create\n");
 
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
@@ -300,7 +300,7 @@ struct inode *inode_open (block_sector_t sector){
 		return NULL;
 	}
 
-	//printf("opening inode at sector %u\n", sector);
+	printf("opening inode at sector %u\n", sector);
 
 	/* Inodes need the open_inodes_lock to close and
 	   remove the inode */
@@ -486,7 +486,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	//printf("size %u, offset %u ino length %u\n", size, offset, inode->cur_length);
+	printf("size %u, offset %u ino length %u\n", size, offset, inode->cur_length);
 
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
