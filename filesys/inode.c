@@ -530,11 +530,12 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    growth is not yet implemented.) */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	//printf("inode write\n");
+	printf("inode write\n");
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
 	bool extending = false;
+	printf("Acquire meta\n");
 	lock_acquire(&inode->meta_data_lock);
 	if (inode->deny_write_cnt){
 		lock_release(&inode->meta_data_lock);
@@ -542,6 +543,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 	lock_release(&inode->meta_data_lock);
 
+	printf("Acquire eof locks\n");
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
