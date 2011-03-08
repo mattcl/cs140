@@ -482,7 +482,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	printf("size %u, offset %u ino length %u\n", size, offset, inode->data.length);
+	printf("size %u, offset %u ino length %u\n", size, offset, inode->cur_length);
 
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
