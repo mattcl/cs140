@@ -89,7 +89,7 @@ off_t file_write (struct file *file, const void *buffer, off_t size){
    The file's current position is unaffected. */
 off_t file_write_at (struct file *file, const void *buffer, off_t size,
 		off_t file_ofs){
-	printf("%u, %u, %p %p, %s\n", size, file_ofs, file, buffer, buffer);
+	printf("%u, %u, %p %p, %d\n", size, file_ofs, file, buffer, *(uint32_t*)buffer);
 	return inode_write_at (file->inode, buffer, size, file_ofs);
 }
 
