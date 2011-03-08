@@ -580,9 +580,10 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
+		printf("Change flag\n");
 		entry->flags |= CACHE_ENTRY_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
