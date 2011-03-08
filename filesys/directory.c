@@ -6,8 +6,10 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+#define DIR_ERROR ZERO_SECTOR
 /* A directory. */
 struct dir{
+        dir *parent;
 	struct inode *inode;                /* Backing store. */
 	off_t pos;                          /* Current position. */
 };
