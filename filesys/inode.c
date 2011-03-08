@@ -528,6 +528,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		/* REad ahead the next sector if it isn't all zeroes*/
 		if(next_sector != ZERO_SECTOR){
 			bcache_asynch_read(next_sector);
+			printf("read ahead\n");
 		}
 
 		if(sector_idx == ZERO_SECTOR){
@@ -538,7 +539,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		}else{
 			struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-			//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+			printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 

@@ -6,6 +6,7 @@
 #include <uint_set.h>
 #include "free-map.h"
 #include "devices/timer.h"
+#include "threads/malloc.h"
 
 /* If accesses are greater than (cur_pri)*PROMOTE_THRESHOLD
    then we will move the priority of this cache block up to
