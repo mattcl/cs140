@@ -74,10 +74,14 @@ static inline size_t bytes_to_sectors (off_t size){
 static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool create){
 	block_sector_t alloc;
 	if(array[idx] == ZERO_SECTOR){
+		printf("Array index ZERO\n");
 		if(!create || !free_map_allocate (1, &alloc)){
+			printf("Not create or not alloc\n");
 			return ZERO_SECTOR;
 		}
 		array[idx] = alloc;
+	}else{
+		printf("Array index nonZERO\n");
 	}
 	return array[idx];
 }
@@ -165,7 +169,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	uint32_t file_sector = pos / BLOCK_SECTOR_SIZE;
 
-	printf("Byte to sector File sector %u\n", file_sector);
+	printf("Byte to sector File sector %u create %u\n", file_sector, create);
 
 	block_sector_t ret = ZERO_SECTOR;
 
