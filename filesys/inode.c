@@ -262,11 +262,11 @@ void inode_init (void){
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
 bool inode_create (block_sector_t sector, off_t length){
-	printf("create\n");
+	//printf("create\n");
 
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
-		printf("not alloc\n");
+		//printf("not alloc\n");
 		return false;
 	}
 
@@ -284,7 +284,7 @@ bool inode_create (block_sector_t sector, off_t length){
 	disk_inode->magic = INODE_MAGIC;
 	bcache_unlock(e, UNLOCK_FLUSH);
 
-	printf("create ret\n");
+	//printf("create ret\n");
 	return true;
 }
 
@@ -300,7 +300,7 @@ struct inode *inode_open (block_sector_t sector){
 		return NULL;
 	}
 
-	printf("opening inode at sector %u\n", sector);
+	//printf("opening inode at sector %u\n", sector);
 
 	/* Inodes need the open_inodes_lock to close and
 	   remove the inode */
@@ -312,7 +312,7 @@ struct inode *inode_open (block_sector_t sector){
 		lock_acquire(&inode->meta_data_lock);
 
 		if (inode->sector == sector && !inode->removed){
-			printf("Reoppend\n");
+			//printf("Reoppend\n");
 			inode->open_cnt++;
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -348,7 +348,7 @@ struct inode *inode_open (block_sector_t sector){
 	lock_acquire(&open_inodes_lock);
 	list_push_front (&open_inodes, &inode->elem);
 	lock_release(&open_inodes_lock);
-	printf("Return\n");
+	//printf("Return\n");
 	return inode;
 }
 
@@ -402,7 +402,7 @@ void inode_close (struct inode *inode){
 	if(inode == NULL){
 		return;
 	}
-	printf("closing inode\n");
+	//printf("closing inode\n");
 
 
 	/* Acquire both locks, make sure no IO occurs
@@ -482,7 +482,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	printf("size %u, offset %u ino length %u\n", size, offset, inode->cur_length);
+	//printf("size %u, offset %u ino length %u\n", size, offset, inode->cur_length);
 
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -539,10 +539,10 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		size -= chunk_size;
 		offset += chunk_size;
 		bytes_read += chunk_size;
-		printf("size %d\n", size);
+		//printf("size %d\n", size);
 	}
 
-	printf("read ret\n");
+	//printf("read ret\n");
 	return bytes_read;
 }
 
@@ -553,7 +553,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    growth is not yet implemented.) */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	printf("inode write %u %u\n", size, offset);
+	//printf("inode write %u %u\n", size, offset);
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
@@ -566,7 +566,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 	lock_release(&inode->meta_data_lock);
 
-	printf("Acquire eof locks\n");
+	//printf("Acquire eof locks\n");
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -633,7 +633,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	printf("inode write end %u\n", bytes_written);
+	//printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
