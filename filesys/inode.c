@@ -630,9 +630,9 @@ void inode_allow_write (struct inode *inode){
 
 /* Returns the length, in bytes, of INODE's data. */
 off_t inode_length (const struct inode *inode){
-	lock_acquire(&inode.reader_lock);
-	off_t eof = inode.cur_length;
-	lock_release(&inode.reader_lock);
+	lock_acquire(&inode->reader_lock);
+	off_t eof = inode->cur_length;
+	lock_release(&inode->reader_lock);
 	return eof;
 }
 
