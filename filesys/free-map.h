@@ -12,6 +12,7 @@ void free_map_open (void);
 void free_map_close (void);
 
 bool free_map_allocate (size_t, block_sector_t *);
+bool free_map_is_allocated(block_sector_t sector);
 void free_map_release (block_sector_t, size_t);
 
 #endif /* filesys/free-map.h */
