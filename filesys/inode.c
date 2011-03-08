@@ -540,6 +540,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		size -= chunk_size;
 		offset += chunk_size;
 		bytes_read += chunk_size;
+		printf("size %d\n", size);
 	}
 
 	printf("read ret\n");
