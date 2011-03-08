@@ -165,6 +165,10 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			cond_wait(&to_return->num_accessors_dec, &cache_lock);
 		}
 
+		/* Check to see here if the item is invalidated */
+		bool is_valid = !(to_return->flags & CACHE_ENTRY_INVALID);
+
+
 		/* No one else is accessing the old data in the cache
 		   entry and anyone that wants to read the new data
 		   will wait until this cache entry is no longer evicting
@@ -184,9 +188,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		lock_release(&cache_lock);
 
 		if((to_return->flags & CACHE_ENTRY_INITIALIZED) &&
-		            (to_return->flags & CACHE_ENTRY_DIRTY)){
+			is_valid && (to_return->flags & CACHE_ENTRY_DIRTY)){
 			/* Write the dirty old block out except when the
-			   cache entry is brand new.*/
+			   cache entry is brand new. Or when it has been invalidated*/
 			//printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, to_return->data);
 		}
@@ -230,7 +234,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
    and keep the entry in the cache. This is useful when writing data
    to an inode. Another approach would be to implement journaling for
    inodes and directories.*/
-void bcache_unlock(struct cache_entry *entry, bool flush_now){
+void bcache_unlock(struct cache_entry *entry, uint32_t flag){
 
 	/* This is the only IO that is performed with the cache_entry
 	   lock held. This is the reason whe we can only acquire the
@@ -238,22 +242,66 @@ void bcache_unlock(struct cache_entry *entry, bool flush_now){
 	   of eviction, when we know that no other thread is about to
 	   call this function with flush now == true. Otherwise we would
 	   be holding the cache lock while doing IO which is a no-no */
-	if(flush_now){
+	if(UNLOCK_FLUSH == flag){
 		block_write(fs_device, entry->sector_num, entry->data);
 	}
 
+	lock_release(&entry->entry_lock);
+
 	lock_acquire(&cache_lock);
 	entry->num_accessors--;
-
 	/* Wake up the evictor of this thread*/
+	if(UNLOCK_INVALIDATE == flag){
+		entry->flags |= CACHE_ENTRY_INVALID;
+	}
 	cond_signal(&entry->num_accessors_dec, &cache_lock);
-	lock_release(&entry->entry_lock);
 	lock_release(&cache_lock);
 }
 
-/* Clear the entry and set it to uninitialized */
-void bcache_clear_entry(struct cache_entry *entry){
+/* Removes all entries in our cache, now!*/
+void bcache_invalidate(void){
+	lock_acquire(&cache_lock);
+	/* If the process is right now
+	   evicting this cache entry it will show
+	   the evicting flag, in which case it is not
+	   in an eviction list yet and it is not safe
+	   to remove it*/
+	uint32_t i;
+	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
+		lock_acquire(&cache[i].entry_lock);
+		/* We have the lock of this entry so
+	       no one else can be accessing it. */
+		if(cache[i].flags & CACHE_ENTRY_EVICTING ||
+				cache[i].num_accessors != 0 ||
+				!(cache[i].flags & CACHE_ENTRY_INITIALIZED)){
+			lock_release(&cache[i].entry_lock);
+			continue;
+		}else{
+			/* Safe to destroy this entry because it is not in the middle of
+			   being evicted and we know that no one is waiting on the lock
+			   we are holding. People that could be waiting are waiting on
+			   the eviction status to be changed or accessors to go to 0.
+			   Because the ohter flags are set the way they are we know
+			   this entry is in an eviction list and in the hash.*/
+			list_remove(&cache[i].eviction_elem);
+			struct hash_elem *check =
+					hash_delete(&lookup_hash, &cache[i].lookup_elem);
+			ASSERT(check != NULL);
+			ASSERT(hash_entry(check, struct cache_entry, lookup_elem) == cache[i]);
 
+			/* Clear the data */
+			cache[i].flags = 0;
+			cache[i].sector_num = 0;
+			cache[i].num_accessors = 0;
+			cache[i].num_hits = 0;
+			cache[i].cur_pri = CACHE_DATA;
+
+			list_push_front(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
+			lock_release(&cache[i].entry_lock);
+		}
+	}
+
+	lock_release(&cache_lock);
 }
 
 static void bcache_asynch_func(void *sector){

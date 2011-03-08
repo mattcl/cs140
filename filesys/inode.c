@@ -244,7 +244,7 @@ void inode_init (void){
    When a seek/write combo creates empty sectors between the
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
-bool inode_create (block_sector_t sector, off_t length){
+bool inode_create (block_sector_t sector, off_t length UNUSED){
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
 		return false;
@@ -253,7 +253,6 @@ bool inode_create (block_sector_t sector, off_t length){
 	/* Make sure that we have the correct sized disk inode*/
 	ASSERT(sizeof(struct disk_inode));
 
-	uint32_t i;
 	struct cache_entry *e = bcache_get_and_lock(sector, CACHE_INODE);
 	struct disk_inode *disk_inode = (struct disk_inode*)e->data;
 
@@ -263,7 +262,7 @@ bool inode_create (block_sector_t sector, off_t length){
 	/* Allocate as writes come in */
 	disk_inode->file_length = 0;
 	disk_inode->magic = INODE_MAGIC;
-	bcache_unlock(e, true);
+	bcache_unlock(e, UNLOCK_FLUSH);
 
 	return true;
 }
@@ -322,7 +321,7 @@ struct inode *inode_open (block_sector_t sector){
 
 	inode->cur_length = data->file_length;
 
-	bcache_unlock(entry, false);
+	bcache_unlock(entry, UNLOCK_NORMAL);
 
 	lock_acquire(&open_inodes_lock);
 	list_push_front (&open_inodes, &inode->elem);
@@ -346,6 +345,8 @@ static void free_block_sectors(uint32_t *array, uint32_t size){
 	uint32_t i;
 	for(i = 0; i < size; i++){
 		if(array[i] != ZERO_SECTOR){
+			/* These blocks have already been invalidated in
+			   our cache*/
 			free_map_release (array[i], 1);
 		}
 	}
@@ -357,7 +358,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 	for(i = 0; i < size; i++){
 		if(array[i] != ZERO_SECTOR){
 			struct cache_entry *entry =
-					bcache_get_and_lock(array[i], CACHE_INDIRECT);
+					bcache_get_and_lock(array[i], CACHE_DATA);
 			struct indirect_block *b = (struct indirect_block*)entry->data;
 			if(count == 1){
 				free_block_sectors(b->ptrs, PTR_PER_BLK);
@@ -365,6 +366,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 				free_indirect_blocks(b->ptrs, PTR_PER_BLK, --count);
 			}
 			free_map_release(array[i], 1);
+			bcache_unlock(entry, UNLOCK_INVALIDATE);
 		}
 	}
 }
@@ -398,9 +400,10 @@ void inode_close (struct inode *inode){
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
 
-			struct cache_entry *entry =
-					bcache_get_and_lock(inode->sector, CACHE_INODE);
+			bcache_invalidate();
 
+			struct cache_entry *entry =
+					bcache_get_and_lock(inode->sector, CACHE_DATA);
 			struct disk_inode *d_inode = (struct disk_inode*)entry->data;
 			/* Here we need to go through the entire
 			   inode structure and get all of the sectors
@@ -416,8 +419,9 @@ void inode_close (struct inode *inode){
 
 			free_map_release (inode->sector, 1);
 
-			bcache_unlock(entry);
+			bcache_unlock(entry, UNLOCK_INVALIDATE);
 			//printf("removed and freeing entries in freemap\n");
+
 		}else{
 
 			/* the data we were protecting has been read*/
@@ -504,7 +508,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
-			bcache_unlock(entry, false);
+			bcache_unlock(entry, UNLOCK_NORMAL);
 
 			/* Need to call this here
 			bcache_asynch_sector_fetch();
@@ -581,7 +585,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		entry->flags |= CACHE_ENTRY_DIRTY;
 
-		bcache_unlock(entry, false);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 
 		/* Advance. */
 		size -= chunk_size;
@@ -595,7 +599,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 		inode_d->file_length = offset;
-		bcache_unlock(entry, false);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 		lock_release(&inode->reader_lock);
 		lock_release(&inode->writer_lock);
 	}
@@ -636,6 +640,6 @@ bool inode_is_dir(const struct inode *inode){
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = inode_d->flags & INODE_IS_DIR;
-	bcache_unlock(entry, false);
+	bcache_unlock(entry, UNLOCK_NORMAL);
 	return is_dir;
 }
