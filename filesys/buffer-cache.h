@@ -74,7 +74,7 @@ void bcache_init(void);
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri);
 void bcache_unlock(struct cache_entry *entry, uint32_t flag);
 
-void bcache_asynch_sector_fetch(block_sector_t sector);
+void bcache_asynch_read(block_sector_t sector);
 void bcache_flush(void);
 void bcache_invalidate(void);
 

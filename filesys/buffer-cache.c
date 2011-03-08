@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <string.h>
 #include <uint_set.h>
+#include "free-map.h"
+#include "devices/timer.h"
 
 /* If accesses are greater than (cur_pri)*PROMOTE_THRESHOLD
    then we will move the priority of this cache block up to
@@ -349,7 +351,7 @@ static void spawn_daemon_thread(void){
 }
 
 /* Reads in the sector */
-static void bcache_asynch_read(void *sector){
+static void bcache_asynch_read_(void *sector){
 	struct cache_entry *e =
 			bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
 	if(e != NULL){
@@ -359,9 +361,9 @@ static void bcache_asynch_read(void *sector){
 
 /* Fetches the given sector and puts it in the cache. Will evict a current
    cache entry. Will give the block the CACHE_DATA priority*/
-void bcache_asynch_sector_fetch(block_sector_t sector){
+void bcache_asynch_read(block_sector_t sector){
 	block_sector_t sector_to_send = sector;
-	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read, &sector_to_send);
+	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, &sector_to_send);
 }
 
 /* Flushes the buffer cache to disk */
