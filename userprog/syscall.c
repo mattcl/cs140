@@ -198,7 +198,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	case SYS_MKDIR:{
-		printf("SYS_MKDIR called\n");
+		//printf("SYS_MKDIR called\n");
 		break;
 	}
 	case SYS_READDIR:{
