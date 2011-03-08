@@ -34,6 +34,7 @@ void filesys_init (bool format){
 /* Shuts down the file system module, writing any unwritten data
    to disk. */
 void filesys_done (void){
+	printf("Filesys done\n");
 	bcache_flush();
 	free_map_close ();
 }
