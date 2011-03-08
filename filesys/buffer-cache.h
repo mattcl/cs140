@@ -31,7 +31,7 @@ enum meta_priority{
 										 the middle of being evicted*/
 #define CACHE_ENTRY_INITIALIZED (1<<2)/* Whether this cache entry has been used
 										 before */
-
+#define CACHE_ENTRY_INVALID (1<<3) 	  /* The cache entry is invalid */
 /* The zero sector counts toward our size of the cache*/
 uint8_t zeroed_sector[BLOCK_SECTOR_SIZE];
 
@@ -66,11 +66,16 @@ struct cache_entry{
 
 };
 
+#define UNLOCK_NORMAL 0
+#define UNLOCK_FLUSH 1
+#define UNLOCK_INVALIDATE 2
+
 void bcache_init(void);
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri);
-void bcache_unlock(struct cache_entry *entry, bool flush_now);
+void bcache_unlock(struct cache_entry *entry, uint32_t flag);
 
 void bcache_asynch_sector_fetch(block_sector_t sector);
 void bcache_flush(void);
+void bcache_invalidate(void);
 
 #endif /* BUFFER_CACHE_H_ */

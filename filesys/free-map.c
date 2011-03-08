@@ -29,7 +29,7 @@ bool free_map_allocate (size_t cnt, block_sector_t *sectorp){
 	//printf("free map allocate\n");
 	if(sector != BITMAP_ERROR
 			&& free_map_file != NULL
-			&& !bitmap_write (free_map, free_map_file)){
+			/*&& !bitmap_write (free_map, free_map_file)*/){
 		bitmap_set_multiple (free_map, sector, cnt, false);
 		sector = BITMAP_ERROR;
 	}

@@ -20,6 +20,11 @@
 
 #define INODE_IS_DIR 1
 
+/* List of open inodes, so that opening a single inode twice
+   returns the same `struct inode'. */
+static struct list open_inodes;
+
+static struct lock open_inodes_lock;
 
 struct indirect_block{
 	uint32_t ptrs[PTR_PER_BLK];
@@ -53,6 +58,7 @@ struct inode{
 	off_t cur_length;					/* The current length of the file */
 	struct lock writer_lock;			/* Needed to extend the file */
 	struct lock reader_lock;			/* Needed to change or write cur_length*/
+	struct lock meta_data_lock;			/* A lock for open count */
 	struct list_elem elem;              /* Element in inode list. */
 };
 
@@ -225,13 +231,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	}
 }
 
-/* List of open inodes, so that opening a single inode twice
-   returns the same `struct inode'. */
-static struct list open_inodes;
-
 /* Initializes the inode module. */
 void inode_init (void){
 	list_init (&open_inodes);
+	lock_init (&open_inodes_lock);
 	bcache_init();
 }
 
@@ -241,7 +244,7 @@ void inode_init (void){
    When a seek/write combo creates empty sectors between the
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
-bool inode_create (block_sector_t sector, off_t length){
+bool inode_create (block_sector_t sector, off_t length UNUSED){
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
 		return false;
@@ -250,7 +253,6 @@ bool inode_create (block_sector_t sector, off_t length){
 	/* Make sure that we have the correct sized disk inode*/
 	ASSERT(sizeof(struct disk_inode));
 
-	uint32_t i;
 	struct cache_entry *e = bcache_get_and_lock(sector, CACHE_INODE);
 	struct disk_inode *disk_inode = (struct disk_inode*)e->data;
 
@@ -260,7 +262,7 @@ bool inode_create (block_sector_t sector, off_t length){
 	/* Allocate as writes come in */
 	disk_inode->file_length = 0;
 	disk_inode->magic = INODE_MAGIC;
-	bcache_unlock(e, true);
+	bcache_unlock(e, UNLOCK_FLUSH);
 
 	return true;
 }
@@ -279,16 +281,24 @@ struct inode *inode_open (block_sector_t sector){
 
 	//printf("opening inode at sector %u\n", sector);
 
+	/* Inodes need the open_inodes_lock to close and
+	   remove the inode */
+	lock_acquire(&open_inodes_lock);
 	/* Check whether this inode is already open. */
 	for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
 			e = list_next (e)){
 		inode = list_entry (e, struct inode, elem);
-		if (inode->sector == sector){
+		lock_acquire(&inode->meta_data_lock);
+
+		if (inode->sector == sector && !inode->removed){
 			//printf("Reoppend\n");
-			inode_reopen (inode);
+			inode->open_cnt++;
+			lock_release(&inode->meta_data_lock);
+			lock_release(&open_inodes_lock);
 			return inode;
 		}
 	}
+	lock_release(&open_inodes_lock);
 
 	/* Allocate memory. */
 	inode = malloc (sizeof *inode);
@@ -297,13 +307,13 @@ struct inode *inode_open (block_sector_t sector){
 		return NULL;
 	}
 	/* Initialize. */
-	list_push_front (&open_inodes, &inode->elem);
 	inode->sector = sector;
 	inode->open_cnt = 1;
 	inode->deny_write_cnt = 0;
 	inode->removed = false;
 	lock_init(&inode->writer_lock);
 	lock_init(&inode->reader_lock);
+	lock_init(&inode->meta_data_lock);
 
 	/* if just created will already be in the cache and on disk*/
 	struct cache_entry *entry = bcache_get_and_lock(sector, CACHE_INODE);
@@ -311,16 +321,18 @@ struct inode *inode_open (block_sector_t sector){
 
 	inode->cur_length = data->file_length;
 
-	bcache_unlock(entry, false);
+	bcache_unlock(entry, UNLOCK_NORMAL);
+
+	lock_acquire(&open_inodes_lock);
+	list_push_front (&open_inodes, &inode->elem);
+	lock_release(&open_inodes_lock);
 
 	return inode;
 }
 
 /* Reopens and returns INODE. */
 struct inode *inode_reopen (struct inode *inode){
-	if (inode != NULL){
-		inode->open_cnt++;
-	}
+	ASSERT(inode != NULL);
 	return inode;
 }
 
@@ -333,6 +345,8 @@ static void free_block_sectors(uint32_t *array, uint32_t size){
 	uint32_t i;
 	for(i = 0; i < size; i++){
 		if(array[i] != ZERO_SECTOR){
+			/* These blocks have already been invalidated in
+			   our cache*/
 			free_map_release (array[i], 1);
 		}
 	}
@@ -344,7 +358,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 	for(i = 0; i < size; i++){
 		if(array[i] != ZERO_SECTOR){
 			struct cache_entry *entry =
-					bcache_get_and_lock(array[i], CACHE_INDIRECT);
+					bcache_get_and_lock(array[i], CACHE_DATA);
 			struct indirect_block *b = (struct indirect_block*)entry->data;
 			if(count == 1){
 				free_block_sectors(b->ptrs, PTR_PER_BLK);
@@ -352,6 +366,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 				free_indirect_blocks(b->ptrs, PTR_PER_BLK, --count);
 			}
 			free_map_release(array[i], 1);
+			bcache_unlock(entry, UNLOCK_INVALIDATE);
 		}
 	}
 }
@@ -367,17 +382,28 @@ void inode_close (struct inode *inode){
 	}
 	//printf("closing inode\n");
 
+
+	/* Acquire both locks, make sure no IO occurs
+	   with the global lock held*/
+	lock_acquire(&open_inodes_lock);
+	lock_acquire(&inode->meta_data_lock);
+
 	/* Release resources if this was the last opener. */
 	if(--inode->open_cnt == 0){
 		/* Remove from inode list and release lock. */
+
 		list_remove (&inode->elem);
 
 		/* Deallocate blocks if removed. */
 		if(inode->removed){
+			/* the data we were protecting has been read*/
+			lock_release(&inode->meta_data_lock);
+			lock_release(&open_inodes_lock);
+
+			bcache_invalidate();
 
 			struct cache_entry *entry =
-					bcache_get_and_lock(inode->sector, CACHE_INODE);
-
+					bcache_get_and_lock(inode->sector, CACHE_DATA);
 			struct disk_inode *d_inode = (struct disk_inode*)entry->data;
 			/* Here we need to go through the entire
 			   inode structure and get all of the sectors
@@ -393,22 +419,38 @@ void inode_close (struct inode *inode){
 
 			free_map_release (inode->sector, 1);
 
-			bcache_unlock(entry);
+			bcache_unlock(entry, UNLOCK_INVALIDATE);
 			//printf("removed and freeing entries in freemap\n");
+
 		}else{
+
+			/* the data we were protecting has been read*/
+			lock_release(&inode->meta_data_lock);
+			lock_release(&open_inodes_lock);
+
 			/* Flush any dirty data to disk */
 			bcache_flush();
 		}
-
 		free (inode);
+	}else{
+		/* the data we were protecting has been read*/
+		lock_release(&inode->meta_data_lock);
+		lock_release(&open_inodes_lock);
 	}
+
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
    has it open. */
 void inode_remove (struct inode *inode){
 	ASSERT (inode != NULL);
+	/* Should always be called with open
+	   count greater than one unless
+	   we coded wrong. Only when open count
+	   goes to 0 will the inode be freed.*/
+	lock_acquire(&inode->meta_data_lock);
 	inode->removed = true;
+	lock_release(&inode->meta_data_lock);
 }
 
 /* Reads SIZE bytes from INODE into BUFFER, starting at position OFFSET.
@@ -466,7 +508,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
-			bcache_unlock(entry, false);
+			bcache_unlock(entry, UNLOCK_NORMAL);
 
 			/* Need to call this here
 			bcache_asynch_sector_fetch();
@@ -493,9 +535,12 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	off_t bytes_written = 0;
 
 	bool extending = false;
+	lock_acquire(&inode->meta_data_lock);
 	if (inode->deny_write_cnt){
+		lock_release(&inode->meta_data_lock);
 		return 0;
 	}
+	lock_release(&inode->meta_data_lock);
 
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
@@ -535,12 +580,13 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
+		printf("Change flag\n");
 		entry->flags |= CACHE_ENTRY_DIRTY;
 
-		bcache_unlock(entry, false);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 
 		/* Advance. */
 		size -= chunk_size;
@@ -554,7 +600,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 		inode_d->file_length = offset;
-		bcache_unlock(entry, false);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 		lock_release(&inode->reader_lock);
 		lock_release(&inode->writer_lock);
 	}
@@ -566,31 +612,35 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 /* Disables writes to INODE.
    May be called at most once per inode opener. */
 void inode_deny_write (struct inode *inode){
+	lock_acquire(&inode->meta_data_lock);
 	inode->deny_write_cnt++;
 	ASSERT (inode->deny_write_cnt <= inode->open_cnt);
+	lock_release(&inode->meta_data_lock);
 }
 
 /* Re-enables writes to INODE.
    Must be called once by each inode opener who has called
    inode_deny_write() on the inode, before closing the inode. */
 void inode_allow_write (struct inode *inode){
+	lock_acquire(&inode->meta_data_lock);
 	ASSERT (inode->deny_write_cnt > 0);
 	ASSERT (inode->deny_write_cnt <= inode->open_cnt);
 	inode->deny_write_cnt--;
+	lock_release(&inode->meta_data_lock);
 }
 
 /* Returns the length, in bytes, of INODE's data. */
-off_t inode_length (const struct inode *inode){
-	lock_acquire(&inode.reader_lock);
-	off_t eof = inode.cur_length;
-	lock_release(&inode.reader_lock);
+off_t inode_length (struct inode *inode){
+	lock_acquire(&inode->reader_lock);
+	off_t eof = inode->cur_length;
+	lock_release(&inode->reader_lock);
 	return eof;
 }
 
-bool inode_is_dir(const struct inode *inode){
+bool inode_is_dir(struct inode *inode){
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = inode_d->flags & INODE_IS_DIR;
-	bcache_unlock(entry, false);
+	bcache_unlock(entry, UNLOCK_NORMAL);
 	return is_dir;
 }
