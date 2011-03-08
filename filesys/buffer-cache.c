@@ -94,7 +94,7 @@ void bcache_init(void){
    how important this cache entry is, otherwise the parameter is ignored.
    Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	//printf("get sector %u\n", sector);
+	printf("bcache get sector %u\n", sector);
 	/* Requests for the zero sector will return NULL */
 	if(sector == ZERO_SECTOR){
 		return NULL;
@@ -109,7 +109,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			struct cache_entry, lookup_e)->flags & CACHE_E_INVALID)){
 		c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 
-		//printf("Exists and %u\n", to_return->flags & CACHE_ENTRY_EVICTING);
+		printf("Exists and %u\n", to_return->flags & CACHE_ENTRY_EVICTING);
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
@@ -159,8 +159,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 		}
 
-		//printf("Doesn't exist choosing %u to delete %u\n", to_return->sector_num,
-		//		(to_return->flags & CACHE_ENTRY_INITIALIZED));
+		printf("Doesn't exist choosing %u to delete %u\n", c_entry->sector_num,
+				(c_entry->flags & CACHE_E_INITIALIZED));
 
 		if(c_entry->flags & CACHE_E_INITIALIZED){
 			check =	hash_delete(&lookup_hash, &c_entry->lookup_e);
@@ -356,9 +356,11 @@ static void bcache_asynch_read_(block_sector_t *sector){
 	printf("asynch got here %u\n", *sector);
 	struct cache_entry *e =
 			bcache_get_and_lock(*sector, CACHE_DATA);
+	printf("asynch got here p2\n");
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
+	printf("asynch got here p3\n");
 	free(sector);
 }
 

@@ -258,6 +258,8 @@ static tid_t thread_create__ (const char *name, int priority,
 			intr_set_level (old_level);
 			return TID_ERROR;
 		}
+	}else{
+		t->process = NULL;
 	}
 #endif
 	/* Stack frame for kernel_thread(). */

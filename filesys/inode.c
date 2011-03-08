@@ -506,12 +506,12 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	while (size > 0){
 		/* Disk sector to read, starting byte offset within sector. */
 		block_sector_t sector_idx = byte_to_sector (inode, offset, false);
-		printf("sector %u\n", sector_idx);
+		printf("read sector %u\n", sector_idx);
 
 		block_sector_t next_sector =
 				byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE, false);
 
-		printf("next sector %u\n", next_sector);
+		printf("read next sector %u\n", next_sector);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
 		/* Bytes left in inode, bytes left in sector, lesser of the two. */
