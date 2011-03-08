@@ -266,6 +266,7 @@ bool inode_create (block_sector_t sector, off_t length){
 
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
+		printf("not alloc\n");
 		return false;
 	}
 
@@ -283,6 +284,7 @@ bool inode_create (block_sector_t sector, off_t length){
 	disk_inode->magic = INODE_MAGIC;
 	bcache_unlock(e, UNLOCK_FLUSH);
 
+	printf("create ret\n");
 	return true;
 }
 
