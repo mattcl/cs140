@@ -368,6 +368,7 @@ void bcache_asynch_read(block_sector_t sector){
 
 /* Flushes the buffer cache to disk */
 void bcache_flush(void){
+	printf("flush\n");
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		lock_acquire(&cache[i].entry_lock);
