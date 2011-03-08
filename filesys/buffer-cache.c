@@ -318,6 +318,10 @@ void bcache_asynch_sector_fetch(block_sector_t sector){
 }
 
 static void bcache_asynch_flush(void *none UNUSED){
+
+}
+
+void bcache_flush(void){
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
 		lock_acquire(&cache[i].entry_lock);
@@ -327,10 +331,6 @@ static void bcache_asynch_flush(void *none UNUSED){
 		}
 		lock_release(&cache[i].entry_lock);
 	}
-}
-
-void bcache_flush(void){
-	thread_create_kernel("flush", PRI_MAX, bcache_asynch_flush, NULL);
 }
 
 /* Returns true if all the eviction lists are empty
