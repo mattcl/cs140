@@ -17,7 +17,7 @@
 
 /* The time for the daemon to flush all data out to disk
    in milliseconds */
-#define FLUSH_REFRESH_TIME 15000
+#define FLUSH_REFRESH_TIME 30000
 
 /* A hash that provides efficient lookup of sectors
    and to return the cache_entry quickly*/
@@ -352,10 +352,10 @@ static void spawn_daemon_thread(void){
 }
 
 /* Reads in the sector */
-static void bcache_asynch_read_(block_sector_t *sector){
-	//printf("asynch got here %u\n", *sector);
+static void bcache_asynch_read_(void *sector){
+	//printf("asynch got here %u\n", *(block_sector_t*)sector);
 	struct cache_entry *e =
-			bcache_get_and_lock(*sector, CACHE_DATA);
+			bcache_get_and_lock(*(block_sector_t*)sector, CACHE_DATA);
 	//printf("asynch got here p2\n");
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
