@@ -422,6 +422,10 @@ void inode_close (struct inode *inode){
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
 
+			/* Dump all our data out to disk now then invalidate the
+			   cache so that cache_entries from this file won't be
+			   found and evicted later on in kernel execution*/
+			bcache_flush();
 			bcache_invalidate();
 
 			struct cache_entry *entry =
@@ -628,7 +632,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 		inode_d->file_length = offset;
-		bcache_unlock(entry, UNLOCK_NORMAL);
+		bcache_unlock(entry, UNLOCK_FLUSH);
 		lock_release(&inode->reader_lock);
 		lock_release(&inode->writer_lock);
 	}
