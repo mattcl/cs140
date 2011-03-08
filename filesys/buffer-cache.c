@@ -371,6 +371,7 @@ void bcache_flush(void){
 	printf("flush\n");
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
+		printf("acquire\n");
 		lock_acquire(&cache[i].entry_lock);
 		/* We only flush if the following conditions apply:
 		   the entry must be initialized, dirty, not in the middle
@@ -381,10 +382,12 @@ void bcache_flush(void){
 				!(cache[i].flags & CACHE_E_EVICTING) &&
 				!(cache[i].flags & CACHE_E_INVALID) &&
 				(cache[i].flags & CACHE_E_INITIALIZED)){
+			printf("write\n");
 			block_write(fs_device, cache[i].sector_num, cache[i].data);
 			cache[i].flags &= ~(CACHE_E_DIRTY);
 		}
 		lock_release(&cache[i].entry_lock);
+		printf("release\n");
 	}
 }
 
