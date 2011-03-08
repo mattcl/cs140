@@ -287,7 +287,7 @@ void bcache_invalidate(void){
 			struct hash_elem *check =
 					hash_delete(&lookup_hash, &cache[i].lookup_elem);
 			ASSERT(check != NULL);
-			ASSERT(hash_entry(check, struct cache_entry, lookup_elem) == cache[i]);
+			ASSERT(hash_entry(check, struct cache_entry, lookup_elem) == &cache[i]);
 
 			/* Clear the data */
 			cache[i].flags = 0;
@@ -307,7 +307,7 @@ void bcache_invalidate(void){
 static void bcache_asynch_func(void *sector){
 	struct cache_entry *e =
 	bcache_get_and_lock(*((block_sector_t*)sector), CACHE_DATA);
-	bcache_unlock(e);
+	bcache_unlock(e, UNLOCK_NORMAL);
 }
 
 /* Fetches the given sector and puts it in the cache. Will evict a current

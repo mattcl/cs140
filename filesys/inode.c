@@ -629,14 +629,14 @@ void inode_allow_write (struct inode *inode){
 }
 
 /* Returns the length, in bytes, of INODE's data. */
-off_t inode_length (const struct inode *inode){
+off_t inode_length (struct inode *inode){
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
 	lock_release(&inode->reader_lock);
 	return eof;
 }
 
-bool inode_is_dir(const struct inode *inode){
+bool inode_is_dir(struct inode *inode){
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = inode_d->flags & INODE_IS_DIR;
