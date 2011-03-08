@@ -313,6 +313,7 @@ struct inode *inode_open (block_sector_t sector){
 			lock_release(&open_inodes_lock);
 			return inode;
 		}
+		lock_release(&inode->meta_data_lock);
 	}
 	lock_release(&open_inodes_lock);
 
