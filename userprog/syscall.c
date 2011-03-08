@@ -174,7 +174,7 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	case SYS_CLOSE:{
-		error = set_args(esp, 2, arg1);
+		error = set_args(esp, 1, arg1);
 		if(error < 0)system_exit(f, -1);
 		system_close(f, (int)arg1[0]);
 		break;
@@ -194,7 +194,9 @@ static void syscall_handler (struct intr_frame *f){
 	}
 	/* Progect 4 Syscalls */
 	case SYS_CHDIR:{
-		printf("SYS_CHDIR called\n");
+	        error = set_args(esp, 1, arg1);
+		if(error < 0) system_exit(f, -1);
+		system_chrdr(f, (char*)arg1[0]);
 		break;
 	}
 	case SYS_MKDIR:{
@@ -202,15 +204,21 @@ static void syscall_handler (struct intr_frame *f){
 		break;
 	}
 	case SYS_READDIR:{
-		printf("SYS_READDIR called\n");
+     	        error = set_args(esp, 2, arg1);
+		if(error < 0) system_exit(f,-1);
+		system_readdir(f, arg1[0], arg1[1]);
 		break;
 	}
 	case SYS_ISDIR:{
-		printf("SYS_ISDIR called\n");
+       	        error = set_args(esp, 1, arg1);
+		if(error < 0) system_exit(f,-1);
+		system_isdir(f, (int)arg1[0]);
 		break;
 	}
 	case SYS_INUMBER:{
-		printf("SYS_INUMBER called\n");
+	        error = set_args(esp, 1, arg1);
+		if(error < 0) system_exit(f, -1);
+		system_inumber(f, (int)arg1[0]);
 		break;
 	}
 	default:{
@@ -507,7 +515,7 @@ static void system_tell(struct intr_frame *f, int fd){
 
 /* Closes the file described by fd and removes fd from the list of open
    files for this process. Does nothing if fd is invalid*/
-static void system_close(struct intr_frame *f UNUSED, int fd ){
+static void system_close(struct intr_frame *f, int fd ){
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't close something that is already closed */
 	if(entry == NULL || entry->is_closed){
@@ -871,6 +879,54 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	return true;
 }
 
+static void system_chrdir(struct intr_frame *f, const char* dir_name){
+    if(!string_is_valid(dir_name)){
+        system_exit(f,-1);
+	return;
+    }
+
+   
+    
+    /* At this point we want to know if we are doing a lookup for a
+       or absolute path */
+    
+}
+
+static void system_isdir(struct intr_frame *f, int fd){
+  struct file *file = file_for_fd(fd, false);
+   
+    if(file != NULL && inode_is_dir(file_get_inode(file))){
+        f->eax = (int) true;
+	return;
+    }
+    
+    f->eax = (int)false;
+}
+
+static void system_inumber(struct intr_frame *f, int fd){
+  struct file *file = file_for_fd(fd, false);
+    if(file != NULL){
+        f->eax = inode_get_inumber(file_get_inode(file));
+	return;
+    }
+
+    f->eax = -1;
+}
+
+static void system_readdir(struct intr_frame *f, int fd, char *name){
+  if(!bugger_is_valid(name, READDIR_MAX_LEN + 1)){
+      system_exit(f, -1);
+  }
+
+  struct file *file = file_for_fd(fd, false);
+  
+  if(file != NULL && inode_is_dir(file_get_inode(file))){
+    struct dir
+  }
+
+  f->eax = (int) false;
+    
+}
 /* System call helpers */
 
 /* Saves all of the pages that are dirty for the given mmap_hash_entry
@@ -1157,3 +1213,4 @@ static bool string_is_valid(const char* str){
 	}
 	return true;
 }
+
