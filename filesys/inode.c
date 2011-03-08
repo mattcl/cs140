@@ -75,8 +75,12 @@ static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool cr
 	block_sector_t alloc;
 	if(array[idx] == ZERO_SECTOR){
 		printf("Array index ZERO\n");
-		if(!create || !free_map_allocate (1, &alloc)){
-			printf("Not create or not alloc\n");
+		if(!create){
+			printf("not create\n");
+			return ZERO_SECTOR;
+		}
+		if(!free_map_allocate (1, &alloc)){
+			printf("not alloc\n");
 			return ZERO_SECTOR;
 		}
 		array[idx] = alloc;
