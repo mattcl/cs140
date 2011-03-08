@@ -581,7 +581,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	off_t eof = inode->cur_length;
 	lock_release(&inode->reader_lock);
 
-	//printf("eof is %d\n", eof);
+	printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
 		extending = true;
