@@ -33,7 +33,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 			&& (dir = dir_open(inode_open(sector))) != NULL
 			&& dir_add(dir, ".", sector) && dir_add(dir, "..", parent);
 
-	printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
+	//printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
 	dir_close(dir);
 
 	return success;
@@ -243,9 +243,9 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
-	printf("open path recursive\n");
+	//printf("open path recursive\n");
 	if(path == NULL || start_dir == NULL){
-		printf("opr ret null 1\n");
+		//printf("opr ret null 1\n");
 		return NULL;
 	}
 	//printf("dir open path wrap\n");
@@ -265,10 +265,10 @@ static struct dir *dir_open_path_wrap(const char *path,
 	if(*path == '\0'){
 		/* path ended in a \ */
 		if(return_root){
-			printf("opr return root 1\n");
+			//printf("opr return root 1\n");
 			return dir_open_root();
 		}else{
-			printf("opr return NULL 1\n");
+			//printf("opr return NULL 1\n");
 			return NULL;
 		}
 	}
@@ -283,7 +283,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 
 	if(*path != '\0' && *path != '/'){
 		/* A file name was too long */
-		printf("opr name too long 1\n");
+		//printf("opr name too long 1\n");
 		return NULL;
 	}
 
@@ -294,23 +294,23 @@ static struct dir *dir_open_path_wrap(const char *path,
 		struct inode *ino = inode_open(e.inode_sector);
 		if(!inode_is_dir(ino)){
 			inode_close(ino);
-			printf("inode wasn't a directory returned nULL\n");
+			//printf("inode wasn't a directory returned nULL\n");
 			return NULL;
 		}
 
 		struct dir *next_dir = dir_open(ino);
 		if(*path == '\0'){
-			printf("Returned next dir\n");
+			//printf("Returned next dir\n");
 			return next_dir;
 		}else{
 			struct dir *ret = dir_open_path_wrap(path, next_dir, false);
 			dir_close(next_dir);
-			printf("opr returned from recursion!\n");
+			//printf("opr returned from recursion!\n");
 			return ret;
 		}
 	}else{
 		lock_release(&start_dir->dir_lock);
-		printf("opr return NULL\n");
+		//printf("opr return NULL\n");
 		return NULL;
 	}
 }
@@ -322,10 +322,10 @@ static struct dir *dir_open_path_wrap(const char *path,
    NULL. if "\" or "\\\\" etc is passed in this function will return the
    root directory and the file_name will point to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
-	printf("dir open path\n");
+	//printf("dir open path\n");
 	uint32_t path_length;
 	if(path == NULL || (path_length = strlen(path)) == 0 || file_name == NULL){
-		printf("Failed first\n");
+		//printf("Failed first\n");
 		return NULL;
 	}
 	char buf [path_length + 1];
@@ -341,34 +341,34 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
-			printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
+			//printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
 			return dir_reopen(cwd);
 		}else{
-			printf("parsed path was %s\n", dir_path);
+			//printf("parsed path was %s\n", dir_path);
 			return dir_open_path_wrap(dir_path, cwd, false);
 		}
 	}else{
 		struct dir* root = dir_open_root();
 		if(dir_path == NULL){
-			printf("returned root 1\n");
+			//printf("returned root 1\n");
 			return root;
 		}else{
-			printf("parsed path was %s\n", dir_path);
+			//printf("parsed path was %s\n", dir_path);
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
 			if(ret == NULL){
 				dir_close(root);
-				printf("returned null 2\n");
+				//printf("returned null 2\n");
 				return NULL;
 			}
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
 				/* set file name to last \ */
 				*file_name = path + (path_length-1);
-				printf("returned root 2\n");
+				//printf("returned root 2\n");
 				return root;
 			}else{
 				dir_close(root);
-				printf("returned non root directory\n");
+				//printf("returned non root directory\n");
 				return ret;
 			}
 		}
