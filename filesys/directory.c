@@ -333,7 +333,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
    and returns true if one exists, false otherwise.
    On success, sets *INODE to an inode for the file, otherwise to
    a null pointer.  The caller must close *INODE. */
-bool dir_lookup (const struct dir *dir, const char *name, struct inode **inode){
+bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
 	printf("dir lookup\n");
 	struct dir_entry e;
 
