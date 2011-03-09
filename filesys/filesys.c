@@ -89,6 +89,7 @@ struct file * filesys_open (const char *path){
 	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
 	printf("filesys open dir_open path success name is %s\n", file_name);
+	pritnf("dir == root %u\n", dir == dir_open_root());
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
