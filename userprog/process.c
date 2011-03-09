@@ -22,6 +22,7 @@
 #include "threads/malloc.h"
 #include "vm/frame.h"
 #include "vm/swap.h"
+#include "vm/mmap.h"
 
 static struct hash processes;			 /*A hash of all created processes*/
 static struct lock processes_hash_lock;  /*A lock on that hash table*/
@@ -44,9 +45,6 @@ static void fd_hash_entry_destroy (struct hash_elem *e, AUX);
 
 static unsigned process_hash_func (HASH_ELEM *a, AUX);
 static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
-
-static unsigned mmap_hash_func (HASH_ELEM *a, AUX);
-static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX);
 
 typedef bool is_equal (struct list_elem *cle, void *c_tid);
 static bool is_equal_func_tid (struct list_elem *cle, void *c_tid){
@@ -1131,20 +1129,6 @@ static bool process_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
 static unsigned process_hash_func (HASH_ELEM *a, AUX){
 	pid_t pid = hash_entry(a, struct process, elem)->pid;
 	return hash_bytes(&pid, (sizeof(pid_t)));
-}
-
-/* mmap hash function */
-static unsigned mmap_hash_func (HASH_ELEM *a, AUX){
-	mapid_t mapid = hash_entry(a, struct mmap_hash_entry, elem)->mmap_id;
-	return hash_bytes(&mapid, (sizeof(mapid_t)));
-}
-
-/* mmap hash compare function */
-static bool mmap_hash_compare  (HASH_ELEM *a, HASH_ELEM *b, AUX){
-	ASSERT(a != NULL);
-	ASSERT(b != NULL);
-	return (hash_entry(a, struct mmap_hash_entry, elem)->mmap_id <
-			hash_entry(b, struct mmap_hash_entry, elem)->mmap_id);
 }
 
 #undef HASH_ELEM
