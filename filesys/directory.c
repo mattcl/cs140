@@ -47,16 +47,16 @@ struct dir *dir_open (struct inode *inode){
 	ret_elem = hash_find(&open_dirs, &key_dir.e);
 	if(ret_elem != NULL){
 		ret_dir = hash_entry(ret_elem, struct dir, e);
-		lock_acquire(&ret_dir.dir_lock);
+		lock_acquire(&ret_dir->dir_lock);
 		ret_dir.open_cnt ++;
-		lock_release(&ret_dir.dir_lock);
+		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
 		return ret_dir;
 
 	}else{
 		ret_dir = calloc(1, sizeof(struct dir));
 		if(ret_dir == NULL){
-			lock_release(&open_dirs);
+			lock_release(&open_dirs_lock);
 			inode_close(inode);
 			free(ret_dir);
 			return NULL;
@@ -64,10 +64,9 @@ struct dir *dir_open (struct inode *inode){
 		ret_dir->inode = inode;
 		ret_dir->sector = inode->sector;
 		lock_init(&ret_dir->dir_lock);
-		ret_dir->pos = 0;
 		ret_dir->open_cnt = 1;
 		ret_elem = hash_insert(&open_dirs, &ret_dir->e);
-		lock_release(&open_dirs);
+		lock_release(&open_dirs_lock);
 		if(ret_elem != NULL){
 			inode_close(inode);
 			free(ret_dir);
@@ -106,7 +105,7 @@ void dir_close (struct dir *dir){
 		inode_close(dir->inode);
 		free(dir);
 	}
-	lock_release(&open_dirs);
+	lock_release(&open_dirs_lock);
 }
 
 /* Returns the inode encapsulated by DIR. */
@@ -211,8 +210,8 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 /* Recursive function, traverses the path till it finds the last item in the
    path. Opens the last item as a directory and returns it. Returns NULL if
    the last item in the path is not a directory*/
-struct dir *dir_open_path_wrap(const char *path, const struct dir *start_dir,
-		bool first_call){
+static struct dir *dir_open_path_wrap(const char *path,
+			const struct dir *start_dir, bool first_call){
 
 	bool return_root = false;
 	if(*path == '\0'){
