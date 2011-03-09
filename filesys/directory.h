@@ -38,17 +38,17 @@ void dir_init(void);
 /* Opening and closing directories. */
 bool dir_create (block_sector_t sector, block_sector_t parent);
 struct dir *dir_open_path(const char *path, char **file_name);
-struct dir *dir_open (struct inode *);
+struct dir *dir_open (struct inode *inode);
 struct dir *dir_open_root (void);
-struct dir *dir_reopen (struct dir *);
-void dir_close (struct dir *);
-struct inode *dir_get_inode (struct dir *);
+struct dir *dir_reopen (struct dir *dir);
+void dir_close (struct dir *dir);
+struct inode *dir_get_inode (struct dir * dir);
 
 /* Reading and writing. */
-bool dir_lookup (const struct dir *, const char *name, struct inode **);
-bool dir_add (struct dir *, const char *name, block_sector_t);
-bool dir_remove (struct dir *, const char *name);
-bool dir_readdir (struct dir *, char *name, off_t *off);
+bool dir_lookup (const struct dir *dir, const char *name, struct inode **);
+bool dir_add (struct dir *dir, const char *name, block_sector_t);
+bool dir_remove (struct dir *dir, const char *name);
+bool dir_readdir (struct dir *dir, char *name, off_t *off);
 uint32_t dir_file_count(struct dir *dir);
 
 #endif /* filesys/directory.h */
