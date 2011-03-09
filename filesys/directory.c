@@ -290,7 +290,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	}
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
-		if(!dir_path){
+		if(dir_path != NULL){
 			return cwd;
 		}else{
 			return dir_open_path_wrap(dir_path, cwd, false);
