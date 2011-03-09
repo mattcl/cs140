@@ -203,31 +203,31 @@ static void syscall_handler (struct intr_frame *f){
 	/* Progect 4 Syscalls */
 	case SYS_CHDIR:{
 		error = set_args(esp, 1, arg1);
-		if(error < 0) system_exit(f, -1);
+		if(error < 0)system_exit(f, -1);
 		system_chdir(f, (char*)arg1[0]);
 		break;
 	}
 	case SYS_MKDIR:{
 		error = set_args(esp, 1, arg1);
-		if(error < 0) system_exit(f, -1);
+		if(error < 0)system_exit(f, -1);
 		system_mkdir(f, (const char*)arg1[0]);
 		break;
 	}
 	case SYS_READDIR:{
 		error = set_args(esp, 2, arg1);
-		if(error < 0) system_exit(f,-1);
+		if(error < 0)system_exit(f,-1);
 		system_readdir(f, (int)arg1[0], (char*)arg1[1]);
 		break;
 	}
 	case SYS_ISDIR:{
 		error = set_args(esp, 1, arg1);
-		if(error < 0) system_exit(f,-1);
+		if(error < 0)system_exit(f,-1);
 		system_isdir(f, (int)arg1[0]);
 		break;
 	}
 	case SYS_INUMBER:{
 		error = set_args(esp, 1, arg1);
-		if(error < 0) system_exit(f, -1);
+		if(error < 0)system_exit(f, -1);
 		system_inumber(f, (int)arg1[0]);
 		break;
 	}
