@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "vm/frame.h"
+#include "vm/mmap.h"
 #include <stdio.h>
 
 /* Wait until the PTE status goes from PTE_MMAP_WAIT to
