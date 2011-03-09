@@ -14,8 +14,8 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 struct mmap_hash_entry *uaddr_to_mmap_entry(struct process *cur, void *uaddr);
 struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 
-static unsigned mmap_hash_func (const struct hash_elem *a, void *aux UNUSED);
-static bool mmap_hash_compare  (const struct hash_elem *a,
+unsigned mmap_hash_func (const struct hash_elem *a, void *aux UNUSED);
+bool mmap_hash_compare  (const struct hash_elem *a,
 		const struct hash_elem *b, void *aux UNUSED);
 void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED);
 
