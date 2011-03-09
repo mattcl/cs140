@@ -11,7 +11,6 @@
 
 static struct hash open_dirs;
 
-
 static struct lock open_dirs_lock;
 
 static unsigned dir_hash_func(const struct hash_elem*a, void *aux UNUSED);
@@ -37,7 +36,6 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 	dir_close(dir);
 
 	return success;
-
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -45,7 +43,6 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 struct dir *dir_open (struct inode *inode){
 	//printf("dir open\n");
 	if(inode == NULL){
-
 		return NULL;
 	}
 	struct dir key_dir, *ret_dir;
@@ -318,9 +315,10 @@ static struct dir *dir_open_path_wrap(const char *path,
    NULL. if "\" or "\\\\" etc is passed in this function will return the
    root directory and the file_name will point to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
-	//printf("dir open path\n");
+	printf("dir open path\n");
 	uint32_t path_length;
 	if(path == NULL || (path_length = strlen(path)) == 0 || file_name == NULL){
+		printf("Failed first\n");
 		return NULL;
 	}
 	char buf [path_length + 1];
@@ -336,31 +334,34 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
-			//printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
+			printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
 			return dir_reopen(cwd);
 		}else{
+			printf("parsed path was %s\n", dir_path);
 			return dir_open_path_wrap(dir_path, cwd, false);
 		}
 	}else{
 		struct dir* root = dir_open_root();
 		if(dir_path == NULL){
-			//printf("returned root 1\n");
+			printf("returned root 1\n");
 			return root;
 		}else{
+			printf("parsed path was %s\n", dir_path);
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
 			if(ret == NULL){
 				dir_close(root);
+				pritnf("returned null 2\n");
 				return NULL;
 			}
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
 				/* set file name to last \ */
 				*file_name = path + (path_length-1);
-				//printf("returned root 2\n");
+				printf("returned root 2\n");
 				return root;
 			}else{
 				dir_close(root);
-				//printf("returned non root directory\n");
+				printf("returned non root directory\n");
 				return ret;
 			}
 		}
