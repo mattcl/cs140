@@ -297,6 +297,9 @@ static struct dir *dir_open_path_wrap(const char *path,
 struct dir *dir_open_path(const char *path, const char **file_name){
 	//printf("dir open path\n");
 	uint32_t path_length = strlen(path);
+	if(path_length == 0){
+		return NULL;
+	}
 	char buf [path_length + 1];
 	memcpy(buf, path, path_length + 1); /* Copy all and null term */
 	char *dir_path = NULL;
@@ -456,10 +459,10 @@ bool dir_remove (struct dir *dir, const char *name){
 			goto done;
 		}
 		lock_release(&dir->dir_lock);
+		lock_release(&open_dirs_lock);
 
 		struct dir *sub_dir = dir_open(inode);
 
-		lock_release(&open_dirs_lock);
 
 		uint32_t file_count = dir_file_count(sub_dir);
 		dir_close(sub_dir);
@@ -479,6 +482,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	/* Remove inode. */
 	inode_remove (inode);
 	success = true;
+	lock_release(&dir->dir_lock);
 
 	done:
 	inode_close (inode);
