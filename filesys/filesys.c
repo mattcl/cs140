@@ -80,10 +80,24 @@ bool filesys_create_dir(const char *path){
 	block_sector_t inode_sector = 0;
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
+	printf("creating a directory %s at path %s\n");
+
+	/* debug variables */
+	bool s1 = false;
+	bool s2 = false;
+	bool s3 = false;
+
+
 	bool success = (dir != NULL
-			&& free_map_allocate (1, &inode_sector)
-			&& dir_create (inode_sector, dir_get_inode(dir)->sector)
-			&& dir_add (dir, file_name, inode_sector));
+			&& (s1 = free_map_allocate (1, &inode_sector))
+			&& (s2 = dir_create (inode_sector, dir_get_inode(dir)->sector))
+			&& (s3 = dir_add (dir, file_name, inode_sector)));
+
+	if(!success){
+		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+	}
+
+
 	if(!success && inode_sector != 0){
 		free_map_release (inode_sector, 1);
 	}

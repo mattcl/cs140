@@ -242,7 +242,9 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
+	prtinf("open path recursive\n");
 	if(path == NULL || start_dir == NULL){
+		printf("opr ret null 1\n");
 		return NULL;
 	}
 	//printf("dir open path wrap\n");
@@ -262,8 +264,10 @@ static struct dir *dir_open_path_wrap(const char *path,
 	if(*path == '\0'){
 		/* path ended in a \ */
 		if(return_root){
+			printf("opr return root 1\n");
 			return dir_open_root();
 		}else{
+			printf("opr return NULL 1\n");
 			return NULL;
 		}
 	}
@@ -278,6 +282,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 
 	if(*path != '\0' && *path != '/'){
 		/* A file name was too long */
+		printf("opr name too long 1\n");
 		return NULL;
 	}
 
@@ -288,22 +293,23 @@ static struct dir *dir_open_path_wrap(const char *path,
 		struct inode *ino = inode_open(e.inode_sector);
 		if(!inode_is_dir(ino)){
 			inode_close(ino);
+			printf("inode wasn't a directory returned nULL\n");
 			return NULL;
 		}
 
 		struct dir *next_dir = dir_open(ino);
 		if(*path == '\0'){
-			//printf("Return next dir\n");
+			printf("Returned next dir\n");
 			return next_dir;
 		}else{
 			struct dir *ret = dir_open_path_wrap(path, next_dir, false);
 			dir_close(next_dir);
-			//printf("return ret\n");
+			printf("opr returned from recursion!\n");
 			return ret;
 		}
 	}else{
 		lock_release(&start_dir->dir_lock);
-		//printf("return NULL\n");
+		printf("opr return NULL\n");
 		return NULL;
 	}
 }
