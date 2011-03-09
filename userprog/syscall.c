@@ -741,6 +741,8 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
+	printf("Readdir %s\n", name);
+
 	f->eax = success;
 }
 
