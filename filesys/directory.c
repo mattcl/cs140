@@ -102,7 +102,9 @@ struct dir *dir_reopen (struct dir *dir){
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
 	//printf("dir close\n");
-	ASSERT(dir != NULL);
+	if(dir != NULL){
+		return;
+	}
 
 	struct hash_elem *ret_elem;
 	lock_acquire(&open_dirs_lock);
@@ -123,7 +125,9 @@ void dir_close (struct dir *dir){
 /* Returns the inode encapsulated by DIR. */
 struct inode *dir_get_inode (struct dir *dir){
 	//printf("dir get inode\n");
-	ASSERT(dir != NULL);
+	if(dir != NULL){
+		return NULL;
+	}
 	/* If it isn't null then we know that it has opencnt > 0
 	   and the dir inode never changes after creation */
 	return dir->inode;
