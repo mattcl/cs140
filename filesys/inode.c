@@ -234,7 +234,7 @@ bool inode_create (block_sector_t sector, off_t length, bool is_dir){
 	disk_inode->file_length = length;
 	disk_inode->magic = INODE_MAGIC;
 	if(is_dir){
-		disk_inode->flags &= INODE_IS_DIR;
+		disk_inode->flags |= INODE_IS_DIR;
 	}
 	bcache_unlock(e, UNLOCK_FLUSH);
 
