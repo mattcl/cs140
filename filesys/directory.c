@@ -20,6 +20,7 @@ static bool dir_hash_comp(const struct hash_elem *a,
 void dir_init(void){
 	lock_init(&open_dirs_lock);
 	hash_init(&open_dirs, dir_hash_func, dir_hash_comp, NULL);
+	thread_current()->process->cwd = dir_open_root();
 }
 
 /* Creates a directory with space for ENTRY_CNT entries in the
