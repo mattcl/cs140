@@ -111,6 +111,7 @@ void dir_close (struct dir *dir){
 	lock_release(&dir->dir_lock);
 
 	if(delete){
+		printf("actually deleted\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
 		inode_close(dir->inode);
@@ -310,7 +311,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
 			printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
-			return cwd;
+			return dir_reopen(cwd);
 		}else{
 			return dir_open_path_wrap(dir_path, cwd, false);
 		}
@@ -364,7 +365,7 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
-	printf("dir add\n");
+	printf("dir add %p\n", dir);
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;
@@ -408,6 +409,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	done:
 	lock_release(&dir->dir_lock);
 
+	printf("added\n");
 	return success;
 }
 
