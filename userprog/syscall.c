@@ -730,11 +730,14 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 			(dir = dir_open(inode)) != NULL){
 
 		off_t off = file_tell(file);
-		dir_readdir(dir, name, &off);
+		success = dir_readdir(dir, name, &off);
+		/* Skip over . and .. */
+		while(success && ((!strcmp(name, ".") || !strcmp(name, "..")))){
+			success = dir_readdir(dir, name, &off);
+		}
 		/* because we only get to here if dir is open
 		   this is the only place we need to call dir close */
 		dir_close(dir);
-		success = true;
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
