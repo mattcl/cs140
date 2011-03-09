@@ -243,7 +243,7 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
-	prtinf("open path recursive\n");
+	printf("open path recursive\n");
 	if(path == NULL || start_dir == NULL){
 		printf("opr ret null 1\n");
 		return NULL;

@@ -80,7 +80,7 @@ bool filesys_create_dir(const char *path){
 	block_sector_t inode_sector = 0;
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
-	printf("creating a directory %s at path %s\n");
+	printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* debug variables */
 	bool s1 = false;
