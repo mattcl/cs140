@@ -95,6 +95,9 @@ struct dir *dir_open_root (void){
 /* Opens and returns a new directory for the same inode as DIR.
    Returns a null pointer on failure. */
 struct dir *dir_reopen (struct dir *dir){
+	if(dir == NULL){
+		return NULL;
+	}
 	//printf("dir reopen\n");
 	return dir_open (inode_reopen (dir->inode));
 }
@@ -102,7 +105,7 @@ struct dir *dir_reopen (struct dir *dir){
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
 	//printf("dir close\n");
-	if(dir != NULL){
+	if(dir == NULL){
 		return;
 	}
 
@@ -125,7 +128,7 @@ void dir_close (struct dir *dir){
 /* Returns the inode encapsulated by DIR. */
 struct inode *dir_get_inode (struct dir *dir){
 	//printf("dir get inode\n");
-	if(dir != NULL){
+	if(dir == NULL){
 		return NULL;
 	}
 	/* If it isn't null then we know that it has opencnt > 0
@@ -141,6 +144,10 @@ struct inode *dir_get_inode (struct dir *dir){
 static bool lookup (const struct dir *dir, const char *name,
 		struct dir_entry *ep, off_t *ofsp){
 	//printf("lookup\n");
+
+	if(dir == NULL|| name == NULL){
+		return false;
+	}
 
 	ASSERT(lock_held_by_current_thread(&dir->dir_lock));
 	struct dir_entry e;
@@ -180,7 +187,9 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 	//printf("dir path and leaf\n");
 	uint32_t last_slash = 0;
 	uint32_t count = 0;
-	ASSERT(strlen(full) > 0);
+	if(full == NULL || path == NULL || leaf == NULL || strlen(full) == 0){
+		return false;
+	}
 
 	while(full[count] != '\0'){
 		if(full[count] == '/'){
@@ -231,7 +240,9 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
-
+	if(path == NULL || start_dir == NULL){
+		return NULL;
+	}
 	//printf("dir open path wrap\n");
 	bool return_root = false;
 	if(*path == '\0'){
@@ -300,8 +311,8 @@ static struct dir *dir_open_path_wrap(const char *path,
    root directory and the file_name will point to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
 	//printf("dir open path\n");
-	uint32_t path_length = strlen(path);
-	if(path_length == 0){
+	uint32_t path_length;
+	if(path == NULL || (strlen(path) = path_length) == 0 || file_name == NULL){
 		return NULL;
 	}
 	char buf [path_length + 1];
@@ -350,12 +361,11 @@ struct dir *dir_open_path(const char *path, const char **file_name){
    On success, sets *INODE to an inode for the file, otherwise to
    a null pointer.  The caller must close *INODE. */
 bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
+	if(dir == NULL|| name == NULL || inode== NULL){
+		return false;
+	}
 	//printf("dir lookup\n");
 	struct dir_entry e;
-
-	ASSERT (dir != NULL);
-	ASSERT (name != NULL);
-
 	lock_acquire(&dir->dir_lock);
 	if(lookup (dir, name, &e, NULL)){
 		*inode = inode_open (e.inode_sector);
@@ -372,6 +382,9 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
+	if(dir == NULL || name == NULL || strlen(name) == 0){
+		return false;
+	}
 	//printf("dir add %p\n", dir);
 	struct dir_entry e;
 	off_t ofs;
@@ -424,6 +437,10 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
+	if(dir == NULL || name == NULL || strlen(name) == 0){
+		return false;
+	}
+
 	//printf("dir remove\n");
 	struct dir_entry e;
 	struct inode *inode = NULL;
@@ -498,6 +515,9 @@ bool dir_remove (struct dir *dir, const char *name){
    if the directory contains no more entries. Changes OFF.
    Call the first time with off of 0. Inspired by strtok_r. */
 bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1], off_t *off){
+	if(dir == NULL || name == NULL || off == NULL){
+		return false;
+	}
 	//printf("dir readdir\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
@@ -515,6 +535,9 @@ bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1], off_t *off){
 }
 
 uint32_t dir_file_count(struct dir *dir){
+	if(dir == NULL){
+		return 0;
+	}
 	//printf("dir file_count\n");
 	lock_acquire(&dir->dir_lock);
 	off_t off = 0;
