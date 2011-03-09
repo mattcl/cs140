@@ -32,7 +32,7 @@ usage (void)
           "is in a directory to be archived.)\n");
   exit (EXIT_FAILURE);
 }
-
+
 static bool archive_file (char file_name[], size_t file_name_size,
                           int archive_fd, bool *write_error);
 
@@ -178,6 +178,7 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
     if (!archive_file (file_name, file_name_size, archive_fd, write_error))
       success = false;
   file_name[dir_len] = '\0';
+  printf("name %s !\n", file_name);
 
   return success;
 }
