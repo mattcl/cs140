@@ -40,9 +40,15 @@ debug_panic (const char *file, int line, const char *function,
   else if (level == 2)
     printf ("Kernel PANIC recursion at %s:%d in %s().\n",
             file, line, function);
+
   else 
     {
       /* Don't print anything: that's probably why we recursed. */
+	  printf("Entering infinite loop now!!!!\n");
+	  while(1){
+		  ;
+	  }
+
     }
 
   serial_flush ();
