@@ -118,7 +118,7 @@ struct file * filesys_open (const char *path){
 	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
 	printf("filesys open dir_path %s file_name is %s\n",path, file_name);
-	printf("dir null %u, 0dir sector %u root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
+	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
 	printf("process pid %u\n", thread_current()->process->pid);
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
