@@ -62,6 +62,11 @@ bool filesys_create (const char *path, off_t initial_size){
 	const char *file_name;
 	struct dir *dir = dir_open_path (path, &file_name);
 
+	if(file_name == NULL){
+		dir_close(dir);
+		return NULL;
+	}
+
 	/* You don't create the root directory.. ever */
 	if(file_is_root(file_name, dir)){
 		dir_close(dir);
@@ -98,6 +103,12 @@ bool filesys_create_dir(const char *path){
 	block_sector_t inode_sector = 0;
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	if(file_name == NULL){
+		dir_close(dir);
+		return NULL;
+	}
+
 	printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* special consideration for creating /, we don't allow it sorry! :)*/
@@ -139,6 +150,11 @@ struct file * filesys_open (const char *path){
 	const char *file_name = NULL;
 	struct dir *dir = dir_open_path (path, &file_name);
 
+	if(file_name == NULL){
+		dir_close(dir);
+		return NULL;
+	}
+
 	/* special consideration for opening / because
 	   / is not actually in the directory. */
 	if(file_is_root(file_name, dir)){
@@ -169,6 +185,11 @@ struct file * filesys_open (const char *path){
 bool filesys_remove (const char *path){
 	const char *file_name = NULL;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	if(file_name == NULL){
+		dir_close(dir);
+		return NULL;
+	}
 
 	/* special consideration for removing / or . or .. we don't
 	   allow deleting them sorry! :)*/

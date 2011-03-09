@@ -9,6 +9,8 @@
 #include "userprog/process.h"
 #include <hash.h>
 
+const char *root_dir_str = "/";
+
 static struct hash open_dirs;
 
 static struct lock open_dirs_lock;
@@ -319,9 +321,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 /* opens the directory and returns the leaf of the path if any. Paths
    with a trailing / are illegal file names. A path to a directory with
    a trailing / will open the directory and set file_name to point to
-   NULL. if "/" or "///"  or "/.././.././." etc is passed in this
-   function will return the root directory and the file_name will point
-   to the forward slash.*/
+   NULL.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
 	//printf("dir open path %s \n", path);
 	uint32_t path_length;
@@ -363,9 +363,8 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 			}
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
-				/* set file name to last \ */
-				*file_name = path + (path_length-1);
 				//printf("returned root 2\n");
+				*file_name = root_dir_str;
 				return root;
 			}else{
 				dir_close(root);
