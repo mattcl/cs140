@@ -420,7 +420,7 @@ void inode_close (struct inode *inode){
 			lock_release(&open_inodes_lock);
 
 			/* Flush any dirty data to disk */
-			//bcache_flush();
+			bcache_flush();
 		}
 		free (inode);
 	}else{

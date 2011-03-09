@@ -35,9 +35,9 @@ void filesys_init (bool format){
 /* Shuts down the file system module, writing any unwritten data
    to disk. */
 void filesys_done (void){
-	//printf("Filesys done\n");
 	bcache_flush();
 	free_map_close ();
+	printf("Filesys done\n");
 }
 
 /* Creates a file named NAME with the given INITIAL_SIZE.
@@ -54,7 +54,7 @@ bool filesys_create (const char *path, off_t initial_size){
 	bool s2 = false;
 	bool s3 = false;
 
-	//printf("Creating filename %s at path %s \n", file_name, path);
+	printf("Creating filename %s at path %s \n", file_name, path);
 	bool success = (dir != NULL
 			&& (s1 = free_map_allocate (1, &inode_sector))
 			&& (s2 = inode_create (inode_sector, initial_size, false))
@@ -62,7 +62,7 @@ bool filesys_create (const char *path, off_t initial_size){
 
 
 	if(!success){
-		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
 
 	if(!success && inode_sector != 0){
@@ -79,7 +79,7 @@ bool filesys_create_dir(const char *path){
 	block_sector_t inode_sector = 0;
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
-	//printf("creating a directory %s at path %s\n", file_name, path);
+	printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* debug variables */
 	bool s1 = false;
@@ -93,7 +93,7 @@ bool filesys_create_dir(const char *path){
 			&& (s3 = dir_add (dir, file_name, inode_sector)));
 
 	if(!success){
-		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
 
 
@@ -114,8 +114,9 @@ struct file * filesys_open (const char *path){
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
-	//printf("filesys open dir_open path success name is %s\n", file_name);
-	//printf("dir sector %u root sector %u\n", dir->sector, ROOT_DIR_SECTOR);
+	printf("filesys open dir_path %s file_name is %s\n",path, file_name);
+	printf("dir null %u, 0dir sector %u root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
+	printf("process pid %u\n", thread_current()->process->pid);
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
