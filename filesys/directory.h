@@ -46,7 +46,7 @@ void dir_close (struct dir *dir);
 struct inode *dir_get_inode (struct dir * dir);
 
 /* Reading and writing. */
-bool dir_lookup (const struct dir *dir, const char *name, struct inode **);
+bool dir_lookup (struct dir *dir, const char *name, struct inode **);
 bool dir_add (struct dir *dir, const char *name, block_sector_t);
 bool dir_remove (struct dir *dir, const char *name);
 bool dir_readdir (struct dir *dir, char *name, off_t *off);
