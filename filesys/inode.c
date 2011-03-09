@@ -321,7 +321,7 @@ struct inode *inode_reopen (struct inode *inode){
 	}
 	inode->open_cnt ++;
 	lock_release(&inode->meta_data_lock);
-
+	return inode;
 }
 
 /* Returns INODE's inode number. */
