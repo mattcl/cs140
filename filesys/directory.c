@@ -305,6 +305,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
+			printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
 			return cwd;
 		}else{
 			return dir_open_path_wrap(dir_path, cwd, false);
@@ -312,6 +313,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	}else{
 		struct dir* root = dir_open_root();
 		if(dir_path == NULL){
+			printf("returned root 1\n");
 			return root;
 		}else{
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
@@ -319,9 +321,11 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 				dir_close(ret);
 				/* set file name to last \ */
 				*file_name = path + (path_length-1);
+				printf("returned root 2\n");
 				return root;
 			}else{
 				dir_close(root);
+				printf("returned non root directory\n");
 				return ret;
 			}
 		}
