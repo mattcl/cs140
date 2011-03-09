@@ -6,6 +6,7 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 #include "threads/thread.h"
+#include "userprog/process.h"
 #include <hash.h>
 
 static struct hash open_dirs;
