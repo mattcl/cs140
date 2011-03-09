@@ -421,7 +421,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		struct dir key_dir;
 		key_dir.sector = inode->sector;
 		struct hash_elem *ret_elem;
-		ret_elem = hash_find(&open_dirs_lock, &key_dir.e);
+		ret_elem = hash_find(&open_dirs, &key_dir.e);
 		if(ret_elem != NULL){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
@@ -482,7 +482,7 @@ uint32_t dir_file_count(struct dir *dir){
 	off_t off = 0;
 	uint32_t file_count = 0;
 	struct dir_entry e;
-	while(inode_read_at(dir->inode, &e, sizeof(struct dir_entry), *off)
+	while(inode_read_at(dir->inode, &e, sizeof(struct dir_entry), off)
 			== sizeof(struct dir_entry)){
 
 		off += sizeof(struct dir_entry);
