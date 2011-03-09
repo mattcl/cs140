@@ -155,6 +155,10 @@ struct file * filesys_open (const char *path){
 		return NULL;
 	}
 
+	printf("filesys open dir_path %s file_name is %s\n",path, file_name);
+	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
+	printf("process pid %u\n", thread_current()->process->pid);
+
 	/* special consideration for opening / because
 	   / is not actually in the directory. */
 	if(file_is_root(file_name, dir)){
@@ -163,10 +167,6 @@ struct file * filesys_open (const char *path){
 	}
 
 	struct inode *inode = NULL;
-	printf("filesys open dir_path %s file_name is %s\n",path, file_name);
-	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
-	printf("process pid %u\n", thread_current()->process->pid);
-
 
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
