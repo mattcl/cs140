@@ -89,6 +89,8 @@ static bool
 archive_file (char file_name[], size_t file_name_size,
               int archive_fd, bool *write_error) 
 {
+
+	printf("archive file %s \n", file_name);
   int file_fd = open (file_name);
   if (file_fd >= 0) 
     {
@@ -174,9 +176,11 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
     return false;
       
   file_name[dir_len] = '/';
-  while (readdir (file_fd, &file_name[dir_len + 1])) 
-    if (!archive_file (file_name, file_name_size, archive_fd, write_error))
-      success = false;
+  while (readdir (file_fd, &file_name[dir_len + 1])){
+	  if (!archive_file (file_name, file_name_size, archive_fd, write_error)){
+		  success = false;
+	  }
+  }
   file_name[dir_len] = '\0';
   printf("name %s !\n", file_name);
 
