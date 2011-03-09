@@ -43,6 +43,16 @@ void filesys_done (void){
 	printf("Filesys done\n");
 }
 
+static inline bool file_is_self(char *file_name){
+	return file_name != NULL && ((strlen(file_name) == 2 && !strcmp(file_name, '..')) ||
+			(strlen(file_name) == 1 && *file_name =='.'));
+}
+
+static inline bool file_is_root(char *file_name, struct dir *dir){
+	return (dir != NULL && dir->sector == ROOT_DIR_SECTOR && file_name != NULL
+			&& (file_is_self(file_name) || *file_name == '/'));
+}
+
 /* Creates a file named NAME with the given INITIAL_SIZE.
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
@@ -51,6 +61,12 @@ bool filesys_create (const char *path, off_t initial_size){
 	block_sector_t inode_sector = 0;
 	const char *file_name;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	/* You don't create the root directory.. ever */
+	if(file_is_root(file_name, dir)){
+		dir_close(dir);
+		return false;
+	}
 
 	/* debug variables */
 	bool s1 = false;
@@ -84,6 +100,12 @@ bool filesys_create_dir(const char *path){
 	struct dir *dir = dir_open_path (path, &file_name);
 	printf("creating a directory %s at path %s\n", file_name, path);
 
+	/* special consideration for creating /, we don't allow it sorry! :)*/
+	if(file_is_root(file_name, dir)){
+		dir_close(dir);
+		return false;
+	}
+
 	/* debug variables */
 	bool s1 = false;
 	bool s2 = false;
@@ -114,12 +136,22 @@ bool filesys_create_dir(const char *path){
    or if an internal memory allocation fails, or the path
    leading up to the leaf was invalid. */
 struct file * filesys_open (const char *path){
-	const char *file_name ;
+	const char *file_name = NULL;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	/* special consideration for opening / because
+	   / is not actually in the directory. */
+	if(file_is_root(file_name, dir)){
+		dir_close(dir);
+		return file_open(inode_open(ROOT_DIR_SECTOR));
+	}
+
 	struct inode *inode = NULL;
 	printf("filesys open dir_path %s file_name is %s\n",path, file_name);
 	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
 	printf("process pid %u\n", thread_current()->process->pid);
+
+
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
@@ -135,8 +167,16 @@ struct file * filesys_open (const char *path){
    leading up to the leaf of the path is an invalid path
    or if an internal memory allocation fails. */
 bool filesys_remove (const char *path){
-	const char *file_name ;
+	const char *file_name = NULL;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	/* special consideration for removing / or . or .. we don't
+	   allow deleting them sorry! :)*/
+	if(file_is_self(file_name) || file_is_root(file_name, dir)){
+		dir_close(dir);
+		return false;
+	}
+
 	bool success = (dir != NULL) && dir_remove (dir, file_name);
 	dir_close (dir);
 

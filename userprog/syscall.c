@@ -731,13 +731,12 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 
 		off_t off = file_tell(file);
 		dir_readdir(dir, name, &off);
+		/* because we only get to here if dir is open
+		   this is the only place we need to call dir close */
 		dir_close(dir);
-		dir = NULL; /* Prevent dir from being freed twice*/
 		success = true;
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
-
-	dir_close(dir);
 
 	f->eax = success;
 }
