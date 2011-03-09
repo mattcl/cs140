@@ -323,7 +323,7 @@ static struct dir *dir_open_path_wrap(const char *path,
    function will return the root directory and the file_name will point
    to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
-	//printf("dir open path\n");
+	printf("dir open path %s \n", path);
 	uint32_t path_length;
 	if(path == NULL || (path_length = strlen(path)) == 0 || file_name == NULL){
 		//printf("Failed first\n");
