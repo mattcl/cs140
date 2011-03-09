@@ -57,9 +57,9 @@ bool filesys_create (const char *path, off_t initial_size){
 
 	printf("Creating filename %s at path %s \n", file_name, path);
 	bool success = (dir != NULL
-			&& s1 = free_map_allocate (1, &inode_sector)
-			&& s2 = inode_create (inode_sector, initial_size, false)
-			&& s3 = dir_add (dir, file_name, inode_sector));
+			&& (s1 = free_map_allocate (1, &inode_sector))
+			&& (s2 = inode_create (inode_sector, initial_size, false))
+			&& (s3 = dir_add (dir, file_name, inode_sector)));
 
 
 	if(!success){
