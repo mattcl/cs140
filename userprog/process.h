@@ -7,6 +7,7 @@
 #include <hash.h>
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -113,6 +114,8 @@ struct process {
 	   while the owning process creates or destroyes mmaps can
 	   be synchronized*/
 	struct lock mmap_table_lock;
+
+	struct dir *cwd;
 
 };
 

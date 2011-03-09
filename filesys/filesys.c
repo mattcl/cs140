@@ -23,6 +23,7 @@ void filesys_init (bool format){
 
 	inode_init ();
 	free_map_init ();
+	dir_init();
 
 	if(format){
 		do_format ();
@@ -43,13 +44,14 @@ void filesys_done (void){
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
-bool filesys_create (const char *name, off_t initial_size){
+bool filesys_create (const char *path, off_t initial_size){
 	block_sector_t inode_sector = 0;
-	struct dir *dir = dir_open_root ();
+	const char *file_name;
+	struct dir *dir = dir_open_path (path, &file_name);
 	bool success = (dir != NULL
 			&& free_map_allocate (1, &inode_sector)
-			&& inode_create (inode_sector, initial_size)
-			&& dir_add (dir, name, inode_sector));
+			&& inode_create (inode_sector, initial_size, false)
+			&& dir_add (dir, file_name, inode_sector));
 	if(!success && inode_sector != 0){
 		free_map_release (inode_sector, 1);
 	}
@@ -59,17 +61,35 @@ bool filesys_create (const char *name, off_t initial_size){
 	return success;
 }
 
-/* Opens the file with the given NAME.
+/* Creates an empty directory! At the path name handed in*/
+bool filesys_create_dir(const char *path){
+	block_sector_t inode_sector = 0;
+	const char *file_name ;
+	struct dir *dir = dir_open_path (path, &file_name);
+	bool success = (dir != NULL
+			&& free_map_allocate (1, &inode_sector)
+			&& dir_create (inode_sector, dir_get_inode(dir)->sector)
+			&& dir_add (dir, file_name, inode_sector));
+	if(!success && inode_sector != 0){
+		free_map_release (inode_sector, 1);
+	}
+
+	dir_close (dir);
+	return success;
+}
+
+/* Opens the file with the given path.
    Returns the new file if successful or a null pointer
-   otherwise.
-   Fails if no file named NAME exists,
-   or if an internal memory allocation fails. */
-struct file * filesys_open (const char *name){
-	struct dir *dir = dir_open_root ();
+   otherwise. Fails if no file named NAME exists,
+   or if an internal memory allocation fails, or the path
+   leading up to the leaf was invalid. */
+struct file * filesys_open (const char *path){
+	const char *file_name ;
+	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
 
 	if(dir != NULL){
-		dir_lookup (dir, name, &inode);
+		dir_lookup (dir, file_name, &inode);
 	}
 
 	dir_close (dir);
@@ -77,13 +97,15 @@ struct file * filesys_open (const char *name){
 	return file_open (inode);
 }
 
-/* Deletes the file named NAME.
+/* Deletes the file named by path.
    Returns true if successful, false on failure.
-   Fails if no file named NAME exists,
+   Fails if no file named NAME exists, or the path
+   leading up to the leaf of the path is an invalid path
    or if an internal memory allocation fails. */
-bool filesys_remove (const char *name){
-	struct dir *dir = dir_open_root ();
-	bool success = dir != NULL && dir_remove (dir, name);
+bool filesys_remove (const char *path){
+	const char *file_name ;
+	struct dir *dir = dir_open_path (path, &file_name);
+	bool success = (dir != NULL) && dir_remove (dir, file_name);
 	dir_close (dir);
 
 	return success;
@@ -93,7 +115,7 @@ bool filesys_remove (const char *name){
 static void do_format (void){
 	printf ("Formatting file system...\n");
 	free_map_create ();
-	if(!dir_create (ROOT_DIR_SECTOR, 16)){
+	if(!dir_create (ROOT_DIR_SECTOR, ROOT_DIR_SECTOR)){
 		PANIC ("root directory creation failed");
 	}
 	free_map_close ();

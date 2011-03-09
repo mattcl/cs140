@@ -142,6 +142,8 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	our_thread->process = p;
 	p->exit_code = -1;
 
+	p->cwd = dir_reopen(thread_current()->process->cwd);
+
 	struct hash_elem *process = hash_insert(&processes, &p->elem);
 
 	/* returns something if it wasn't inserted of NULL if it

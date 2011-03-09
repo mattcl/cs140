@@ -1,5 +1,4 @@
 #include "filesys/inode.h"
-#include <list.h>
 #include <debug.h>
 #include <round.h>
 #include <string.h>
@@ -7,60 +6,12 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 #include "buffer-cache.h"
-/* Identifies an inode. */
-#define INODE_MAGIC 0x494e4f44
-
-/* The different break down of block
-   pointers in our inode */
-#define NUM_REG_BLK 122
-#define NUM_IND_BLK 1
-#define NUM_DBL_BLK 1
-#define NUM_TRP_BLK 1
-#define PTR_PER_BLK (BLOCK_SECTOR_SIZE/sizeof(uint32_t))
-
-#define INODE_IS_DIR 1
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
 static struct list open_inodes;
 
 static struct lock open_inodes_lock;
-
-struct indirect_block{
-	uint32_t ptrs[PTR_PER_BLK];
-};
-
-/* On-disk inode.
-   Must be exactly BLOCK_SECTOR_SIZE bytes long.
-   For conciseness in space the i suffix/prefix signifies an indirect block
-   a d signifies a double indirect block and a t signifies a triply
-   indirect block */
-struct disk_inode{
-	off_t file_length;               	/* File size in bytes. */
-	uint32_t flags;						/* Flags */
-	uint32_t magic;                     /* Magic number. */
-
-	/* Our design allows for changing the constants and experimenting
-	   with the benifits of different amount of indirection*/
-	uint32_t block_ptrs[NUM_REG_BLK];   /* The first X sectors of the file
-	 	 	 	 	 	 	 	 	 	   can be accessed directly*/
-	uint32_t i_ptrs[NUM_IND_BLK];		/* The indirect pointers in the inode*/
-	uint32_t d_ptrs[NUM_DBL_BLK];		/* The double indirect pointers inode*/
-	uint32_t t_ptrs[NUM_TRP_BLK];		/* The trp indirect pointers*/
-};
-
-/* In-memory inode. */
-struct inode{
-	block_sector_t sector;              /* Sector number of disk location. */
-	int open_cnt;                       /* Number of openers. */
-	bool removed;                       /* True if deleted, false otherwise. */
-	int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
-	off_t cur_length;					/* The current length of the file */
-	struct lock writer_lock;			/* Needed to extend the file */
-	struct lock reader_lock;			/* Needed to change or write cur_length*/
-	struct lock meta_data_lock;			/* A lock for open count */
-	struct list_elem elem;              /* Element in inode list. */
-};
 
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
@@ -261,7 +212,7 @@ void inode_init (void){
    When a seek/write combo creates empty sectors between the
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
-bool inode_create (block_sector_t sector, off_t length){
+bool inode_create (block_sector_t sector, off_t length, bool is_dir){
 	//printf("create\n");
 
 	if(!free_map_is_allocated(sector)){
@@ -282,6 +233,9 @@ bool inode_create (block_sector_t sector, off_t length){
 	/* Allocate as writes come in */
 	disk_inode->file_length = length;
 	disk_inode->magic = INODE_MAGIC;
+	if(is_dir){
+		disk_inode->flags &= INODE_IS_DIR;
+	}
 	bcache_unlock(e, UNLOCK_FLUSH);
 
 	//printf("create ret\n");
@@ -311,9 +265,14 @@ struct inode *inode_open (block_sector_t sector){
 		inode = list_entry (e, struct inode, elem);
 		lock_acquire(&inode->meta_data_lock);
 
-		if (inode->sector == sector && !inode->removed){
-			//printf("Reoppend\n");
-			inode->open_cnt++;
+		if (inode->sector == sector){
+			if(!inode->removed){
+				//printf("Reoppend\n");
+				inode->open_cnt++;
+			}else{
+				/* Can't open this inode any more */
+				inode = NULL;
+			}
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
 			return inode;
@@ -352,9 +311,16 @@ struct inode *inode_open (block_sector_t sector){
 	return inode;
 }
 
-/* Reopens and returns INODE. */
+/* Reopens and returns INODE if it hasn't been removed*/
 struct inode *inode_reopen (struct inode *inode){
 	ASSERT(inode != NULL);
+	lock_acquire(&inode->meta_data_lock);
+	if(inode->removed){
+		lock_release(&inode->meta_data_lock);
+		return NULL;
+	}
+	inode->open_cnt ++;
+	lock_release(&inode->meta_data_lock);
 	return inode;
 }
 
@@ -560,9 +526,8 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 /* Writes SIZE bytes from BUFFER into INODE, starting at OFFSET.
    Returns the number of bytes actually written, which may be
-   less than SIZE if end of file is reached or an error occurs.
-   (Normally a write at end of file would extend the inode, but
-   growth is not yet implemented.) */
+   less than SIZE if a kernel panic occurs. Grows the file if the
+   write goes past the end of file marker. */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
 	//printf("inode write %u %u inode %u\n", size, offset, inode->sector);
