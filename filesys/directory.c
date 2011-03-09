@@ -319,8 +319,9 @@ static struct dir *dir_open_path_wrap(const char *path,
 /* opens the directory and returns the leaf of the path if any. Paths
    with a trailing / are illegal file names. A path to a directory with
    a trailing / will open the directory and set file_name to point to
-   NULL. if "\" or "\\\\" etc is passed in this function will return the
-   root directory and the file_name will point to the forward slash.*/
+   NULL. if "/" or "///"  or "/.././.././." etc is passed in this
+   function will return the root directory and the file_name will point
+   to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
 	//printf("dir open path\n");
 	uint32_t path_length;

@@ -43,12 +43,12 @@ void filesys_done (void){
 	printf("Filesys done\n");
 }
 
-static inline bool file_is_self(char *file_name){
-	return file_name != NULL && ((strlen(file_name) == 2 && !strcmp(file_name, '..')) ||
+static inline bool file_is_self(const char *file_name){
+	return file_name != NULL && ((strlen(file_name) == 2 && !strcmp(file_name, "..")) ||
 			(strlen(file_name) == 1 && *file_name =='.'));
 }
 
-static inline bool file_is_root(char *file_name, struct dir *dir){
+static inline bool file_is_root(const char *file_name, struct dir *dir){
 	return (dir != NULL && dir->sector == ROOT_DIR_SECTOR && file_name != NULL
 			&& (file_is_self(file_name) || *file_name == '/'));
 }
