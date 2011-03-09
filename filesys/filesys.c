@@ -75,6 +75,7 @@ bool filesys_create_dir(const char *path){
 	}
 
 	dir_close (dir);
+	return success;
 }
 
 /* Opens the file with the given path.

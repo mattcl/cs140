@@ -48,7 +48,7 @@ struct dir *dir_open (struct inode *inode){
 	if(ret_elem != NULL){
 		ret_dir = hash_entry(ret_elem, struct dir, e);
 		lock_acquire(&ret_dir->dir_lock);
-		ret_dir.open_cnt ++;
+		ret_dir->open_cnt ++;
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
 		return ret_dir;
@@ -211,7 +211,7 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    path. Opens the last item as a directory and returns it. Returns NULL if
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
-			const struct dir *start_dir, bool first_call){
+			    struct dir *start_dir, bool first_call){
 
 	bool return_root = false;
 	if(*path == '\0'){
@@ -236,7 +236,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 	memset(buf, 0, NAME_MAX+1);
 	uint32_t name_chars = 0;
 	while(*path != '\0' && *path != '/' && name_chars != NAME_MAX + 1){
-		buf[name_chars] == *path;
+		buf[name_chars] = *path;
 		name_chars ++;
 		path ++;
 	}
@@ -248,9 +248,9 @@ static struct dir *dir_open_path_wrap(const char *path,
 
 	struct dir_entry e;
 	lock_acquire(&start_dir->dir_lock);
-	if(lookup (start_dir->inode, buf, &e, NULL)){
+	if(lookup (start_dir, buf, &e, NULL)){
 		lock_release(&start_dir->dir_lock);
-		struct inode *ino = inode_open(e->inode_sector);
+		struct inode *ino = inode_open(e.inode_sector);
 		if(!inode_is_dir(ino)){
 			inode_close(ino);
 			return NULL;
@@ -276,7 +276,7 @@ static struct dir *dir_open_path_wrap(const char *path,
    a trailing / will open the directory and set file_name to point to
    NULL. if "\" or "\\\\" etc is passed in this function will return the
    root directory and the file_name will point to the forward slash.*/
-struct dir *dir_open_path(const char *path, char **file_name){
+struct dir *dir_open_path(const char *path, const char **file_name){
 	uint32_t path_length = strlen(path);
 	char buf [path_length + 1];
 	memcpy(buf, path, path_length + 1); /* Copy all and null term */

@@ -23,7 +23,7 @@ struct dir{
 	struct hash_elem e;			 /* Elem in the dirs hash*/
 	struct lock dir_lock;		 /* Access to the directory only
 								    handled by one thread at a time*/
-	int open_cnt;                       /* Number of openers. */
+	int open_cnt;                /* Number of openers. */
 };
 
 /* A single directory entry. */
