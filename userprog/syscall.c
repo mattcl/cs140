@@ -202,31 +202,31 @@ static void syscall_handler (struct intr_frame *f){
 	}
 	/* Progect 4 Syscalls */
 	case SYS_CHDIR:{
-	        error = set_args(esp, 1, arg1);
+		error = set_args(esp, 1, arg1);
 		if(error < 0) system_exit(f, -1);
 		system_chdir(f, (char*)arg1[0]);
 		break;
 	}
 	case SYS_MKDIR:{
-      	        error = set_args(esp, 1, arg1);
+		error = set_args(esp, 1, arg1);
 		if(error < 0) system_exit(f, -1);
 		system_mkdir(f, (const char*)arg1[0]);
 		break;
 	}
 	case SYS_READDIR:{
-     	        error = set_args(esp, 2, arg1);
+		error = set_args(esp, 2, arg1);
 		if(error < 0) system_exit(f,-1);
-		system_readdir(f, arg1[0], (char*)arg1[1]);
+		system_readdir(f, (int)arg1[0], (char*)arg1[1]);
 		break;
 	}
 	case SYS_ISDIR:{
-       	        error = set_args(esp, 1, arg1);
+		error = set_args(esp, 1, arg1);
 		if(error < 0) system_exit(f,-1);
 		system_isdir(f, (int)arg1[0]);
 		break;
 	}
 	case SYS_INUMBER:{
-	        error = set_args(esp, 1, arg1);
+		error = set_args(esp, 1, arg1);
 		if(error < 0) system_exit(f, -1);
 		system_inumber(f, (int)arg1[0]);
 		break;
@@ -615,7 +615,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	   actually grow the stack larger than the max size by cleverly mmapping
 	   files*/
 	if((uint32_t)masked_uaddr + (num_pages * PGSIZE) >
-			(uint32_t)PHYS_BASE - (stack_size)){
+	(uint32_t)PHYS_BASE - (stack_size)){
 		f->eax = -1;
 		return;
 	}
@@ -877,81 +877,90 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 
 static void system_isdir(struct intr_frame *f, int fd){
-  struct file *file = file_for_fd(fd, false);
-   
-    if(file != NULL && inode_is_dir(file_get_inode(file))){
-        f->eax = (int) true;
-	return;
-    }
-    
-    f->eax = (int)false;
+	struct file *file = file_for_fd(fd, false);
+
+	if(file != NULL && inode_is_dir(file_get_inode(file))){
+		f->eax = true;
+		return;
+	}
+
+	f->eax = false;
 }
 
 static void system_inumber(struct intr_frame *f, int fd){
-  struct file *file = file_for_fd(fd, false);
-    if(file != NULL){
-        f->eax = inode_get_inumber(file_get_inode(file));
-	return;
-    }
+	struct file *file = file_for_fd(fd, false);
+	if(file != NULL){
+		f->eax = inode_get_inumber(file_get_inode(file));
+		return;
+	}
 
-    f->eax = -1;
+	f->eax = -1;
 }
 
 static void system_readdir(struct intr_frame *f, int fd, char *name){
-  if(!buffer_is_valid(name, NAME_MAX) + 1){
-        system_exit(f, -1);
-    }
+	if(!buffer_is_valid(name, (NAME_MAX + 1))){
+		system_exit(f, -1);
+	}
 
-    struct file *file; 
-    struct inode *inode;
-    struct dir *dir;
+	struct file *file = NULL;
+	struct inode *inode = NULL;
+	struct dir *dir = NULL;
+	bool success = false;
 
-    if((file = file_for_fd(fd, false))  && (inode = file_get_inode(file))
-       && inode_is_dir(inode) && (dir = dir_open(inode))){
-                 off_t off = file_tell(file);
-		 dir_readdir(dir, name, &off);
-                 dir_close(dir);
-		 f->eax = (int) true;
-		 return;
-    }
-    
-    f->eax = (int) false;
-    
+	pin_all_frames_for_buffer(name, (NAME_MAX + 1));
+	if((file = file_for_fd(fd, false)) != NULL &&
+			(inode = file_get_inode(file)) != NULL &&
+			inode_is_dir(inode) &&
+			(dir = dir_open(inode)) != NULL){
+		off_t off = file_tell(file);
+		dir_readdir(dir, name, &off);
+		dir_close(dir);
+		success = true;
+	}
+	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
+
+	dir_close(dir);
+
+	f->eax = success;
 }
 
 static void system_mkdir(struct intr_frame *f, const char *dir_name){
-    if(!string_is_valid(dir_name)){
-        system_exit(f,-1);
-	return;
-    }
+	if(!string_is_valid(dir_name)){
+		system_exit(f,-1);
+		return;
+	}
+	pin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
+	if(filesys_create_dir(dir_name)){
+		f->eax = true;
+	}
+	unpin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
 
-  if(filesys_create_dir(dir_name)){
-    f->eax = (int) true;
-  }
-  
-  f->eax = (int) false;
+	f->eax = false;
 }
 
 static void system_chdir(struct intr_frame *f, const char *dir_name){
-    if(!string_is_valid(dir_name)){
-        system_exit(f,-1);
-	return;
-    }    
+	if(!string_is_valid(dir_name)){
+		system_exit(f,-1);
+		return;
+	}
 
-    struct file *fp;
-    struct inode *inode;
-    struct dir *dir;
+	bool success = false;
+	struct file *fp = NULL;
+	struct inode *inode = NULL;
+	struct dir *dir = NULL;
+	pin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
+	if((fp = filesys_open(dir_name)) != NULL &&
+			(inode = file_get_inode(fp)) != NULL &&
+			inode_is_dir(inode) &&
+			(dir = dir_open(inode)) != NULL){
+		dir_close(thread_current()->process->cwd);
+		thread_current()->process->cwd = dir;
+		success = true;
+	}
+	unpin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
 
-  if((fp = filesys_open(dir_name)) && (inode = file_get_inode(fp))
-     && inode_is_dir(inode) && (dir = dir_open(inode))){
-        dir_close(thread_current()->process->cwd);
-	thread_current()->process->cwd = dir;
-	f->eax = (int) true;
-	return;
-  }
-     
-  f->eax = (int) false;
-  
+	f->eax = success;
+
 }
 
 

@@ -370,7 +370,6 @@ void inode_close (struct inode *inode){
 	}
 	//printf("closing inode\n");
 
-
 	/* Acquire both locks, make sure no IO occurs
 	   with the global lock held*/
 	lock_acquire(&open_inodes_lock);
