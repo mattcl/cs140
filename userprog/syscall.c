@@ -273,19 +273,19 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 	if(!string_is_valid(cmd_line)){
 		system_exit(f, -1);
 	}
+
+	pid_t ret = PID_ERROR;
+
 	pin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 	tid_t returned = process_execute(cmd_line);
 	if(returned == TID_ERROR){
-		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
-		f->eax = -1;
-		return;
+		ret = PID_ERROR;
 	}
-	pid_t ret =  child_tid_to_pid(returned);
-	if(ret == PID_ERROR){
-		unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
-		f->eax = -1;
-		return;
+
+	if(ret != PID_ERROR){
+		ret =  child_tid_to_pid(returned);
 	}
+
 	f->eax = ret;
 	unpin_all_frames_for_buffer(cmd_line, strlen(cmd_line));
 }
@@ -929,13 +929,13 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 		system_exit(f,-1);
 		return;
 	}
+	bool success = false;
 	pin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
 	if(filesys_create_dir(dir_name)){
-		f->eax = true;
+		success = true;
 	}
 	unpin_all_frames_for_buffer(dir_name, strlen(dir_name) + 1);
-
-	f->eax = false;
+	f->eax = success;
 }
 
 static void system_chdir(struct intr_frame *f, const char *dir_name){
