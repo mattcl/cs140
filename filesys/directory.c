@@ -33,6 +33,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 			&& (dir = dir_open(inode_open(sector))) != NULL
 			&& dir_add(dir, ".", sector) && dir_add(dir, "..", parent);
 
+	printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
 	dir_close(dir);
 
 	return success;
