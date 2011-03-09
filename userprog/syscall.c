@@ -738,6 +738,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		/* because we only get to here if dir is open
 		   this is the only place we need to call dir close */
 		dir_close(dir);
+		file_seek(file, off);
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
