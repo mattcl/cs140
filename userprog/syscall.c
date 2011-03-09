@@ -919,6 +919,13 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
     f->eax = (int) false;
     
 }
+static void system_mkdir(struct intr_frame *f, const char *dir_name){
+  struct dir *dir = recursive_open_dir(&dir_name);
+
+  
+}
+
+static void recursive_open_dir(const char ** dir_name)
 
 /* System call helpers */
 
