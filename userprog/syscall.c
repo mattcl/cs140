@@ -268,17 +268,12 @@ static void system_exec (struct intr_frame *f, const char *cmd_line ){
 		system_exit(f, -1);
 	}
 
-	bool cont = false;
 	pid_t ret = PID_ERROR;
 	uint32_t length = strlen(cmd_line) + 1; /* plus one for the null */
 
 	pin_all_frames_for_buffer(cmd_line, length);
 	tid_t returned = process_execute(cmd_line);
 	if(returned != TID_ERROR){
-		cont = true;
-	}
-
-	if(cont){
 		ret =  child_tid_to_pid(returned);
 	}
 
