@@ -312,7 +312,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 struct dir *dir_open_path(const char *path, const char **file_name){
 	//printf("dir open path\n");
 	uint32_t path_length;
-	if(path == NULL || (strlen(path) = path_length) == 0 || file_name == NULL){
+	if(path == NULL || (path_length = strlen(path)) == 0 || file_name == NULL){
 		return NULL;
 	}
 	char buf [path_length + 1];
