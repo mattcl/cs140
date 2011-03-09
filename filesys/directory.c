@@ -21,6 +21,7 @@ void dir_init(void){
 	lock_init(&open_dirs_lock);
 	hash_init(&open_dirs, dir_hash_func, dir_hash_comp, NULL);
 	thread_current()->process->cwd = dir_open_root();
+	printf("dir init pid %u cwd %p sector no %u\n", thread_current()->process->pid, thread_current()->process->cwd, thread_current()->process->cwd->sector);
 }
 
 /* Creates a directory with space for ENTRY_CNT entries in the
@@ -55,6 +56,7 @@ struct dir *dir_open (struct inode *inode){
 		ret_dir->open_cnt ++;
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
+		printf("Already existed\n");
 		return ret_dir;
 
 	}else{
@@ -74,8 +76,10 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_elem != NULL){
 			inode_close(inode);
 			free(ret_dir);
+			printf("returned null\n");
 			return NULL;
 		}else{
+			printf("returned new sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
