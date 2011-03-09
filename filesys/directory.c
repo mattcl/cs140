@@ -303,6 +303,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 		}
 	}else{
 		lock_release(&start_dir->dir_lock);
+		printf("return NULL\n");
 		return NULL;
 	}
 }
@@ -344,6 +345,10 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 			return root;
 		}else{
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
+			if(ret == NULL){
+				dir_close(root);
+				return NULL;
+			}
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
 				/* set file name to last \ */
