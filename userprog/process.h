@@ -170,17 +170,6 @@ struct exec_page_info{
 	bool writable;   		/* Whether this segment is read/write or read only*/
 };
 
-struct mmap_hash_entry{
-	mapid_t mmap_id;     	/* Key into the hash table*/
-	uint32_t begin_addr;	/* start address of this mmapping*/
-	uint32_t end_addr;		/* While we can calculate this from the filesize
-							   accessing the disk in any way is too slow so just
-							   keep it stored in memory*/
-	int fd;					/* FD for this mapping*/
-	uint32_t num_pages;		/* Number of pages so I don't have to think*/
-	struct hash_elem elem;  /* hash elem*/
-};
-
 void process_init(void);
 
 /* methods for dealing with pid's and tid's */
@@ -197,6 +186,10 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 bool process_lock(pid_t pid, struct lock *lock_to_grab);
+
+/* General fd helper functions */
+struct file *file_for_fd (int fd, bool mmap);
+struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
 /* Called by exception.c */
 bool process_exec_read_in(void *faulting_addr);

@@ -3,7 +3,6 @@
 #include <syscall-nr.h>
 #include "threads/thread.h"
 #include "threads/synch.h"
-#include "process.h"
 #include "pagedir.h"
 #include "threads/vaddr.h"
 #include <console.h>
@@ -19,6 +18,9 @@
 #include <string.h>
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "threads/interrupt.h"
+#include "userprog/process.h"
+#include "vm/mmap.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
@@ -52,9 +54,6 @@ static bool string_is_valid(const char* str);
 static unsigned int get_user_int(const uint32_t *masked_uaddr, int *error);
 static int get_user(const uint8_t *masked_uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
-
-static struct file *file_for_fd (int fd, bool mmap);
-static struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
 
 /* Maximum size of output to to go into the putbuf command*/
 #define MAX_SIZE_PUTBUF 300
@@ -789,37 +788,6 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
 
 
 /* System call helpers */
-
-
-/* Returns the file or NULL if the fd is invalid.
-   If the file is closed, but needs to be held to
-   read in for mmapping files then we need to return
-   NULL to functions that are not related to mmap
-   functions*/
-static struct file *file_for_fd (int fd, bool mmap){
-	struct fd_hash_entry *hash_elem = fd_to_fd_hash_entry (fd);
-	if(hash_elem == NULL){
-		return NULL;
-	}
-	if(!mmap && hash_elem->is_closed){
-		return NULL;
-	}
-	return  hash_elem->open_file;
-}
-
-/* Returns the corresponding fd_hash_entry for the fd
-   may return null, in which case we know that the fd
-   is invalid soooo..... */
-static struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
-	struct process *process = thread_current()->process;
-	struct fd_hash_entry key;
-	key.fd = fd;
-	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
-	if(fd_hash_elem == NULL){
-		return NULL;
-	}
-	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
-}
 
 /* This function validates the buffer to make sure that we can read
    the full extent of the buffer. Touches every page to make sure that

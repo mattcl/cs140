@@ -1092,6 +1092,39 @@ tid_t child_pid_to_tid (pid_t c_pid){
 	return PID_ERROR;
 }
 
+/* FD helper functions */
+
+/* Returns the file or NULL if the fd is invalid.
+   If the file is closed, but needs to be held to
+   read in for mmapping files then we need to return
+   NULL to functions that are not related to mmap
+   functions*/
+struct file *file_for_fd (int fd, bool mmap){
+	struct fd_hash_entry *hash_elem = fd_to_fd_hash_entry (fd);
+	if(hash_elem == NULL){
+		return NULL;
+	}
+	if(!mmap && hash_elem->is_closed){
+		return NULL;
+	}
+	return  hash_elem->open_file;
+}
+
+/* Returns the corresponding fd_hash_entry for the fd
+   may return null, in which case we know that the fd
+   is invalid soooo..... */
+struct fd_hash_entry * fd_to_fd_hash_entry (int fd){
+	struct process *process = thread_current()->process;
+	struct fd_hash_entry key;
+	key.fd = fd;
+	struct hash_elem *fd_hash_elem = hash_find(&process->open_files, &key.elem);
+	if(fd_hash_elem == NULL){
+		return NULL;
+	}
+	return hash_entry(fd_hash_elem, struct fd_hash_entry, elem);
+}
+
+
 /* HASH FUNCTIONS */
 
 /* Compare for open file hashes */
