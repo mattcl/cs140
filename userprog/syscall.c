@@ -730,6 +730,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 			(dir = dir_open(inode)) != NULL){
 
 		off_t off = file_tell(file);
+		printf("%u offset\n", off);
 		success = dir_readdir(dir, name, &off);
 		/* Skip over . and .. */
 		while(success && ((!strcmp(name, ".") || !strcmp(name, "..")))){
@@ -739,6 +740,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		   this is the only place we need to call dir close */
 		dir_close(dir);
 		file_seek(file, off);
+		printf("%u offset\n", off);
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
