@@ -123,6 +123,7 @@ void free_map_persist(void){
 	/* This function should have found all of the sectors in the
 	   free map file already allocated*/
 	if(free_map_file == NULL){
+		printf("didn't persist\n");
 		return;
 	}
 	/* We count on the atomicity of setting and flipping bits to
