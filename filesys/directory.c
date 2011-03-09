@@ -151,8 +151,8 @@ static bool lookup (const struct dir *dir, const char *name,
 	}
 
 	/* special consideration for opening / because
-	   / is not actually in the directory. We convery
-	   / to . which is*/
+	   / is not actually in the directory. We convert
+	   / to . which is what / means anyway*/
 	if(strlen(name) == 1 && *name == '/'){
 		name = ".\0";
 	}

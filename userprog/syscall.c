@@ -728,9 +728,11 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 			(inode = file_get_inode(file)) != NULL &&
 			inode_is_dir(inode) &&
 			(dir = dir_open(inode)) != NULL){
+
 		off_t off = file_tell(file);
 		dir_readdir(dir, name, &off);
 		dir_close(dir);
+		dir = NULL; /* Prevent dir from being freed twice*/
 		success = true;
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
