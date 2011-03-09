@@ -8,7 +8,7 @@
 #include "userprog/pagedir.h"
 #include "frame.h"
 #include "swap.h"
-#include "userprog/syscall.h"
+#include "mmap.h"
 
 static struct frame_table f_table;
 
