@@ -14,9 +14,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "lib/fixed-point.h"
-#ifdef USERPROG
 #include "userprog/process.h"
-#endif
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -174,12 +172,10 @@ void thread_tick (void){
 	if(t == idle_thread){
 		idle_ticks++;
 	}
-#ifdef USERPROG
+
 	else if(t->pagedir != NULL){
 		user_ticks++;
-	}
-#endif
-	else {
+	}else {
 		kernel_ticks++;
 	}
 
@@ -244,7 +240,6 @@ static tid_t thread_create__ (const char *name, int priority,
 	   member cannot be observed. */
 	old_level = intr_disable ();
 
-#ifdef USERPROG
 	/* Initialize the user process */
 	if(!kernel){
 		struct process *p = calloc (1, sizeof(struct process));
@@ -259,9 +254,11 @@ static tid_t thread_create__ (const char *name, int priority,
 			return TID_ERROR;
 		}
 	}else{
+		/* kernel thread will run with the
+		   init page table in memory */
 		t->process = NULL;
+		t->pagedir = NULL;
 	}
-#endif
 	/* Stack frame for kernel_thread(). */
 	kf = alloc_frame (t, sizeof *kf);
 	kf->eip = NULL;
@@ -381,9 +378,7 @@ void thread_exit (void){
 	   when it calls thread_schedule_tail(). */
 	list_remove (&thread_current()->allelem);
 
-#ifdef USERPROG
 	process_exit ();
-#endif
 
 	release_locks();
 	thread_current ()->status = THREAD_DYING;
@@ -664,10 +659,9 @@ void thread_schedule_tail (struct thread *prev){
 	struct thread *cur = running_thread ();
 	/* Mark us as running. */
 	cur->status = THREAD_RUNNING;
-#ifdef USERPROG
 	/* Activate the new address space. */
 	process_activate ();
-#endif
+
 	/* prev and cur can't be the same and dying or we will
 	 * reach Non-reachable code as a thread that is dying
 	 * now is running and will try to resume execution*/

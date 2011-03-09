@@ -92,7 +92,7 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;       /* List element. */
 
-#ifdef USERPROG
+
 	/* Owned by userprog/process.c. */
 	uint32_t *pagedir; /* Page directory. */
 
@@ -101,7 +101,6 @@ struct thread {
      need a handle to the processes open files and other data*/
 	struct process *process; /* Process data */
 
-#endif
 
 	/* Owned by thread.c. */
 	int64_t wake_time;           /* time used by thread sleep */

@@ -276,7 +276,7 @@ void *memset (void *dst_, int value, size_t size){
 	return dst_;
 }
 
-/* Returns the length of STRING. */
+/* Returns the length of STRING. DOES NOT INCLUDE THE NULL TERMINATOR*/
 size_t strlen (const char *string){
 	const char *p;
 
