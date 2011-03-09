@@ -49,14 +49,23 @@ bool filesys_create (const char *path, off_t initial_size){
 	block_sector_t inode_sector = 0;
 	const char *file_name;
 	struct dir *dir = dir_open_path (path, &file_name);
+
+	/* debug variables */
+	bool s1 = false;
+	bool s2 = false;
+	bool s3 = false;
+
 	printf("Creating filename %s at path %s \n", file_name, path);
 	bool success = (dir != NULL
-			&& free_map_allocate (1, &inode_sector)
-			&& inode_create (inode_sector, initial_size, false)
-			&& dir_add (dir, file_name, inode_sector));
+			&& s1 = free_map_allocate (1, &inode_sector)
+			&& s2 = inode_create (inode_sector, initial_size, false)
+			&& s3 = dir_add (dir, file_name, inode_sector));
+
+
 	if(!success){
-		printf("Failed to create\n");
+		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
+
 	if(!success && inode_sector != 0){
 		free_map_release (inode_sector, 1);
 	}
