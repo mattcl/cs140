@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <hash.h>
 #include "devices/block.h"
+#include "threads/synch.h"
 
 /* Maximum length of a file name component.
    This is the traditional UNIX maximum length.

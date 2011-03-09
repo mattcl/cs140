@@ -47,7 +47,7 @@ void filesys_done (void){
 bool filesys_create (const char *path, off_t initial_size){
 	block_sector_t inode_sector = 0;
 	char *file_name;
-	struct dir *dir = dir_open_path (name, &file_name);
+	struct dir *dir = dir_open_path (path, &file_name);
 	bool success = (dir != NULL
 			&& free_map_allocate (1, &inode_sector)
 			&& inode_create (inode_sector, initial_size, false)
@@ -65,7 +65,7 @@ bool filesys_create (const char *path, off_t initial_size){
 bool filesys_create_dir(const char *path){
 	block_sector_t inode_sector = 0;
 	char *file_name ;
-	struct dir *dir = dir_open_path (name, &file_name);
+	struct dir *dir = dir_open_path (path, &file_name);
 	bool success = (dir != NULL
 			&& free_map_allocate (1, &inode_sector)
 			&& dir_create (inode_sector, dir_get_inode(dir)->sector)
@@ -84,7 +84,7 @@ bool filesys_create_dir(const char *path){
    leading up to the leaf was invalid. */
 struct file * filesys_open (const char *path){
 	char *file_name ;
-	struct dir *dir = dir_open_path (name, &file_name);
+	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
 
 	if(dir != NULL){
@@ -103,7 +103,7 @@ struct file * filesys_open (const char *path){
    or if an internal memory allocation fails. */
 bool filesys_remove (const char *path){
 	char *file_name ;
-	struct dir *dir = dir_open_path (name, &file_name);
+	struct dir *dir = dir_open_path (path, &file_name);
 	bool success = (dir != NULL) && dir_remove (dir, file_name);
 	dir_close (dir);
 

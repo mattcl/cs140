@@ -119,7 +119,7 @@ void free_map_create (void){
 }
 
 void free_map_persist(void){
-	printf("persist\n");
+	//printf("persist\n");
 	/* This function should have found all of the sectors in the
 	   free map file already allocated*/
 	if(free_map_file == NULL){

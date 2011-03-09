@@ -1,5 +1,4 @@
 #include "filesys/inode.h"
-#include <list.h>
 #include <debug.h>
 #include <round.h>
 #include <string.h>
@@ -444,21 +443,6 @@ void inode_remove (struct inode *inode){
 	lock_acquire(&inode->meta_data_lock);
 	inode->removed = true;
 	lock_release(&inode->meta_data_lock);
-}
-
-bool inode_remove_unaccessed(struct inode *inode){
-	ASSERT (inode != NULL);
-	bool remove = false;
-	lock_acquire(&inode->meta_data_lock);
-	if(inode->open_cnt == 1){
-		/* if only this thread has access to the inode
-		   remove it so that all other threads will not
-		   be able to access this inode*/
-		inode->removed = true;
-		remove = true;
-	}
-	lock_release(&inode->meta_data_lock);
-	return remove;
 }
 
 /* Reads SIZE bytes from INODE into BUFFER, starting at position OFFSET.

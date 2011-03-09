@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include "filesys/off_t.h"
 #include "devices/block.h"
+#include <stdint.h>
+#include "threads/synch.h"
+#include <list.h>
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -63,7 +66,6 @@ struct inode *inode_reopen (struct inode *inode);
 block_sector_t inode_get_inumber (const struct inode *inode);
 void inode_close (struct inode *inode);
 void inode_remove (struct inode *inode);
-bool inode_remove_unaccessed(struct inode *inode);
 off_t inode_read_at (struct inode *inode, void *buf, off_t size, off_t offset);
 off_t inode_write_at (struct inode *inode, const void *buf, off_t size, off_t offset);
 void inode_deny_write (struct inode *inode);
