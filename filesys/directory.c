@@ -168,9 +168,11 @@ static bool lookup (const struct dir *dir, const char *name,
 			if(ofsp != NULL){
 				*ofsp = ofs;
 			}
+			printf("lookup true\n");
 			return true;
 		}
 	}
+	printf("lookup false\n");
 	return false;
 }
 
@@ -291,10 +293,12 @@ static struct dir *dir_open_path_wrap(const char *path,
 
 		struct dir *next_dir = dir_open(ino);
 		if(*path == '\0'){
+			printf("Return next dir\n");
 			return next_dir;
 		}else{
 			struct dir *ret = dir_open_path_wrap(path, next_dir, false);
 			dir_close(next_dir);
+			printf("return ret\n");
 			return ret;
 		}
 	}else{
