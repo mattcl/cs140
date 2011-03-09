@@ -235,6 +235,8 @@ static struct dir *dir_open_path_wrap(const char *path,
 		path ++;
 	}
 
+	printf("past /\n");
+
 	if(*path == '\0'){
 		/* path ended in a \ */
 		if(return_root){
@@ -292,8 +294,8 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	uint32_t path_length = strlen(path);
 	char buf [path_length + 1];
 	memcpy(buf, path, path_length + 1); /* Copy all and null term */
-	char *dir_path;
-	char *file_leaf;
+	char *dir_path = NULL;
+	char *file_leaf = NULL;
 	bool is_relative = dir_path_and_leaf(buf, &dir_path, &file_leaf);
 	if(file_leaf == NULL){
 		*file_name = NULL;
@@ -302,14 +304,14 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	}
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
-		if(dir_path != NULL){
+		if(dir_path == NULL){
 			return cwd;
 		}else{
 			return dir_open_path_wrap(dir_path, cwd, false);
 		}
 	}else{
 		struct dir* root = dir_open_root();
-		if(!dir_path){
+		if(dir_path == NULL){
 			return root;
 		}else{
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
