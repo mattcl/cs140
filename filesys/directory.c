@@ -350,7 +350,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
 			if(ret == NULL){
 				dir_close(root);
-				pritnf("returned null 2\n");
+				printf("returned null 2\n");
 				return NULL;
 			}
 			if(ret->inode->sector == root->inode->sector){
