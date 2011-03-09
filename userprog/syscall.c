@@ -18,6 +18,8 @@
 #include "vm/frame.h"
 #include <string.h>
 #include "devices/timer.h"
+#include "filesys/inode.h"
+#include "filesys/directory.h"
 
 /* THIS IS AN INTERNAL INTERRUPT HANDLER */
 static void syscall_handler (struct intr_frame *);
@@ -36,6 +38,12 @@ static void system_tell (struct intr_frame *f, int fd );
 static void system_close (struct intr_frame *f, int fd );
 static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr);
 static void system_munmap (struct intr_frame *f, mapid_t map_id);
+static void system_chdir(struct intr_frame *f, const char *dir);
+static void system_mkdir(struct intr_frame *f, const char *dir);
+static void system_readdir(struct intr_frame *f, int fd, char *name);
+static void system_isdir(struct intr_frame *f, int fd);
+static void system_inumber(struct intr_frame *f, int fd);
+
 
 static struct mmap_hash_entry *mapid_to_hash_entry(mapid_t mid);
 static bool buffer_is_valid (const void * buffer, unsigned int size);
@@ -196,17 +204,19 @@ static void syscall_handler (struct intr_frame *f){
 	case SYS_CHDIR:{
 	        error = set_args(esp, 1, arg1);
 		if(error < 0) system_exit(f, -1);
-		system_chrdr(f, (char*)arg1[0]);
+		system_chdir(f, (char*)arg1[0]);
 		break;
 	}
 	case SYS_MKDIR:{
-		//printf("SYS_MKDIR called\n");
+      	        error = set_args(esp, 1, arg1);
+		if(error < 0) system_exit(f, -1);
+		system_mkdir(f, (const char*)arg1[0]);
 		break;
 	}
 	case SYS_READDIR:{
      	        error = set_args(esp, 2, arg1);
 		if(error < 0) system_exit(f,-1);
-		system_readdir(f, arg1[0], arg1[1]);
+		system_readdir(f, arg1[0], (char*)arg1[1]);
 		break;
 	}
 	case SYS_ISDIR:{
@@ -865,18 +875,6 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	return true;
 }
 
-static void system_chrdir(struct intr_frame *f, const char* dir_name){
-    if(!string_is_valid(dir_name)){
-        system_exit(f,-1);
-	return;
-    }
-
-   
-    
-    /* At this point we want to know if we are doing a lookup for a
-       or absolute path */
-    
-}
 
 static void system_isdir(struct intr_frame *f, int fd){
   struct file *file = file_for_fd(fd, false);
@@ -900,7 +898,7 @@ static void system_inumber(struct intr_frame *f, int fd){
 }
 
 static void system_readdir(struct intr_frame *f, int fd, char *name){
-    if(!bugger_is_valid(name, READDIR_MAX_LEN + 1)){
+  if(!buffer_is_valid(name, NAME_MAX) + 1){
         system_exit(f, -1);
     }
 
@@ -909,8 +907,9 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
     struct dir *dir;
 
     if((file = file_for_fd(fd, false))  && (inode = file_get_inode(file))
-       && inode_is_dir(inode) && (dir = dir_open(inode)) &&
-         dir_readdir(dir, name)){
+       && inode_is_dir(inode) && (dir = dir_open(inode))){
+                 off_t off = file_tell(file);
+		 dir_readdir(dir, name, &off);
                  dir_close(dir);
 		 f->eax = (int) true;
 		 return;
@@ -919,13 +918,42 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
     f->eax = (int) false;
     
 }
-static void system_mkdir(struct intr_frame *f, const char *dir_name){
-  struct dir *dir = recursive_open_dir(&dir_name);
 
+static void system_mkdir(struct intr_frame *f, const char *dir_name){
+    if(!string_is_valid(dir_name)){
+        system_exit(f,-1);
+	return;
+    }
+
+  if(filesys_create_dir(dir_name)){
+    f->eax = (int) true;
+  }
+  
+  f->eax = (int) false;
+}
+
+static void system_chdir(struct intr_frame *f, const char *dir_name){
+    if(!string_is_valid(dir_name)){
+        system_exit(f,-1);
+	return;
+    }    
+
+    struct file *fp;
+    struct inode *inode;
+    struct dir *dir;
+
+  if((fp = filesys_open(dir_name)) && (inode = file_get_inode(fp))
+     && inode_is_dir(inode) && (dir = dir_open(inode))){
+        dir_close(thread_current()->process->cwd);
+	thread_current()->process->cwd = dir;
+	f->eax = (int) true;
+	return;
+  }
+     
+  f->eax = (int) false;
   
 }
 
-static void recursive_open_dir(const char ** dir_name)
 
 /* System call helpers */
 
