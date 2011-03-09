@@ -21,13 +21,13 @@ void dir_init(void){
 	lock_init(&open_dirs_lock);
 	hash_init(&open_dirs, dir_hash_func, dir_hash_comp, NULL);
 	thread_current()->process->cwd = dir_open_root();
-	printf("dir init pid %u cwd %p sector no %u\n", thread_current()->process->pid, thread_current()->process->cwd, thread_current()->process->cwd->sector);
+	//printf("dir init pid %u cwd %p sector no %u\n", thread_current()->process->pid, thread_current()->process->cwd, thread_current()->process->cwd->sector);
 }
 
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, block_sector_t parent){
-	printf("dir create\n");
+	//printf("dir create\n");
 	struct dir *dir = NULL;
 	bool success = inode_create (sector, 0, true)
 			&& (dir = dir_open(inode_open(sector))) != NULL
@@ -41,7 +41,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *dir_open (struct inode *inode){
-	printf("dir open\n");
+	//printf("dir open\n");
 	if(inode == NULL){
 		return NULL;
 	}
@@ -56,7 +56,7 @@ struct dir *dir_open (struct inode *inode){
 		ret_dir->open_cnt ++;
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
-		printf("Already existed\n");
+		//printf("Already existed\n");
 		return ret_dir;
 
 	}else{
@@ -76,10 +76,10 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_elem != NULL){
 			inode_close(inode);
 			free(ret_dir);
-			printf("returned null\n");
+			//printf("returned null\n");
 			return NULL;
 		}else{
-			printf("returned new sector %u \n", ret_dir->sector);
+			//printf("returned new sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
@@ -88,20 +88,20 @@ struct dir *dir_open (struct inode *inode){
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
 struct dir *dir_open_root (void){
-	printf("dir open root\n");
+	//printf("dir open root\n");
 	return dir_open (inode_open (ROOT_DIR_SECTOR));
 }
 
 /* Opens and returns a new directory for the same inode as DIR.
    Returns a null pointer on failure. */
 struct dir *dir_reopen (struct dir *dir){
-	printf("dir reopen\n");
+	//printf("dir reopen\n");
 	return dir_open (inode_reopen (dir->inode));
 }
 
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
-	printf("dir close\n");
+	//printf("dir close\n");
 	ASSERT(dir != NULL);
 
 	struct hash_elem *ret_elem;
@@ -111,7 +111,7 @@ void dir_close (struct dir *dir){
 	lock_release(&dir->dir_lock);
 
 	if(delete){
-		printf("actually deleted\n");
+		//printf("actually deleted\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
 		inode_close(dir->inode);
@@ -122,7 +122,7 @@ void dir_close (struct dir *dir){
 
 /* Returns the inode encapsulated by DIR. */
 struct inode *dir_get_inode (struct dir *dir){
-	printf("dir get inode\n");
+	//printf("dir get inode\n");
 	ASSERT(dir != NULL);
 	/* If it isn't null then we know that it has opencnt > 0
 	   and the dir inode never changes after creation */
@@ -136,7 +136,7 @@ struct inode *dir_get_inode (struct dir *dir){
    otherwise, returns false and ignores EP and OFSP. */
 static bool lookup (const struct dir *dir, const char *name,
 		struct dir_entry *ep, off_t *ofsp){
-	printf("lookup\n");
+	//printf("lookup\n");
 
 	ASSERT(lock_held_by_current_thread(&dir->dir_lock));
 	struct dir_entry e;
@@ -173,7 +173,7 @@ static bool lookup (const struct dir *dir, const char *name,
    slash seperating them will be turned into a null character.
    Asserts that the full path passed in has a size greater than 0 */
 static bool dir_path_and_leaf(char *full, char **path, char **leaf){
-	printf("dir path and leaf\n");
+	//printf("dir path and leaf\n");
 	uint32_t last_slash = 0;
 	uint32_t count = 0;
 	ASSERT(strlen(full) > 0);
@@ -228,7 +228,7 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
 
-	printf("dir open path wrap\n");
+	//printf("dir open path wrap\n");
 	bool return_root = false;
 	if(*path == '\0'){
 		return NULL;
@@ -240,7 +240,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 		path ++;
 	}
 
-	printf("past /\n");
+	//printf("past /\n");
 
 	if(*path == '\0'){
 		/* path ended in a \ */
@@ -295,7 +295,7 @@ static struct dir *dir_open_path_wrap(const char *path,
    NULL. if "\" or "\\\\" etc is passed in this function will return the
    root directory and the file_name will point to the forward slash.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
-	printf("dir open path\n");
+	//printf("dir open path\n");
 	uint32_t path_length = strlen(path);
 	char buf [path_length + 1];
 	memcpy(buf, path, path_length + 1); /* Copy all and null term */
@@ -310,7 +310,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
-			printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
+			//printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
 			return dir_reopen(cwd);
 		}else{
 			return dir_open_path_wrap(dir_path, cwd, false);
@@ -318,7 +318,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	}else{
 		struct dir* root = dir_open_root();
 		if(dir_path == NULL){
-			printf("returned root 1\n");
+			//printf("returned root 1\n");
 			return root;
 		}else{
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
@@ -326,11 +326,11 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 				dir_close(ret);
 				/* set file name to last \ */
 				*file_name = path + (path_length-1);
-				printf("returned root 2\n");
+				//printf("returned root 2\n");
 				return root;
 			}else{
 				dir_close(root);
-				printf("returned non root directory\n");
+				//printf("returned non root directory\n");
 				return ret;
 			}
 		}
@@ -343,7 +343,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
    On success, sets *INODE to an inode for the file, otherwise to
    a null pointer.  The caller must close *INODE. */
 bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
-	printf("dir lookup\n");
+	//printf("dir lookup\n");
 	struct dir_entry e;
 
 	ASSERT (dir != NULL);
@@ -365,7 +365,7 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
    Fails if NAME is invalid (i.e. too long) or a disk or memory
    error occurs. */
 bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
-	printf("dir add %p\n", dir);
+	//printf("dir add %p\n", dir);
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;
@@ -409,7 +409,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	done:
 	lock_release(&dir->dir_lock);
 
-	printf("added\n");
+	//printf("added\n");
 	return success;
 }
 
@@ -417,7 +417,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
-	printf("dir remove\n");
+	//printf("dir remove\n");
 	struct dir_entry e;
 	struct inode *inode = NULL;
 	bool success = false;
@@ -490,7 +490,7 @@ bool dir_remove (struct dir *dir, const char *name){
    if the directory contains no more entries. Changes OFF.
    Call the first time with off of 0. Inspired by strtok_r. */
 bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1], off_t *off){
-	printf("dir readdir\n");
+	//printf("dir readdir\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
 	while(inode_read_at (dir->inode, &e, sizeof(struct dir_entry), *off)
@@ -507,7 +507,7 @@ bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1], off_t *off){
 }
 
 uint32_t dir_file_count(struct dir *dir){
-	printf("dir file_count\n");
+	//printf("dir file_count\n");
 	lock_acquire(&dir->dir_lock);
 	off_t off = 0;
 	uint32_t file_count = 0;

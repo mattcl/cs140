@@ -35,7 +35,7 @@ void filesys_init (bool format){
 /* Shuts down the file system module, writing any unwritten data
    to disk. */
 void filesys_done (void){
-	printf("Filesys done\n");
+	//printf("Filesys done\n");
 	return;
 	bcache_flush();
 	free_map_close ();
@@ -88,8 +88,8 @@ struct file * filesys_open (const char *path){
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
 	struct inode *inode = NULL;
-	printf("filesys open dir_open path success name is %s\n", file_name);
-	printf("dir sector %u root sector %u\n", dir->sector, ROOT_DIR_SECTOR);
+	//printf("filesys open dir_open path success name is %s\n", file_name);
+	//printf("dir sector %u root sector %u\n", dir->sector, ROOT_DIR_SECTOR);
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
