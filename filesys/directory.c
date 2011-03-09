@@ -154,7 +154,7 @@ static bool lookup (const struct dir *dir, const char *name,
 	   / is not actually in the directory. We convery
 	   / to . which is*/
 	if(strlen(name) == 1 && *name == '/'){
-		name = "/\0";
+		name = ".\0";
 	}
 
 
