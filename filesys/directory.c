@@ -488,9 +488,9 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
-	//printf("dir remove\n");
+	printf("dir remove\n");
 	if(dir == NULL || name == NULL || strlen(name) == 0){
-		//printf("invalid parameters\n");
+		printf("invalid parameters\n");
 		return false;
 	}
 
@@ -509,14 +509,14 @@ bool dir_remove (struct dir *dir, const char *name){
 	lock_acquire(&dir->dir_lock);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
-		//printf("file doesn't exist\n");
+		printf("file doesn't exist\n");
 		goto done;
 	}
 
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
-		//printf("inode is null\n");
+		printf("inode is null\n");
 		goto done;
 	}
 
@@ -531,7 +531,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(ret_elem != NULL){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
-			//printf("directory in use by a thread\n");
+			printf("directory in use by a thread\n");
 			goto done;
 		}
 
@@ -545,7 +545,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(file_count != 2){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
-			//printf("File count != 2 goto done\n");
+			printf("File count != 2 goto done\n");
 			goto done;
 		}
 	}
@@ -555,7 +555,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	/* Erase directory entry. */
 	e.in_use = false;
 	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_entry)){
-		//printf("Goto done 5\n");
+		printf("Goto done 5\n");
 		goto done;
 	}
 
@@ -565,11 +565,11 @@ bool dir_remove (struct dir *dir, const char *name){
 	inode_remove (inode);
 	success = true;
 
-	//printf("Inode removed\n");
+	printf("Inode removed\n");
 
 	done:
 	inode_close (inode);
-	//printf("dir removes succes %u\n", success);
+	printf("dir removes succes %u\n", success);
 	return success;
 }
 
