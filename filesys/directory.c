@@ -507,6 +507,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	   is in use */
 	lock_acquire(&open_dirs_lock);
 	lock_acquire(&dir->dir_lock);
+	dir_file_count(dir);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
 		printf("file doesn't exist\n");
