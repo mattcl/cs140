@@ -150,9 +150,10 @@ bool initialize_process (struct process *p, struct thread *our_thread){
 	}
 
 	/* if this is not the global process then we
-	   will inherit the current threads cwd*/
+	   will inherit the current threads cwd otherwise
+	   we will open a new instance of the cwd*/
 	if(p->pid != 1){
-		p->cwd = dir_reopen(thread_current()->process->cwd);
+		p->cwd = dir_open(thread_current()->process->cwd->inode);
 	}
 
 	return true;

@@ -382,7 +382,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 }
 
 
-/* Closes INODE and writes it to disk.
+/* Closes INODE and writes it to disk !!! May wait on IO.
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
 void inode_close (struct inode *inode){
