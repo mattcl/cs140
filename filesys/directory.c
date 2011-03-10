@@ -490,7 +490,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 bool dir_remove (struct dir *dir, const char *name){
 	printf("dir remove in dir %u\n", dir->inode->sector);
 	if(dir == NULL || name == NULL || strlen(name) == 0){
-		printf("invalid parameters\n");
+		//printf("invalid parameters\n");
 		return false;
 	}
 
@@ -507,17 +507,17 @@ bool dir_remove (struct dir *dir, const char *name){
 	   is in use */
 	lock_acquire(&open_dirs_lock);
 	lock_acquire(&dir->dir_lock);
-	dir_file_count(dir);
+	//dir_file_count(dir);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
-		printf("file doesn't exist\n");
+		//printf("file doesn't exist\n");
 		goto done;
 	}
 
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
-		printf("inode is null\n");
+		//printf("inode is null\n");
 		goto done;
 	}
 
@@ -532,7 +532,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(ret_elem != NULL){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
-			printf("directory in use by a thread\n");
+			//printf("directory in use by a thread\n");
 			goto done;
 		}
 
@@ -540,16 +540,19 @@ bool dir_remove (struct dir *dir, const char *name){
 		sub_dir.inode = inode;
 		sub_dir.sector = e.inode_sector;
 
-		printf("trying to remove subdir at %u %u\n", inode->sector, e.inode_sector);
+		//printf("trying to remove subdir at %u %u\n", inode->sector, e.inode_sector);
 
 		uint32_t file_count = dir_file_count(&sub_dir);
 
 		if(file_count != 2){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
-			printf("File count != 2 goto done %u\n", file_count);
+			//printf("File count != 2 goto done %u\n", file_count);
 			goto done;
 		}
+
+		/* Right here need to check if the inode has anybody besides use that has
+		   opened it, if so then don't remove and exit, if not just remove and continue*/
 	}
 
 	lock_release(&open_dirs_lock);
@@ -558,11 +561,11 @@ bool dir_remove (struct dir *dir, const char *name){
 	e.in_use = false;
 	e.inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_entry)){
-		printf("Goto done 5\n");
+		//printf("Goto done 5\n");
 		goto done;
 	}
 
-	dir_file_count(dir);
+	//dir_file_count(dir);
 
 	lock_release(&dir->dir_lock);
 
@@ -570,7 +573,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	inode_remove (inode);
 	success = true;
 
-	printf("Inode removed access count %u\n", inode->open_cnt);
+	//printf("Inode removed access count %u\n", inode->open_cnt);
 
 	done:
 	inode_close (inode);
@@ -619,7 +622,7 @@ uint32_t dir_file_count(struct dir *dir){
 		off += sizeof(struct dir_entry);
 		if(e.in_use){
 			file_count ++;
-			printf("file found %s %u\n", e.name, e.inode_sector);
+			//printf("file found %s %u\n", e.name, e.inode_sector);
 		}
 	}
 	return file_count;
