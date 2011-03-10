@@ -415,8 +415,7 @@ void inode_close (struct inode *inode){
 			//bcache_flush();
 			bcache_invalidate();
 
-			struct cache_entry *entry =
-					bcache_get_and_lock(inode->sector, CACHE_DATA);
+			struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_DATA);
 			struct disk_inode *d_inode = (struct disk_inode*)entry->data;
 			/* Here we need to go through the entire
 			   inode structure and get all of the sectors
