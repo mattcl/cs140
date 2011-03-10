@@ -719,6 +719,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 	}
 
 
+	printf("readdir\n");
 	struct file *file = NULL;
 	struct inode *inode = NULL;
 	struct dir *dir = NULL;
