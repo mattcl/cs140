@@ -283,10 +283,13 @@ void bcache_unlock(struct cache_entry *entry, uint32_t flag){
 
 	lock_acquire(&cache_lock);
 	entry->num_accessors--;
-	/* Wake up the evictor of this thread*/
+
+	/* Invalidate the cache entry so that it will not be written to
+	   disk*/
 	if(UNLOCK_INVALIDATE == flag){
 		entry->flags |= CACHE_E_INVALID;
 	}
+	/* Wake up the evictor of this thread*/
 	cond_signal(&entry->num_accessors_dec, &cache_lock);
 	lock_release(&cache_lock);
 }
