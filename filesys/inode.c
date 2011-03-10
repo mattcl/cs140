@@ -412,7 +412,7 @@ void inode_close (struct inode *inode){
 			/* invalidate the cache so that cache_entries from
 			   this file won't be found and writen out to disk
 			    later on in kernel execution*/
-			//bcache_flush();
+			bcache_flush();
 			bcache_invalidate();
 
 			struct cache_entry *entry =
