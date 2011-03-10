@@ -561,10 +561,11 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	}
 
 	printf("success removing\n");
+	success = true;
 done:
 	lock_release(&dir->dir_lock);
 	inode_close(inode);
-	return true;
+	return success;
 }
 
 /* Removes any entry for NAME in DIR.
@@ -616,7 +617,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		ASSERT(!lock_held_by_current_thread(&open_dirs_lock));
 		return success;
 	}else{
-		success = dir_remove_file(dir, inode &e, ofs);
+		success = dir_remove_file(dir, inode, &e, ofs);
 		ASSERT(!lock_held_by_current_thread(&dir->dir_lock));
 		ASSERT(!lock_held_by_current_thread(&open_dirs_lock));
 		return success;
