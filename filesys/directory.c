@@ -481,15 +481,16 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
+	printf("dir remove\n");
 	if(dir == NULL || name == NULL || strlen(name) == 0){
+		printf("invalid parameters\n");
 		return false;
 	}
 
-	//printf("dir remove\n");
 	struct dir_entry e;
 	struct inode *inode = NULL;
 	bool success = false;
-	off_t ofs;
+	off_t ofs = 0;
 
 	ASSERT (dir != NULL);
 	ASSERT (name != NULL);
@@ -501,17 +502,19 @@ bool dir_remove (struct dir *dir, const char *name){
 	lock_acquire(&dir->dir_lock);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
+		printf("file doesn't exist\n");
 		goto done;
 	}
 
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
+		printf("inode is null\n");
 		goto done;
 	}
 
 	if(inode_is_dir(inode)){
-		/* remove the director if no one else is
+		/* remove the directory if no one else is
 		   using it right at this moment and the
 		   directory is empty*/
 		struct dir key_dir;
@@ -521,6 +524,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(ret_elem != NULL){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
+			printf("directory in use by a thread\n");
 			goto done;
 		}
 		lock_release(&dir->dir_lock);
@@ -531,7 +535,8 @@ bool dir_remove (struct dir *dir, const char *name){
 
 		uint32_t file_count = dir_file_count(sub_dir);
 		dir_close(sub_dir);
-		if(file_count != 0){
+		if(file_count != 2){
+			printf("File count != 2 goto done\n");
 			goto done;
 		}
 	}else{
@@ -540,7 +545,8 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	/* Erase directory entry. */
 	e.in_use = false;
-	if(inode_write_at (dir->inode, &e, sizeof(e), ofs) != sizeof(e)){
+	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_enty)){
+		printf("Goto done 5\n");
 		goto done;
 	}
 
@@ -549,8 +555,11 @@ bool dir_remove (struct dir *dir, const char *name){
 	success = true;
 	lock_release(&dir->dir_lock);
 
+	printf("Inode removed\n");
+
 	done:
 	inode_close (inode);
+	printf("dir removes succes %u\n", success);
 	return success;
 }
 
