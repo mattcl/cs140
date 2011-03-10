@@ -83,6 +83,7 @@ bool
 ustar_make_header (const char *file_name, enum ustar_type type,
                    int size, char header[USTAR_HEADER_SIZE])
 {
+	printf("make header\n");
   struct ustar_header *h = (struct ustar_header *) header;
 
   ASSERT (sizeof (struct ustar_header) == USTAR_HEADER_SIZE);
@@ -113,7 +114,7 @@ ustar_make_header (const char *file_name, enum ustar_type type,
 
   /* Compute and fill in final checksum. */
   snprintf (h->chksum, sizeof h->chksum, "%07o", calculate_chksum (h));
-
+  printf("header made\n");
   return true;
 }
 

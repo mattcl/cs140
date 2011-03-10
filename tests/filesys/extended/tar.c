@@ -201,12 +201,16 @@ static bool
 write_header (const char *file_name, enum ustar_type type, int size,
               int archive_fd, bool *write_error) 
 {
+	printf("write header\n");
   static char header[512];
-  return (ustar_make_header (file_name, type, size, header)
+  bool success = (ustar_make_header (file_name, type, size, header)
           && do_write (archive_fd, header, 512, write_error));
+  printf("write header return\n");
+  return success;
 }
 
 static bool do_write (int fd, const char *buffer, int size, bool *write_error){
+	printf("do write\n");
 	if (write (fd, buffer, size) == size) {
 		return true;
 	}else{
@@ -216,4 +220,5 @@ static bool do_write (int fd, const char *buffer, int size, bool *write_error){
 		}
 		return false;
 	}
+	printf("write return\n");
 }
