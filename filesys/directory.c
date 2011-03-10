@@ -107,10 +107,12 @@ struct dir *dir_reopen (struct dir *dir){
 
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
-	//printf("dir close\n");
+	printf("dir close\n");
 	if(dir == NULL){
 		return;
 	}
+
+	printf("dir close inode num %u\n", dir->inode->sector);
 
 	struct hash_elem *ret_elem;
 	lock_acquire(&open_dirs_lock);
@@ -119,11 +121,13 @@ void dir_close (struct dir *dir){
 	lock_release(&dir->dir_lock);
 
 	if(delete){
-		//printf("actually deleted\n");
+		printf("actually removed\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
 		inode_close(dir->inode);
 		free(dir);
+	}else{
+		printf("not removed\n");
 	}
 	lock_release(&open_dirs_lock);
 }

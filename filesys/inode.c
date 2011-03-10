@@ -368,7 +368,6 @@ void inode_close (struct inode *inode){
 	if(inode == NULL){
 		return;
 	}
-	//printf("closing inode\n");
 
 	/* Acquire both locks, make sure no IO occurs
 	   with the global lock held*/
@@ -378,11 +377,12 @@ void inode_close (struct inode *inode){
 	/* Release resources if this was the last opener. */
 	if(--inode->open_cnt == 0){
 		/* Remove from inode list and release lock. */
-
+		printf("inode closed\n");
 		list_remove (&inode->elem);
 
 		/* Deallocate blocks if removed. */
 		if(inode->removed){
+			printf("inode removed\n");
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -411,10 +411,10 @@ void inode_close (struct inode *inode){
 			free_map_release (inode->sector, 1);
 
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
-			//printf("removed and freeing entries in freemap\n");
+			printf("removed and freeing entries in freemap\n");
 
 		}else{
-
+			printf("inode not removed\n");
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -427,6 +427,7 @@ void inode_close (struct inode *inode){
 		/* the data we were protecting has been read*/
 		lock_release(&inode->meta_data_lock);
 		lock_release(&open_inodes_lock);
+		printf("inode not closed\n");
 	}
 
 }
