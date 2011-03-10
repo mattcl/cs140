@@ -703,3 +703,14 @@ bool inode_is_dir(struct inode *inode){
 	//printf("inode return\n");
 	return is_dir;
 }
+
+bool inode_remove_unopened(struct inode *inode){
+	lock_acquire(&inode->meta_data_lock);
+	bool removed = false;
+	if(inode->open_cnt == 1){
+		inode->removed = true;
+		removed = true;
+	}
+	lock_release(&inode->meta_data_lock);
+	return removed;
+}
