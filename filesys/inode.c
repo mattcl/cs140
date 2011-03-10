@@ -529,7 +529,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    write goes past the end of file marker. */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	//printf("inode write %u %u inode %u\n", size, offset, inode->sector);
+	printf("inode write %u %u inode %u\n", size, offset, inode->sector);
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
@@ -548,7 +548,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	off_t eof = inode->cur_length;
 	lock_release(&inode->reader_lock);
 
-	//printf("eof is %d\n", eof);
+	printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
 		extending = true;
@@ -584,7 +584,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		//printf("bcache get sector %u\n", sector_idx);
+		printf("bcache get sector %u\n", sector_idx);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
