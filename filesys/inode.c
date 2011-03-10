@@ -579,6 +579,9 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 
 		if(sector_idx == 0){
+			if(extending){
+				release_lock(&inode->writer_lock);
+			}
 			return bytes_written;
 		}
 
@@ -598,7 +601,13 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		printf("bcache get sector %u\n", sector_idx);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
+		if(entry == NULL){
+			if(extending){
+				release_lock(&inode->writer_lock);
+			}
 
+			return bytes_written;
+		}
 
 		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
