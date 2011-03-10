@@ -489,8 +489,8 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
   //printf("dir remove\n");
-	if(dir ==  NULL || name == NULL || strlen(name) == 0){
-		printf("invalid parameters\n");
+        if(dir ==  NULL || name == NULL || strlen(name) == 0){
+	  //	printf("invalid parameters\n");
 		return false;
 	}
 
