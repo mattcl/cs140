@@ -538,14 +538,13 @@ bool dir_remove (struct dir *dir, const char *name){
 		struct dir sub_dir;
 		sub_dir.inode = inode;
 		sub_dir.sector = e.inode_sector;
-		lock_init(&sub_dir.dir_lock);
 
 		uint32_t file_count = dir_file_count(&sub_dir);
 
 		if(file_count != 2){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
-			printf("File count != 2 goto done\n");
+			printf("File count != 2 goto done %u\n", file_count);
 			goto done;
 		}
 	}
@@ -605,7 +604,6 @@ uint32_t dir_file_count(struct dir *dir){
 		return 0;
 	}
 	//printf("dir file_count\n");
-	lock_acquire(&dir->dir_lock);
 	off_t off = 0;
 	uint32_t file_count = 0;
 	struct dir_entry e;
@@ -615,9 +613,9 @@ uint32_t dir_file_count(struct dir *dir){
 		off += sizeof(struct dir_entry);
 		if(e.in_use){
 			file_count ++;
+			printf("file found %s %u\n", e.name, e.inode_sector);
 		}
 	}
-	lock_release(&dir->dir_lock);
 	return file_count;
 }
 
