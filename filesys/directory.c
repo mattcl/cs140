@@ -519,7 +519,7 @@ static bool dir_remove_file(struct dir *dir, struct inode *inode,
 	e->in_use = false;
 	e->inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off) != sizeof(struct dir_entry)){
-		printf("Goto done 6\n");
+		//printf("Goto done 6\n");
 		success = false;
 	}
 
@@ -551,7 +551,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 
 	if(file_count != 2){
 		lock_release(&open_dirs_lock);
-		printf("File count != 2 goto done %u\n", file_count);
+		//printf("File count != 2 goto done %u\n", file_count);
 		goto done;
 	}
 
@@ -561,7 +561,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	   be put in the directory*/
 	if(!inode_remove_dir(inode)){
 		/* we failed to remove the dir so we need to write the old data back*/
-		printf("failed to remove it \n");
+		//printf("failed to remove it \n");
 		lock_release(&open_dirs_lock);
 		goto done;
 	}
@@ -574,7 +574,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	e->in_use = false;
 	e->inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off) != sizeof(struct dir_entry)){
-		printf("Goto done 5\n");
+		//printf("Goto done 5\n");
 		goto done;
 	}
 
@@ -592,7 +592,7 @@ done:
 bool dir_remove (struct dir *dir, const char *name){
 	//printf("dir remove in dir %u\n", dir->inode->sector);
 	if(dir == NULL || name == NULL || strlen(name) == 0){
-		printf("invalid parameters\n");
+		//printf("invalid parameters\n");
 		return false;
 	}
 
@@ -612,7 +612,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	//dir_file_count(dir);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
-		printf("file doesn't exist\n");
+		//printf("file doesn't exist\n");
 		lock_release(&open_dirs_lock);
 		lock_release(&dir->dir_lock);
 		return success;
@@ -621,7 +621,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
-		printf("inode is null\n");
+		//printf("inode is null\n");
 		lock_release(&open_dirs_lock);
 		lock_release(&dir->dir_lock);
 		return success;
