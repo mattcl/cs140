@@ -58,7 +58,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 		return ZERO_SECTOR;
 	}
 
-	printf("i_sector %u\n", i_sector);
+	//	printf("i_sector %u\n", i_sector);
 
 	struct cache_entry *i_entry =
 			bcache_get_and_lock(i_sector, CACHE_INDIRECT);
@@ -67,7 +67,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 
 	ret = check_alloc_install(i_block->ptrs, sector_off, create);
 
-	printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
+	//	printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
 
 	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
@@ -165,7 +165,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 									i_sec_offset, create);
 
 			bcache_unlock(entry, UNLOCK_NORMAL);
-			printf("byte to sector ret ind block sector %u\n", ret);
+			//			printf("byte to sector ret ind block sector %u\n", ret);
 			return ret; /* May be ZERO_SECTOR */
 		}else{
 
@@ -182,7 +182,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 						    				 d_sec_offset, i_sec_offset, create);
 
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				printf("byte to sector ret dbl block sector %u\n", ret);
+				//				printf("byte to sector ret dbl block sector %u\n", ret);
 				return ret;
 			}else{
 
@@ -196,13 +196,13 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 					   so the request for this offset is greater than 1 GB and can
 					   not be satisfied*/
 					bcache_unlock(entry, UNLOCK_NORMAL);
-					//printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
+					//					//printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
 					return ZERO_SECTOR;
 				}
 				ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
 						t_sec_offset, d_sec_offset, i_sec_offset, create);
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				printf("byte to sector ret trip block sector %u\n", ret);
+				//				printf("byte to sector ret trip block sector %u\n", ret);
 				return ret;
 			}
 		}
