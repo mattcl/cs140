@@ -246,7 +246,7 @@ static void system_halt (struct intr_frame *f UNUSED){
    hash table */
 void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
-	//printf("%s: exit(%d)\n", proc->program_name, status);
+	printf("%s: exit(%d)\n", proc->program_name, status);
 	proc->exit_code = status;
 
 	/* We Need to clear out the mmap table before exiting
