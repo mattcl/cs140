@@ -697,6 +697,7 @@ bool inode_remove_dir(struct inode *inode){
 		return removed;
 	}
 	lock_acquire(&inode->meta_data_lock);
+	printf("open count is %u\n", inode->open_cnt);
 	if(inode->open_cnt == 1 && inode_is_dir(inode)){
 		removed = true;
 		inode->removed = true;
