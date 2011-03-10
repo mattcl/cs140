@@ -535,12 +535,12 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    write goes past the end of file marker. */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
-	//printf("inode write %u %u inode %u\n", size, offset, inode->sector);
+	printf("inode write %u %u inode %u\n", size, offset, inode->sector);
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
 	bool extending = false;
-	//printf("Acquire meta\n");
+	printf("Acquire meta\n");
 	lock_acquire(&inode->meta_data_lock);
 	if (inode->deny_write_cnt){
 		lock_release(&inode->meta_data_lock);
@@ -548,22 +548,22 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 	lock_release(&inode->meta_data_lock);
 
-	//printf("Acquire eof locks\n");
+	printf("Acquire eof locks\n");
 	lock_acquire(&inode->writer_lock);
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
 	lock_release(&inode->reader_lock);
 
-	//printf("eof is %d\n", eof);
+	printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
 		extending = true;
-		//printf("extending!\n");
+		printf("extending!\n");
 	}else{
 		lock_release(&inode->writer_lock);
 	}
 
-	//printf("locks acquired\n");
+	printf("locks acquired\n");
 	/* We do nothing special for the sectors between
 	   eof and the write that we are making, this means
 	   that the block pointers for them will still be
@@ -575,7 +575,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		/* Sector to write, starting byte offset within sector.
 		   byte_to_sector will allocate and install the sector in
 		   the inode for us! It will not, however, be in the cache*/
-		//printf("Byte to sector\n");
+		printf("Byte to sector\n");
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
@@ -590,13 +590,13 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		//printf("bcache get sector %u\n", sector_idx);
+		printf("bcache get sector %u\n", sector_idx);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+		printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
-		//printf("Change flag\n");
+		printf("Change flag\n");
 		entry->flags |= CACHE_E_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
@@ -609,7 +609,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if(extending){
 		lock_acquire(&inode->reader_lock);
-		//printf("New eof %u\n", offset);
+		printf("New eof %u\n", offset);
 		inode->cur_length = offset;
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
@@ -619,7 +619,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	//printf("inode write end %u\n", bytes_written);
+	printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
