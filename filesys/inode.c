@@ -580,7 +580,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		if(sector_idx == 0){
 			if(extending){
-				release_lock(&inode->writer_lock);
+				lock_release(&inode->writer_lock);
 			}
 			return bytes_written;
 		}
@@ -603,7 +603,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 		if(entry == NULL){
 			if(extending){
-				release_lock(&inode->writer_lock);
+				lock_release(&inode->writer_lock);
 			}
 
 			return bytes_written;
