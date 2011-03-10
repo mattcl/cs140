@@ -66,7 +66,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 
 	ret = check_alloc_install(i_block->ptrs, sector_off, create);
 
-	printf("i return %u\n", ret);
+	printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
 
 	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
