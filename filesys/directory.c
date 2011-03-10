@@ -44,7 +44,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *dir_open (struct inode *inode){
-	//printf("dir open\n");
+	printf("dir open\n");
 	if(inode == NULL){
 		return NULL;
 	}
@@ -58,13 +58,14 @@ struct dir *dir_open (struct inode *inode){
 		lock_acquire(&ret_dir->dir_lock);
 		if(inode_reopen(inode) != NULL){
 			ret_dir->open_cnt ++;
+			printf("open and incremented count\n");
 		}else{
+			printf("return null1\n");
 			ret_dir = NULL;
 		}
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
 
-		//printf("Already existed\n");
 		return ret_dir;
 
 	}else{
@@ -77,6 +78,7 @@ struct dir *dir_open (struct inode *inode){
 			lock_release(&open_dirs_lock);
 			//inode_close(inode);
 			free(ret_dir);
+			printf("return null2");
 			return NULL;
 		}
 
@@ -89,10 +91,10 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_elem != NULL){
 			//inode_close(inode);
 			free(ret_dir);
-			//printf("returned null\n");
+			printf("returned null 3\n");
 			return NULL;
 		}else{
-			//printf("returned new sector %u \n", ret_dir->sector);
+			printf("returned  sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
@@ -130,6 +132,8 @@ void dir_close (struct dir *dir){
 	bool delete = (--dir->open_cnt == 0);
 	lock_release(&dir->dir_lock);
 
+	inode_close(dir->inode);
+
 	if(delete){
 		printf("actually removed\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
@@ -138,7 +142,6 @@ void dir_close (struct dir *dir){
 	}else{
 		printf("not removed\n");
 	}
-	inode_close(dir->inode);
 	lock_release(&open_dirs_lock);
 }
 
