@@ -29,7 +29,8 @@ void dir_init(void){
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, block_sector_t parent){
-	printf("dir create\n");
+	printf("dir create sector 1 %u sector 2 %u\n", sector, parent);
+	ASSERT(sector != ZERO_SECTOR && parent != ZERO_SECTOR);
 	struct dir *dir = NULL;
 	struct inode *ino = NULL;
 	bool success = inode_create (sector, 0, true)

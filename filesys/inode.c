@@ -128,7 +128,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	block_sector_t ret = ZERO_SECTOR;
 
+	ASSERT(inode->sector != 0);
+
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
+
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 
 	/* For conciseness in space the i suffix/prefix signifies an indirect block
@@ -215,6 +218,8 @@ void inode_init (void){
 bool inode_create (block_sector_t sector, off_t length, bool is_dir){
 	printf("inode create dir %u\n", is_dir);
 
+	ASSERT(sector != ZERO_SECTOR);
+
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
 		printf("not alloc\n");
@@ -249,6 +254,7 @@ struct inode *inode_open (block_sector_t sector){
 	struct list_elem *e;
 	struct inode *inode;
 
+	ASSERT(sector != ZERO_SECTOR);
 
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
