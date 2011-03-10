@@ -790,7 +790,7 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 	if(!string_is_valid(dir_name)){
 		system_exit(f,-1);
 	}
-	printf("mkdir\\n");
+	printf("mkdir\n");
 	bool success = false;
 	uint32_t length = strlen(dir_name) + 1; /* plus one for the null */
 	pin_all_frames_for_buffer(dir_name, length);

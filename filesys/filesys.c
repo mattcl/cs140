@@ -104,12 +104,19 @@ bool filesys_create_dir(const char *path){
 	const char *file_name ;
 	struct dir *dir = dir_open_path (path, &file_name);
 
-	if(file_name == NULL){
-		dir_close(dir);
-		return NULL;
+
+	if(dir == NULL){
+		return false;
 	}
 
-	//printf("creating a directory %s at path %s\n", file_name, path);
+	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
+
+	if(file_name == NULL){
+		dir_close(dir);
+		return false;
+	}
+
+	printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* special consideration for creating /, we don't allow it sorry! :)*/
 	if(file_is_root(file_name, dir)){
@@ -129,7 +136,7 @@ bool filesys_create_dir(const char *path){
 			&& (s3 = dir_add (dir, file_name, inode_sector)));
 
 	if(!success){
-		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
 
 
