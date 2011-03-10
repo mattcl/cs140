@@ -203,18 +203,14 @@ write_header (const char *file_name, enum ustar_type type, int size,
           && do_write (archive_fd, header, 512, write_error));
 }
 
-static bool
-do_write (int fd, const char *buffer, int size, bool *write_error) 
-{
-  if (write (fd, buffer, size) == size) 
-    return true;
-  else
-    {
-      if (!*write_error) 
-        {
-          printf ("error writing archive\n");
-          *write_error = true; 
-        }
-      return false; 
-    }
+static bool do_write (int fd, const char *buffer, int size, bool *write_error){
+	if (write (fd, buffer, size) == size) {
+		return true;
+	}else{
+		if (!*write_error){
+			printf ("error writing archive\n");
+			*write_error = true;
+		}
+		return false;
+	}
 }

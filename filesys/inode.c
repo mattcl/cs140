@@ -6,6 +6,7 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 #include "buffer-cache.h"
+#include "devices/block.h"
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
@@ -23,7 +24,7 @@ static inline size_t bytes_to_sectors (off_t size){
    block sector. Otherwise if create is true then it will create that sector
    allocating from the free list then return the new sector */
 static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool create){
-	block_sector_t alloc;
+	block_sector_t alloc = ZERO_SECTOR;
 	if(array[idx] == ZERO_SECTOR){
 		//printf("Array index ZERO\n");
 		if(!create){
@@ -34,6 +35,7 @@ static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool cr
 			//printf("not alloc\n");
 			return ZERO_SECTOR;
 		}
+		ASSERT(alloc != 1953394531);
 		array[idx] = alloc;
 	}/*else{
 		//printf("Array index nonZERO\n");
@@ -65,7 +67,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 
 	ret = check_alloc_install(i_block->ptrs, sector_off, create);
 
-	printf("i return %u\n", ret);
+	printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
 
 	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
@@ -145,16 +147,18 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		/* Read directly from inode */
 		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
 		bcache_unlock(entry, UNLOCK_NORMAL);
-		//		printf("byte to sector ret reg block sector %u\n", ret);
+		//printf("byte to sector ret reg block sector %u\n", ret);
 		return ret; /* May be zero sector still ;) */
 	}else{
 		/* The number of the indirect sector that the data resides on*/
 		uint32_t i_file_sector =
 				((PTR_PER_BLK)+(file_sector - NUM_REG_BLK))/PTR_PER_BLK;
 
+		/* The offset in the indirect block of the sector we are looking for */
 		uint32_t i_sec_offset = (file_sector - NUM_REG_BLK) % PTR_PER_BLK;
 
-		/* minus one because of the way we calculated indt_sec_num */
+		/* minus one because of the way we calculated indt_sec_num, and it
+		   isn't an index */
 		if((i_file_sector-1) < NUM_IND_BLK){
 
 			ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
@@ -350,7 +354,9 @@ static void free_block_sectors(uint32_t *array, uint32_t size){
 		if(array[i] != ZERO_SECTOR){
 			/* These blocks have already been invalidated in
 			   our cache as long as we don't get them here*/
+			block_write(fs_device, array[i], zeroed_sector);
 			free_map_release (array[i], 1);
+			array[i] = 0;
 		}
 	}
 }
@@ -368,6 +374,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 			}else{
 				free_indirect_blocks(b->ptrs, PTR_PER_BLK, --count);
 			}
+			block_write(fs_device, array[i], zeroed_sector);
 			free_map_release(array[i], 1);
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
 		}
@@ -402,10 +409,10 @@ void inode_close (struct inode *inode){
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
 
-			/* Dump all our data out to disk now then invalidate the
-			   cache so that cache_entries from this file won't be
-			   found and evicted later on in kernel execution*/
-			bcache_flush();
+			/* invalidate the cache so that cache_entries from
+			   this file won't be found and writen out to disk
+			    later on in kernel execution*/
+			//bcache_flush();
 			bcache_invalidate();
 
 			struct cache_entry *entry =
@@ -426,6 +433,8 @@ void inode_close (struct inode *inode){
 			free_map_release (inode->sector, 1);
 
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
+
+			block_write(fs_device, inode->sector, zeroed_sector);
 			//printf("removed and freeing entries in freemap\n");
 
 		}else{
@@ -608,7 +617,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		printf("bcache get sector %u offset %u\n", sector_idx, offset);
+		//printf("bcache get sector %u offset %u\n", sector_idx, offset);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		if(entry == NULL){

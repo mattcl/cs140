@@ -40,7 +40,7 @@ void filesys_init (bool format){
 void filesys_done (void){
 	bcache_flush();
 	free_map_close ();
-	//printf("Filesys done\n");
+	printf("Filesys done\n");
 }
 
 static inline bool file_is_self(const char *file_name){

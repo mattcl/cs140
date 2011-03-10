@@ -32,6 +32,7 @@ enum meta_priority{
 #define CACHE_E_INITIALIZED (1<<2)/* Whether this cache entry has been used
 										 before */
 #define CACHE_E_INVALID (1<<3) 	  /* The cache entry is invalid */
+
 /* The zero sector counts toward our size of the cache*/
 uint8_t zeroed_sector[BLOCK_SECTOR_SIZE];
 
@@ -69,6 +70,7 @@ struct cache_entry{
 #define UNLOCK_NORMAL 0
 #define UNLOCK_FLUSH 1
 #define UNLOCK_INVALIDATE 2
+//#define UNLOCK_ZERO 3
 
 void bcache_init(void);
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri);
