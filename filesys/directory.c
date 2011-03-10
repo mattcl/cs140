@@ -59,6 +59,7 @@ struct dir *dir_open (struct inode *inode){
 		ret_dir->open_cnt ++;
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
+		inode_reopen(inode);
 		//printf("Already existed\n");
 		return ret_dir;
 
