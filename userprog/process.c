@@ -419,10 +419,6 @@ void process_exit (void){
 	}
 	lock_release(&processes_hash_lock);
 
-	/* Free all open files Done without exterior locking
-	   each file will close with the filesys lock held */
-	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
-
 	/* We do not need to lock this because all children of
  	   this process need to go through acquiring a handle
 	   for this process through the all process hash table
@@ -439,10 +435,6 @@ void process_exit (void){
 
 	free(cur_process->program_name);
 
-	/*close our executable allowing write access again */
-	lock_acquire(&filesys_lock);
-	file_close(cur_process->executable_file);
-	lock_release(&filesys_lock);
 	free(cur_process);
 }
 
@@ -1141,7 +1133,7 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 }
 
 /* call all destructor for hash_destroy */
-static void fd_hash_entry_destroy (struct hash_elem *e, AUX){
+void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	/*File close needs to be called here */
     lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);

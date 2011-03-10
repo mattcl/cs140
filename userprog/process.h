@@ -190,6 +190,7 @@ bool process_lock(pid_t pid, struct lock *lock_to_grab);
 /* General fd helper functions */
 struct file *file_for_fd (int fd, bool mmap);
 struct fd_hash_entry * fd_to_fd_hash_entry (int fd);
+void fd_hash_entry_destroy (struct hash_elem *e, void *AUX UNUSED);
 
 /* Called by exception.c */
 bool process_exec_read_in(void *faulting_addr);

@@ -256,6 +256,16 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	lock_acquire(&proc->mmap_table_lock);
 	hash_destroy(&proc->mmap_table, &mmap_hash_entry_destroy);
 	lock_release(&proc->mmap_table_lock);
+
+	/*close our executable allowing write access again */
+	lock_acquire(&filesys_lock);
+	file_close(proc->executable_file);
+	lock_release(&filesys_lock);
+
+	/* Free all open files Done without exterior locking
+	   each file will close with the filesys lock held */
+	hash_destroy(&proc->open_files, &fd_hash_entry_destroy);
+
 	thread_exit();
 	NOT_REACHED();
 }
