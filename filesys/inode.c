@@ -23,7 +23,7 @@ static inline size_t bytes_to_sectors (off_t size){
    block sector. Otherwise if create is true then it will create that sector
    allocating from the free list then return the new sector */
 static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool create){
-	block_sector_t alloc;
+	block_sector_t alloc = ZERO_SECTOR;
 	if(array[idx] == ZERO_SECTOR){
 		//printf("Array index ZERO\n");
 		if(!create){
@@ -34,6 +34,7 @@ static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool cr
 			//printf("not alloc\n");
 			return ZERO_SECTOR;
 		}
+		ASSERT(alloc != 1953394531);
 		array[idx] = alloc;
 	}/*else{
 		//printf("Array index nonZERO\n");
