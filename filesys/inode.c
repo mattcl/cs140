@@ -689,6 +689,22 @@ off_t inode_length (struct inode *inode){
 	return eof;
 }
 
+/* Removes the inode if it is a directory and it isn't
+   open. Returns true on success and false on failure*/
+bool inode_remove_dir(struct inode *inode){
+	bool removed = false;
+	if(inode == NULL){
+		return removed;
+	}
+	lock_acquire(&inode->meta_data_lock);
+	if(inode->open_cnt == 1 && inode_is_dir(inode)){
+		removed = true;
+		inode->removed = true;
+	}
+	lock_release(&inode->meta_data_lock);
+	return removed;
+}
+
 bool inode_is_dir(struct inode *inode){
 	//printf("Inode is dir\n");
 	if(inode == NULL){

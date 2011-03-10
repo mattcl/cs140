@@ -553,6 +553,11 @@ bool dir_remove (struct dir *dir, const char *name){
 
 		/* Right here need to check if the inode has anybody besides use that has
 		   opened it, if so then don't remove and exit, if not just remove and continue*/
+		if(!inode_remove_dir(inode)){
+			lock_release(&dir->dir_lock);
+			lock_release(&open_dirs_lock);
+			goto done;
+		}
 	}
 
 	lock_release(&open_dirs_lock);
