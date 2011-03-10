@@ -300,7 +300,7 @@ struct inode *inode_open (block_sector_t sector){
 	lock_init(&inode->reader_lock);
 	lock_init(&inode->meta_data_lock);
 
-	printf("bcache it\n
+	printf("bcache it\n");
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = (inode_d->flags & INODE_IS_DIR) != 0;
