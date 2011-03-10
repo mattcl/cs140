@@ -365,6 +365,8 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
+	printf("file descriptor %u\n", fd_entry->fd);
+
 	f->eax = fd_entry->fd;
 }
 
@@ -718,6 +720,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		system_exit(f, -1);
 	}
 
+	printf("file descriptor %u\n", fd);
 
 	printf("readdir\n");
 	struct file *file = NULL;
