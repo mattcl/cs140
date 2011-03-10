@@ -655,5 +655,6 @@ bool inode_is_dir(struct inode *inode){
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = (inode_d->flags & INODE_IS_DIR) != 0;
 	bcache_unlock(entry, UNLOCK_NORMAL);
+	printf("inode return\n");
 	return is_dir;
 }

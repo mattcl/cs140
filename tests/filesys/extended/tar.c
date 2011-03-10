@@ -112,7 +112,7 @@ archive_file (char file_name[], size_t file_name_size,
         }
   
       close (file_fd);
-
+      printf("archive file return\n");
       return success;
     }
   else
@@ -131,8 +131,10 @@ archive_ordinary_file (const char *file_name, int file_fd,
   int file_size = filesize (file_fd);
   printf("archive ordinary file %s\n", file_name);
   if (!write_header (file_name, USTAR_REGULAR, file_size,
-                     archive_fd, write_error))
-    return false;
+                     archive_fd, write_error)){
+	  printf("archive ordinary ret 1\n");
+	  return false;
+  }
 
   while (file_size > 0) 
     {
@@ -154,6 +156,8 @@ archive_ordinary_file (const char *file_name, int file_fd,
 
       file_size -= chunk_size;
     }
+
+  printf("archive ordinary ret 2\n");
 
   return success;
 }
@@ -179,6 +183,7 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
       
   file_name[dir_len] = '/';
   while (readdir (file_fd, &file_name[dir_len + 1])){
+	  printf("loop\n");
 	  if (!archive_file (file_name, file_name_size, archive_fd, write_error)){
 		  success = false;
 	  }
