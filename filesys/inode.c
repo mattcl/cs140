@@ -377,12 +377,12 @@ void inode_close (struct inode *inode){
 	/* Release resources if this was the last opener. */
 	if(--inode->open_cnt == 0){
 		/* Remove from inode list and release lock. */
-		printf("inode closed\n");
+		//printf("inode closed\n");
 		list_remove (&inode->elem);
 
 		/* Deallocate blocks if removed. */
 		if(inode->removed){
-			printf("inode removed\n");
+			//printf("inode removed\n");
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -411,10 +411,10 @@ void inode_close (struct inode *inode){
 			free_map_release (inode->sector, 1);
 
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
-			printf("removed and freeing entries in freemap\n");
+			//printf("removed and freeing entries in freemap\n");
 
 		}else{
-			printf("inode not removed\n");
+			//printf("inode not removed\n");
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
@@ -427,7 +427,7 @@ void inode_close (struct inode *inode){
 		/* the data we were protecting has been read*/
 		lock_release(&inode->meta_data_lock);
 		lock_release(&open_inodes_lock);
-		printf("inode not closed\n");
+		//printf("inode not closed\n");
 	}
 
 }
@@ -647,16 +647,16 @@ off_t inode_length (struct inode *inode){
 }
 
 bool inode_is_dir(struct inode *inode){
-	printf("Inode is dir\n");
+	//printf("Inode is dir\n");
 	if(inode == NULL){
-		printf("inode is dir was null\n");
+		//printf("inode is dir was null\n");
 		return NULL;
 	}
-	printf("inode sector %u\n", inode->sector);
+	//printf("inode sector %u\n", inode->sector);
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = (inode_d->flags & INODE_IS_DIR) != 0;
 	bcache_unlock(entry, UNLOCK_NORMAL);
-	printf("inode return\n");
+	//printf("inode return\n");
 	return is_dir;
 }
