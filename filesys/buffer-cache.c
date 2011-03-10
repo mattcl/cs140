@@ -126,16 +126,14 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* Promote here if necessary */
 		c_entry->num_hits ++;
 		if(c_entry->cur_pri != CACHE_INODE){
-			if(c_entry->num_hits >
-					(c_entry->cur_pri * PROMOTE_THRESHOLD)){
+			if(c_entry->num_hits > (c_entry->cur_pri * PROMOTE_THRESHOLD)){
 				c_entry->cur_pri --;
 				c_entry->num_hits = 0;
 			}
 		}
 
 		/* Put at the end of the appropriate evict list */
-		list_push_back(&eviction_lists[c_entry->cur_pri],
-									&c_entry->eviction_elem);
+		list_push_back(&eviction_lists[c_entry->cur_pri], &c_entry->eviction_elem);
 
 		lock_release(&cache_lock);
 
