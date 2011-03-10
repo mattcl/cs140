@@ -523,6 +523,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	ASSERT(lock_held_by_current_thread(&open_dirs_lock));
 	ASSERT(lock_held_by_current_thread(&dir->dir_lock));
 	bool success = false;
+
 	struct dir sub_dir;
 	sub_dir.inode = inode;
 	sub_dir.sector = e->inode_sector;
@@ -536,25 +537,26 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 		goto done;
 	}
 
+	/* Right here need to check if the inode has anybody besides use that has
+	   opened it, if so then don't remove and exit, if not just remove and continue
+	   if the inode has been removed then no one else can open it and nothing can
+	   be put in the directory*/
+	if(!inode_remove_dir(inode)){
+		/* we failed to remove the dir so we need to write the old data back*/
+		printf("failed to remove it \n");
+		lock_release(&open_dirs_lock);
+		goto done;
+	}
+
 	lock_release(&open_dirs_lock);
 
-	/* Erase directory entry. First, and if it fails don't actually
-	   delete the inode. */
+	/* The assumption is that if this fails we have a much deeper problem with
+	   our inode such as we are passing in the offset and it maps to the zero
+	   sector, but we just read from that sector so we have something weird*/
 	e->in_use = false;
 	e->inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off) != sizeof(struct dir_entry)){
 		printf("Goto done 5\n");
-		goto done;
-	}
-
-	/* Right here need to check if the inode has anybody besides use that has
-	   opened it, if so then don't remove and exit, if not just remove and continue*/
-	if(!inode_remove_dir(inode)){
-		/* we failed to remove the dir so we need to write the old data back*/
-		printf("failed to remove it \n");
-		e->in_use = true;
-		e->inode_sector = inode->sector;
-		inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off);
 		goto done;
 	}
 
