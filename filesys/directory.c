@@ -459,6 +459,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 
 	/* Check NAME for validity. */
 	if(*name == '\0' || strlen (name) > NAME_MAX){
+		printf("Name invalid\n");
 		return false;
 	}
 
@@ -467,6 +468,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	//printf("pre lookup\n");
 	/* Check that NAME is not in use. */
 	if(lookup (dir, name, NULL, NULL)){
+		printf("Name existed\n");
 		goto done;
 	}
 
@@ -494,7 +496,9 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	//printf("pre inode write at\n");
 	success = inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs)
 			== sizeof(struct dir_entry);
-
+	if(!success){
+		printf("write failed\n");
+	}
 	done:
 	lock_release(&dir->dir_lock);
 
