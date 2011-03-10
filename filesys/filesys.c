@@ -171,7 +171,7 @@ struct file * filesys_open (const char *path){
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
-
+	printf("inode sector %u\n", inode->sector);
 	dir_close (dir);
 
 	return file_open (inode);

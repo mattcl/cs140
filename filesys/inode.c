@@ -651,6 +651,7 @@ bool inode_is_dir(struct inode *inode){
 		printf("inode is dir was null\n");
 		return NULL;
 	}
+	printf("inode sector %u\n", inode->sector);
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
 	bool is_dir = (inode_d->flags & INODE_IS_DIR) != 0;
