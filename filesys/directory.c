@@ -193,6 +193,7 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 	uint32_t last_slash = 0;
 	uint32_t count = 0;
 	if(full == NULL || path == NULL || leaf == NULL || strlen(full) == 0){
+		printf("invalid params path and leaf\n");
 		return false;
 	}
 
@@ -206,7 +207,8 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 	if(*full == '/'){
 		if(last_slash == 0){
 			if(count == 1){
-				/* The root is the only thing passed in*/
+				/* The root is the only thing passed in
+				   open root*/
 				*leaf = full;
 			}else{
 				/*the leaf is in the root dir*/
@@ -255,9 +257,11 @@ static struct dir *dir_open_path_wrap(const char *path,
 	if(*path == '\0'){
 		return NULL;
 	}
+
 	if(*path == '/' && first_call){
 		return_root = true;
 	}
+
 	while(*path == '/'){
 		path ++;
 	}
@@ -339,6 +343,7 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	}else{
 		*file_name = path + (file_leaf - buf);
 	}
+
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
@@ -364,7 +369,6 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
 				//printf("returned root 2\n");
-				*file_name = root_dir_str;
 				return root;
 			}else{
 				dir_close(root);
