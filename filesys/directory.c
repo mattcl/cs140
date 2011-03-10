@@ -616,7 +616,7 @@ uint32_t dir_file_count(struct dir *dir){
 		off += sizeof(struct dir_entry);
 		if(e.in_use){
 			file_count ++;
-			printf("file found %s %u\n", e.name, e.inode_sector);
+			//printf("file found %s %u\n", e.name, e.inode_sector);
 		}
 	}
 	return file_count;
