@@ -391,11 +391,6 @@ void inode_close (struct inode *inode){
 		return;
 	}
 
-	/* Flush the entire cache to disk now because all our
-	   data may be changed and we don't know which sectors
-	   are in the cache so just write all of it out now*/
-	bcache_flush();
-
 	/* Acquire both locks, make sure no IO occurs
 	   with the global lock held*/
 	lock_acquire(&open_inodes_lock);
@@ -403,6 +398,12 @@ void inode_close (struct inode *inode){
 
 	/* Release resources if this was the last opener. */
 	if(--inode->open_cnt == 0){
+
+		/* Flush the entire cache to disk now because all our
+		   data may be changed and we don't know which sectors
+		   are in the cache so just write all of it out now*/
+		bcache_flush();
+
 		/* Remove from inode list and release lock. */
 		//printf("inode closed\n");
 		list_remove (&inode->elem);
