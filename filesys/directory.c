@@ -56,21 +56,30 @@ struct dir *dir_open (struct inode *inode){
 	if(ret_elem != NULL){
 		ret_dir = hash_entry(ret_elem, struct dir, e);
 		lock_acquire(&ret_dir->dir_lock);
-		ret_dir->open_cnt ++;
+		if(inode_reopen(inode) != NULL){
+			ret_dir->open_cnt ++;
+		}else{
+			ret_dir = NULL;
+		}
 		lock_release(&ret_dir->dir_lock);
 		lock_release(&open_dirs_lock);
-		inode_reopen(inode);
+
 		//printf("Already existed\n");
 		return ret_dir;
 
 	}else{
+		if(inode_reopen(inode) == NULL){
+			return NULL;
+		}
+
 		ret_dir = calloc(1, sizeof(struct dir));
 		if(ret_dir == NULL){
 			lock_release(&open_dirs_lock);
-			inode_close(inode);
+			//inode_close(inode);
 			free(ret_dir);
 			return NULL;
 		}
+
 		ret_dir->inode = inode;
 		ret_dir->sector = inode->sector;
 		lock_init(&ret_dir->dir_lock);
@@ -78,7 +87,7 @@ struct dir *dir_open (struct inode *inode){
 		ret_elem = hash_insert(&open_dirs, &ret_dir->e);
 		lock_release(&open_dirs_lock);
 		if(ret_elem != NULL){
-			inode_close(inode);
+			//inode_close(inode);
 			free(ret_dir);
 			//printf("returned null\n");
 			return NULL;
@@ -125,11 +134,11 @@ void dir_close (struct dir *dir){
 		printf("actually removed\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
-		inode_close(dir->inode);
 		free(dir);
 	}else{
 		printf("not removed\n");
 	}
+	inode_close(dir->inode);
 	lock_release(&open_dirs_lock);
 }
 
