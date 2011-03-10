@@ -581,12 +581,12 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if((offset+size) >= eof){
 		extending = true;
-		//printf("extending!\n");
+		printf("extending!\n");
 	}else{
 		lock_release(&inode->writer_lock);
 	}
 
-	//printf("locks acquired\n");
+	printf("locks acquired\n");
 	/* We do nothing special for the sectors between
 	   eof and the write that we are making, this means
 	   that the block pointers for them will still be
@@ -598,7 +598,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		/* Sector to write, starting byte offset within sector.
 		   byte_to_sector will allocate and install the sector in
 		   the inode for us! It will not, however, be in the cache*/
-		//printf("Byte to sector\n");
+		printf("Byte to sector\n");
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 
 		if(sector_idx == 0){
@@ -648,7 +648,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if(extending){
 		lock_acquire(&inode->reader_lock);
-		//printf("New eof %u\n", offset);
+		printf("New eof %u\n", offset);
 		inode->cur_length = offset;
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
