@@ -46,7 +46,8 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 }
 
 /* Opens and returns the directory for the given INODE, of which
-   it takes ownership.  Returns a null pointer on failure. */
+   it takes ownership.  Returns a null pointer on failure. Caller
+   is responsible for calling inode_close */
 struct dir *dir_open (struct inode *inode){
 	//printf("dir open\n");
 	if(inode == NULL){
@@ -106,7 +107,16 @@ struct dir *dir_open (struct inode *inode){
    Return true if successful, false on failure. */
 struct dir *dir_open_root (void){
 	//printf("dir open root\n");
-	return dir_open (inode_open (ROOT_DIR_SECTOR));
+	struct inode *ino = inode_open (ROOT_DIR_SECTOR);
+	if(ino == NULL){
+		return NULL;
+	}
+	struct dir *ret_dir = dir_open(ino);
+	inode_close(ino);
+	if(ret_dir == NULL){
+		return NULL;
+	}
+	return ret_dir;
 }
 
 /* Opens and returns a new directory for the same inode as DIR.
@@ -115,8 +125,15 @@ struct dir *dir_reopen (struct dir *dir){
 	if(dir == NULL){
 		return NULL;
 	}
+	struct inode *ino = inode_reopen (dir->inode);
+	struct dir *ret_dir = dir_open(ino);
+	inode_close(ino);
+	if(ret_dir == NULL){
+		return NULL;
+	}
+
 	//printf("dir reopen\n");
-	return dir_open (inode_reopen (dir->inode));
+	return ret_dir;
 }
 
 /* Destroys DIR and frees associated resources. */
@@ -324,6 +341,7 @@ static struct dir *dir_open_path_wrap(const char *path,
 		}
 
 		struct dir *next_dir = dir_open(ino);
+		inode_close(ino);
 		if(*path == '\0'){
 			//printf("Returned next dir\n");
 			return next_dir;
