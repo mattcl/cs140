@@ -246,7 +246,7 @@ static void system_halt (struct intr_frame *f UNUSED){
    hash table */
 void system_exit (struct intr_frame *f UNUSED, int status){
 	struct process * proc = thread_current()->process;
-	printf("%s: exit(%d)\n", proc->program_name, status);
+	//printf("%s: exit(%d)\n", proc->program_name, status);
 	proc->exit_code = status;
 
 	/* We Need to clear out the mmap table before exiting
@@ -365,7 +365,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
-	printf("file descriptor %u\n", fd_entry->fd);
+	//printf("file descriptor %u\n", fd_entry->fd);
 
 	f->eax = fd_entry->fd;
 }
@@ -720,9 +720,9 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		system_exit(f, -1);
 	}
 
-	printf("file descriptor %u\n", fd);
+	//printf("file descriptor %u\n", fd);
 
-	printf("readdir\n");
+	//printf("readdir\n");
 	struct file *file = NULL;
 	struct inode *inode = NULL;
 	struct dir *dir = NULL;
@@ -735,7 +735,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 			(dir = dir_open(inode)) != NULL){
 
 		off_t off = file_tell(file);
-		printf("%u offset\n", off);
+		//printf("%u offset\n", off);
 		success = dir_readdir(dir, name, &off);
 		/* Skip over . and .. */
 		while(success && ((!strcmp(name, ".") || !strcmp(name, "..")))){
@@ -745,11 +745,11 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		   this is the only place we need to call dir close */
 		dir_close(dir);
 		file_seek(file, off);
-		printf("%u offset\n", off);
+		//printf("%u offset\n", off);
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
-	printf("Readdir %s\n", name);
+	//printf("Readdir %s\n", name);
 
 	f->eax = success;
 }

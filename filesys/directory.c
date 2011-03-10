@@ -44,7 +44,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *dir_open (struct inode *inode){
-	printf("dir open\n");
+	//printf("dir open\n");
 	if(inode == NULL){
 		return NULL;
 	}
@@ -58,9 +58,9 @@ struct dir *dir_open (struct inode *inode){
 		lock_acquire(&ret_dir->dir_lock);
 		if(inode_reopen(inode) != NULL){
 			ret_dir->open_cnt ++;
-			printf("open and incremented count\n");
+			//printf("open and incremented count\n");
 		}else{
-			printf("return null1\n");
+			//printf("return null1\n");
 			ret_dir = NULL;
 		}
 		lock_release(&ret_dir->dir_lock);
@@ -78,7 +78,7 @@ struct dir *dir_open (struct inode *inode){
 			lock_release(&open_dirs_lock);
 			//inode_close(inode);
 			free(ret_dir);
-			printf("return null2");
+			//printf("return null2");
 			return NULL;
 		}
 
@@ -91,10 +91,10 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_elem != NULL){
 			//inode_close(inode);
 			free(ret_dir);
-			printf("returned null 3\n");
+			//printf("returned null 3\n");
 			return NULL;
 		}else{
-			printf("returned  sector %u \n", ret_dir->sector);
+			//printf("returned  sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
@@ -119,12 +119,12 @@ struct dir *dir_reopen (struct dir *dir){
 
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
-	printf("dir close\n");
+	//printf("dir close\n");
 	if(dir == NULL){
 		return;
 	}
 
-	printf("dir close inode num %u\n", dir->inode->sector);
+	//printf("dir close inode num %u\n", dir->inode->sector);
 
 	struct hash_elem *ret_elem;
 	lock_acquire(&open_dirs_lock);
@@ -135,12 +135,12 @@ void dir_close (struct dir *dir){
 	inode_close(dir->inode);
 
 	if(delete){
-		printf("actually removed\n");
+		//printf("actually removed\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
 		free(dir);
 	}else{
-		printf("not removed\n");
+		//printf("not removed\n");
 	}
 	lock_release(&open_dirs_lock);
 }
@@ -210,7 +210,7 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
 	uint32_t last_slash = 0;
 	uint32_t count = 0;
 	if(full == NULL || path == NULL || leaf == NULL || strlen(full) == 0){
-		printf("invalid params path and leaf\n");
+		//printf("invalid params path and leaf\n");
 		return false;
 	}
 
@@ -405,15 +405,15 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
 	if(dir == NULL|| name == NULL || inode== NULL){
 		return false;
 	}
-	printf("dir lookup\n");
+	//printf("dir lookup\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
 	if(lookup (dir, name, &e, NULL)){
 		*inode = inode_open (e.inode_sector);
-		printf("inode sector %u\n", (*inode)->sector);
+		//printf("inode sector %u\n", (*inode)->sector);
 	}else{
 		*inode = NULL;
-		printf("inode was null\n");
+		//printf("inode was null\n");
 	}
 	lock_release(&dir->dir_lock);
 
