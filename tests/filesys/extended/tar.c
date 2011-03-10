@@ -90,7 +90,7 @@ archive_file (char file_name[], size_t file_name_size,
               int archive_fd, bool *write_error) 
 {
 
-	//printf("archive file %s \n", file_name);
+	printf("archive file %s \n", file_name);
   int file_fd = open (file_name);
   if (file_fd >= 0) 
     {
@@ -140,7 +140,9 @@ archive_ordinary_file (const char *file_name, int file_fd,
     {
       static char buf[512];
       int chunk_size = file_size > 512 ? 512 : file_size;
+      printf("reading\n");
       int read_retval = read (file_fd, buf, chunk_size);
+      printf("read return\n");
       int bytes_read = read_retval > 0 ? read_retval : 0;
 
       if (bytes_read != chunk_size && !read_error) 
@@ -155,6 +157,7 @@ archive_ordinary_file (const char *file_name, int file_fd,
         success = false;
 
       file_size -= chunk_size;
+      printf("file size %u\n", file_size);
     }
 
   printf("archive ordinary ret 2\n");
