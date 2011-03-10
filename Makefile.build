@@ -53,7 +53,7 @@ lib/kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
 lib/kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
 lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
 lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar().
-
+lib/kernel_SRC += lib/kernel/uint_set.c # set !
 # User process code.
 userprog_SRC  = userprog/process.c	# Process loading.
 userprog_SRC += userprog/pagedir.c	# Page directories.
@@ -66,6 +66,7 @@ userprog_SRC += userprog/tss.c		# TSS management.
 vm_SRC =  vm/frame.c			# Some file.
 vm_SRC += vm/evict.c
 vm_SRC += vm/swap.c
+vm_SRC += vm/mmap.c
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
