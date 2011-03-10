@@ -502,9 +502,10 @@ bool dir_remove (struct dir *dir, const char *name){
 	ASSERT (dir != NULL);
 	ASSERT (name != NULL);
 
-	/* Used to query if the file we are evicting
-	   is actually a directory and querying if it
-	   is in use */
+	/* open dirs lock is to make sure that all directories are
+	   either open or they are closed. Restricting processes from
+	   opening a directory and putting stuff in it as we are trying
+	   to delete the directory*/
 	lock_acquire(&open_dirs_lock);
 	lock_acquire(&dir->dir_lock);
 	//dir_file_count(dir);
@@ -513,7 +514,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		//printf("file doesn't exist\n");
 		lock_release(&dir->dir_lock);
 		lock_release(&open_dirs_lock);
-		goto done;
+		return false;
 	}
 
 	/* Open inode. */
@@ -522,7 +523,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		//printf("inode is null\n");
 		lock_release(&dir->dir_lock);
 		lock_release(&open_dirs_lock);
-		goto done;
+		return false;
 	}
 
 	if(inode_is_dir(inode)){
@@ -536,12 +537,16 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(ret_elem != NULL){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
+			inode_close(inode);
 			//printf("directory in use by a thread\n");
-			goto done;
+			return false;
 		}
 
-
-
+		/* See how many files are in this directory, we
+		   know the number of files in it will not change
+		   because we are holding the open_dirs_lock and others
+		   can't open this directory to add or remove stuff from
+		   it*/
 		struct dir sub_dir;
 		sub_dir.inode = inode;
 		sub_dir.sector = e.inode_sector;
@@ -553,8 +558,9 @@ bool dir_remove (struct dir *dir, const char *name){
 		if(file_count != 2){
 			lock_release(&dir->dir_lock);
 			lock_release(&open_dirs_lock);
+			inode_close(inode);
 			//printf("File count != 2 goto done %u\n", file_count);
-			goto done;
+			return false;
 		}
 	}
 
@@ -562,7 +568,9 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	/* Remove inode if we are the only one to have it open. */
 	if(!inode_remove_unopened(inode)){
-		goto done;
+		lock_release(&dir->dir_lock);
+		inode_close(inode);
+		return false;
 	}
 
 	/* Erase directory entry. */
@@ -570,21 +578,21 @@ bool dir_remove (struct dir *dir, const char *name){
 	e.inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_entry)){
 		//printf("Goto done 5\n");
-		goto done;
+		lock_release(&dir->dir_lock);
+		inode_close(inode);
+		return false;
 	}
 
 	//dir_file_count(dir);
 
 	lock_release(&dir->dir_lock);
 
-	success = true;
+	inode_close(inode);
 
 	//printf("Inode removed access count %u\n", inode->open_cnt);
 
-	done:
-	inode_close (inode);
 	//printf("dir removes succes %u\n", success);
-	return success;
+	return true;
 }
 
 /* Reads the next directory entry in DIR and stores the name in
