@@ -451,7 +451,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 
-	//printf("size %u, offset %u ino length %u ino%u\n", size, offset, inode->cur_length, inode->sector);
+	printf("size %u, offset %u ino length %u ino%u\n", size, offset, inode->cur_length, inode->sector);
 
 	lock_acquire(&inode->reader_lock);
 	off_t eof = inode->cur_length;
@@ -471,12 +471,12 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	while (size > 0){
 		/* Disk sector to read, starting byte offset within sector. */
 		block_sector_t sector_idx = byte_to_sector (inode, offset, false);
-		//printf("read sector %u\n", sector_idx);
+		printf("read sector %u\n", sector_idx);
 
 		block_sector_t next_sector =
 				byte_to_sector(inode, offset + BLOCK_SECTOR_SIZE, false);
 
-		//printf("read next sector %u\n", next_sector);
+		printf("read next sector %u\n", next_sector);
 		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
 		/* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -519,7 +519,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		//printf("size %d\n", size);
 	}
 
-	//printf("read ret\n");
+	printf("read ret\n");
 	return bytes_read;
 }
 
