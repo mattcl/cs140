@@ -496,7 +496,6 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	struct dir_entry e;
 	struct inode *inode = NULL;
-	bool success = false;
 	off_t ofs = 0;
 
 	ASSERT (dir != NULL);
@@ -562,16 +561,17 @@ bool dir_remove (struct dir *dir, const char *name){
 			//printf("File count != 2 goto done %u\n", file_count);
 			return false;
 		}
+
+		/* Remove inode if we are the only one to have it open. */
+		if(!inode_remove_unopened(inode)){
+			lock_release(&open_dirs_lock);
+			lock_release(&dir->dir_lock);
+			inode_close(inode);
+			return false;
+		}
 	}
 
 	lock_release(&open_dirs_lock);
-
-	/* Remove inode if we are the only one to have it open. */
-	if(!inode_remove_unopened(inode)){
-		lock_release(&dir->dir_lock);
-		inode_close(inode);
-		return false;
-	}
 
 	/* Erase directory entry. */
 	e.in_use = false;
