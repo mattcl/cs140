@@ -507,10 +507,12 @@ bool dir_remove (struct dir *dir, const char *name){
 	   is in use */
 	lock_acquire(&open_dirs_lock);
 	lock_acquire(&dir->dir_lock);
-	dir_file_count(dir);
+	//dir_file_count(dir);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
 		//printf("file doesn't exist\n");
+		lock_release(&dir->dir_lock);
+		lock_release(&open_dirs_lock);
 		goto done;
 	}
 
@@ -518,6 +520,8 @@ bool dir_remove (struct dir *dir, const char *name){
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
 		//printf("inode is null\n");
+		lock_release(&dir->dir_lock);
+		lock_release(&open_dirs_lock);
 		goto done;
 	}
 
@@ -569,7 +573,7 @@ bool dir_remove (struct dir *dir, const char *name){
 		goto done;
 	}
 
-	dir_file_count(dir);
+	//dir_file_count(dir);
 
 	lock_release(&dir->dir_lock);
 
