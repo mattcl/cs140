@@ -212,13 +212,14 @@ write_header (const char *file_name, enum ustar_type type, int size,
 static bool do_write (int fd, const char *buffer, int size, bool *write_error){
 	printf("do write\n");
 	if (write (fd, buffer, size) == size) {
+		printf("write return1\n");
 		return true;
 	}else{
 		if (!*write_error){
 			printf ("error writing archive\n");
 			*write_error = true;
 		}
+		printf("write return2\n");
 		return false;
 	}
-	printf("write return\n");
 }
