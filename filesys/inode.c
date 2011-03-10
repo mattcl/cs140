@@ -56,12 +56,16 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 		return ZERO_SECTOR;
 	}
 
+	printf("i_sector %u\n", i_sector);
+
 	struct cache_entry *i_entry =
 			bcache_get_and_lock(i_sector, CACHE_INDIRECT);
 
 	struct indirect_block *i_block = (struct indirect_block*)i_entry->data;
 
 	ret = check_alloc_install(i_block->ptrs, sector_off, create);
+
+	printf("i return %u\n", ret);
 
 	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
