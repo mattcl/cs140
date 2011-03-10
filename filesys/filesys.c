@@ -145,6 +145,7 @@ bool filesys_create_dir(const char *path){
 	}
 
 	dir_close (dir);
+	printf("filesys create dir end\n");
 	return success;
 }
 

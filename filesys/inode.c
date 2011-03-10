@@ -213,11 +213,11 @@ void inode_init (void){
    EOF and the new write those sectors will point to the ZERO_SECTOR
    Returns true if sector is already allocated. */
 bool inode_create (block_sector_t sector, off_t length, bool is_dir){
-	//printf("create dir %u\n", is_dir);
+	printf("inode create dir %u\n", is_dir);
 
 	if(!free_map_is_allocated(sector)){
 		/* Make this an assert perhaps ?*/
-		//printf("not alloc\n");
+		printf("not alloc\n");
 		return false;
 	}
 
@@ -238,7 +238,7 @@ bool inode_create (block_sector_t sector, off_t length, bool is_dir){
 	}
 	bcache_unlock(e, UNLOCK_FLUSH);
 
-	//printf("create ret\n");
+	printf("create ret\n");
 	return true;
 }
 

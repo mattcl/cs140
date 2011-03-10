@@ -29,13 +29,16 @@ void dir_init(void){
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, block_sector_t parent){
-	//printf("dir create\n");
+	printf("dir create\n");
 	struct dir *dir = NULL;
+	struct inode *ino = NULL;
 	bool success = inode_create (sector, 0, true)
-			&& (dir = dir_open(inode_open(sector))) != NULL
+			&& (ino = inode_open(sector)) != NULL
+			&& (dir = dir_open(ino)) != NULL
 			&& dir_add(dir, ".", sector) && dir_add(dir, "..", parent);
 
-	//printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
+	printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
+	inode_close(ino);
 	dir_close(dir);
 
 	return success;
