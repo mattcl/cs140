@@ -545,7 +545,7 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	/* Erase directory entry. */
 	e.in_use = false;
-	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_enty)){
+	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_entry)){
 		printf("Goto done 5\n");
 		goto done;
 	}
