@@ -388,15 +388,18 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
 	if(dir == NULL|| name == NULL || inode== NULL){
 		return false;
 	}
-	//printf("dir lookup\n");
+	printf("dir lookup\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
 	if(lookup (dir, name, &e, NULL)){
 		*inode = inode_open (e.inode_sector);
+		print("inode sector %u\n", inode->sector);
 	}else{
 		*inode = NULL;
+		printf("inode was null\n");
 	}
 	lock_release(&dir->dir_lock);
+
 	return *inode != NULL;
 }
 
