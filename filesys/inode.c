@@ -601,6 +601,8 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		printf("Byte to sector\n");
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 
+		printf("sector idx %u\n", sector_idx);
+
 		if(sector_idx == 0){
 			if(extending){
 				lock_release(&inode->writer_lock);
