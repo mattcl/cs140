@@ -617,7 +617,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		printf("bcache get sector %u offset %u\n", sector_idx, offset);
+		//printf("bcache get sector %u offset %u\n", sector_idx, offset);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		if(entry == NULL){
