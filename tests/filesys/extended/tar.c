@@ -169,7 +169,7 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
   size_t dir_len;
   bool success = true;
 
-  //printf("archive directory %s\n", file_name);
+  printf("archive directory %s\n", file_name);
 
   dir_len = strlen (file_name);
   if (dir_len + 1 + READDIR_MAX_LEN + 1 > file_name_size) 
