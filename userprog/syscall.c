@@ -339,7 +339,7 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 /* Opens the file by the name of file_name returns -1 if the file
    wasn't opened. Kills if the file_name refers to invalid memory*/
 static void system_open (struct intr_frame *f, const char *file_name){
-	printf("system open\n");
+	//printf("system open\n");
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
@@ -352,7 +352,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	unpin_all_frames_for_buffer(file_name, length);
 	if(opened_file  == NULL){
 		f->eax = -1;
-		printf("system open done1\n");
+		//printf("system open done1\n");
 		return;
 	}
 
@@ -361,7 +361,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	struct fd_hash_entry *fd_entry = calloc(1, sizeof(struct fd_hash_entry));
 	if(fd_entry == NULL){
 		f->eax = -1;
-		printf("system open done2\n");
+		//printf("system open done2\n");
 		return;
 	}
 
@@ -381,7 +381,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	//printf("file descriptor %u\n", fd_entry->fd);
 
 	f->eax = fd_entry->fd;
-	printf("system open done3\n");
+	//printf("system open done3\n");
 }
 
 /* Returns the size of the file for the fd, or -1 if the fd
@@ -403,14 +403,14 @@ static void system_filesize(struct intr_frame *f, int fd){
    or if the buffer refers to memory that is read only. Checks to make
    sure that buffer is contiguous*/
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	printf("system read\n");
+	//printf("system read\n");
 	if(!buffer_is_valid_writable(buffer, size)){
 		system_exit(f, -1);
 	}
 
 	if(fd == STDOUT_FILENO){
 		f->eax = 0;
-		printf("system read return1\n");
+		//printf("system read return1\n");
 		return;
 	}
 
@@ -423,7 +423,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 			charBuffer[bytes_read]= input_getc();
 		}
 		f->eax = bytes_read;
-		printf("system read return2\n");
+		//printf("system read return2\n");
 		return;
 	}
 
@@ -431,7 +431,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 	if(file == NULL){
 		f->eax = 0;
-		printf("system read return3\n");
+		//printf("system read return3\n");
 		return;
 	}
 	pin_all_frames_for_buffer(buffer, size);
@@ -440,14 +440,14 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 	lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_read;
-	printf("system read return4\n");
+	//printf("system read return4\n");
 }
 
 /* Writes size bytes from buffer to the fd. Returns the number of bytes written
    to the fd. If the buffer does not refer to contiguous valid memory then this
    will kill the process.*/
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	printf("system write\n");
+	//printf("system write\n");
 	if(!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
 	}
@@ -470,7 +470,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 			}
 		}
 		f->eax = size; /* return size*/
-		printf("system write return 1\n");
+		//printf("system write return 1\n");
 		return;
 	}
 
@@ -478,13 +478,13 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 
 	if(open_file == NULL){
 		f->eax = 0;
-		printf("system write return 2\n");
+		//printf("system write return 2\n");
 		return;
 	}
 
 	if(inode_is_dir(file_get_inode(open_file))){
 		f->eax = -1;
-		printf("system write return 3\n");
+		//printf("system write return 3\n");
 		return;
 	}
 
@@ -494,7 +494,7 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
-	printf("system write return 4\n");
+	//printf("system write return 4\n");
 }
 
 /* Seeks to the position in the file described by fd. If the offset is
@@ -538,12 +538,12 @@ static void system_tell(struct intr_frame *f, int fd){
 /* Closes the file described by fd and removes fd from the list of open
    files for this process. Does nothing if fd is invalid*/
 static void system_close(struct intr_frame *f, int fd ){
-	printf("system close\n");
+	//printf("system close\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't close something that is already closed */
 	if(entry == NULL || entry->is_closed){
 		f->eax = -1;
-		printf("system closed return1\n");
+		//printf("system closed return1\n");
 		return;
 	}
 
@@ -571,7 +571,7 @@ static void system_close(struct intr_frame *f, int fd ){
 		/* Will tell munmap to actually close this file*/
 		entry->is_closed = true;
 	}
-	printf("system closed return2\n");
+	//printf("system closed return2\n");
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
@@ -752,8 +752,8 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		system_exit(f, -1);
 	}
 
-	printf("readdir\n");
-	printf("file descriptor %u\n", fd);
+	//printf("readdir\n");
+	//printf("file descriptor %u\n", fd);
 
 	struct file *file = NULL;
 	struct inode *inode = NULL;
@@ -781,7 +781,7 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
 
-	printf("Readdir done %s\n", name);
+	//printf("Readdir done %s\n", name);
 
 	f->eax = success;
 }
@@ -790,7 +790,7 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 	if(!string_is_valid(dir_name)){
 		system_exit(f,-1);
 	}
-	printf("mkdir\n");
+	//printf("mkdir\n");
 	bool success = false;
 	uint32_t length = strlen(dir_name) + 1; /* plus one for the null */
 	pin_all_frames_for_buffer(dir_name, length);
@@ -799,11 +799,11 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 	}
 	unpin_all_frames_for_buffer(dir_name, length);
 	f->eax = success;
-	printf("mkdir done\n");
+	//printf("mkdir done\n");
 }
 
 static void system_chdir(struct intr_frame *f, const char *dir_name){
-	printf("chdir\n");
+	//printf("chdir\n");
 	if(!string_is_valid(dir_name)){
 		system_exit(f,-1);
 	}
@@ -826,7 +826,7 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
 	unpin_all_frames_for_buffer(dir_name, length);
 
 	f->eax = success;
-	printf("chdir done\n");
+	//printf("chdir done\n");
 }
 
 

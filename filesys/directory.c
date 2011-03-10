@@ -29,7 +29,7 @@ void dir_init(void){
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, block_sector_t parent){
-	printf("dir create sector 1 %u sector 2 %u\n", sector, parent);
+	//printf("dir create sector 1 %u sector 2 %u\n", sector, parent);
 	ASSERT(sector != ZERO_SECTOR && parent != ZERO_SECTOR);
 	struct dir *dir = NULL;
 	struct inode *ino = NULL;
@@ -38,7 +38,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 			&& (dir = dir_open(ino)) != NULL
 			&& dir_add(dir, ".", sector) && dir_add(dir, "..", parent);
 
-	printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
+	//printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
 	inode_close(ino);
 	dir_close(dir);
 
@@ -48,7 +48,7 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *dir_open (struct inode *inode){
-	printf("dir open\n");
+	//printf("dir open\n");
 	if(inode == NULL){
 		return NULL;
 	}
@@ -62,9 +62,9 @@ struct dir *dir_open (struct inode *inode){
 		lock_acquire(&ret_dir->dir_lock);
 		if(inode_reopen(inode) != NULL){
 			ret_dir->open_cnt ++;
-			printf("open and incremented count\n");
+			//printf("open and incremented count\n");
 		}else{
-			printf("return null1\n");
+			//printf("return null1\n");
 			ret_dir = NULL;
 		}
 		lock_release(&ret_dir->dir_lock);
@@ -81,7 +81,7 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_dir == NULL){
 			lock_release(&open_dirs_lock);
 			free(ret_dir);
-			printf("return null2");
+			//printf("return null2");
 			return NULL;
 		}
 
@@ -93,10 +93,10 @@ struct dir *dir_open (struct inode *inode){
 		lock_release(&open_dirs_lock);
 		if(ret_elem != NULL){
 			free(ret_dir);
-			printf("returned null 3\n");
+			//printf("returned null 3\n");
 			return NULL;
 		}else{
-			printf("returned  sector %u \n", ret_dir->sector);
+			//printf("returned  sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
@@ -431,7 +431,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	if(dir == NULL || name == NULL || strlen(name) == 0){
 		return false;
 	}
-	printf("dir add %p\n", dir);
+	//printf("dir add %p\n", dir);
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;
@@ -446,7 +446,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 
 	lock_acquire(&dir->dir_lock);
 
-	printf("pre lookup\n");
+	//printf("pre lookup\n");
 	/* Check that NAME is not in use. */
 	if(lookup (dir, name, NULL, NULL)){
 		goto done;
@@ -459,7 +459,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
      inode_read_at() will only return a short read at end of file.
      Otherwise, we'd need to verify that we didn't get a short
      read due to something intermittent such as low memory. */
-	printf("pre read at loop\n");
+	//printf("pre read at loop\n");
 	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof(struct dir_entry), ofs)
 			== sizeof(struct dir_entry);
 			ofs += sizeof(struct dir_entry)){
@@ -468,19 +468,19 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 		}
 	}
 
-	printf("pre strcpy\n");
+	//printf("pre strcpy\n");
 	/* Write slot. */
 	e.in_use = true;
 	strlcpy (e.name, name, sizeof(e.name));
 	e.inode_sector = inode_sector;
-	printf("pre inode write at\n");
+	//printf("pre inode write at\n");
 	success = inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs)
 			== sizeof(struct dir_entry);
 
 	done:
 	lock_release(&dir->dir_lock);
 
-	printf("added\n");
+	//printf("added\n");
 	return success;
 }
 

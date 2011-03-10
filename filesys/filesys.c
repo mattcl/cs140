@@ -109,14 +109,14 @@ bool filesys_create_dir(const char *path){
 		return false;
 	}
 
-	printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
+	//printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
 
 	if(file_name == NULL){
 		dir_close(dir);
 		return false;
 	}
 
-	printf("creating a directory %s at path %s\n", file_name, path);
+	//printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* special consideration for creating /, we don't allow it sorry! :)*/
 	if(file_is_root(file_name, dir)){
@@ -136,7 +136,7 @@ bool filesys_create_dir(const char *path){
 			&& (s3 = dir_add (dir, file_name, inode_sector)));
 
 	if(!success){
-		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
 
 
@@ -145,7 +145,7 @@ bool filesys_create_dir(const char *path){
 	}
 
 	dir_close (dir);
-	printf("filesys create dir end\n");
+	//printf("filesys create dir end\n");
 	return success;
 }
 
@@ -214,7 +214,7 @@ bool filesys_remove (const char *path){
 
 /* Formats the file system. */
 static void do_format (void){
-	printf ("Formatting file system...\n");
+	//printf ("Formatting file system...\n");
 	free_map_create ();
 	if(!dir_create (ROOT_DIR_SECTOR, ROOT_DIR_SECTOR)){
 		PANIC ("root directory creation failed");
