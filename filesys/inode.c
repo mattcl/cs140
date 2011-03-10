@@ -147,9 +147,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		/* Read directly from inode */
 		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
 		bcache_unlock(entry, UNLOCK_NORMAL);
-		//printf("byte to sector ret reg block sector %u\n", ret);
+		printf("byte to sector ret reg block sector %u\n", ret);
 		return ret; /* May be zero sector still ;) */
 	}else{
+		printf("read indirect\n");
 		/* The number of the indirect sector that the data resides on*/
 		uint32_t i_file_sector =
 				((PTR_PER_BLK)+(file_sector - NUM_REG_BLK))/PTR_PER_BLK;
@@ -165,10 +166,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 									i_sec_offset, create);
 
 			bcache_unlock(entry, UNLOCK_NORMAL);
-			//printf("byte to sector ret ind block sector %u\n", ret);
+			printf("byte to sector ret ind block sector %u\n", ret);
 			return ret; /* May be ZERO_SECTOR */
 		}else{
-
+			printf("read double indirect\n");
 			/* The number of the double indirect sector that the indirect sector
 		   	   resides on*/
 			uint32_t d_file_sector =
@@ -182,10 +183,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 						    				 d_sec_offset, i_sec_offset, create);
 
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				//printf("byte to sector ret dbl block sector %u\n", ret);
+				printf("byte to sector ret dbl block sector %u\n", ret);
 				return ret;
 			}else{
-
+				printf("read triple indirect\n");
 				/* The number of the triple indirect block that this sector
 				   resides on. Can really only be 1 or zero*/
 				uint32_t t_file_sector =
@@ -202,7 +203,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 				ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
 						t_sec_offset, d_sec_offset, i_sec_offset, create);
 				bcache_unlock(entry, UNLOCK_NORMAL);
-				//printf("byte to sector ret trip block sector %u\n", ret);
+				printf("byte to sector ret trip block sector %u\n", ret);
 				return ret;
 			}
 		}
