@@ -613,7 +613,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	//printf("inode write end %u\n", bytes_written);
+	printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
