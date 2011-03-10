@@ -266,6 +266,8 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	   each file will close with the filesys lock held */
 	hash_destroy(&proc->open_files, &fd_hash_entry_destroy);
 
+	dir_close(proc->cwd);
+
 	thread_exit();
 	NOT_REACHED();
 }
