@@ -6,6 +6,7 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 #include "buffer-cache.h"
+#include "devices/block.h"
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
@@ -153,9 +154,11 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		uint32_t i_file_sector =
 				((PTR_PER_BLK)+(file_sector - NUM_REG_BLK))/PTR_PER_BLK;
 
+		/* The offset in the indirect block of the sector we are looking for */
 		uint32_t i_sec_offset = (file_sector - NUM_REG_BLK) % PTR_PER_BLK;
 
-		/* minus one because of the way we calculated indt_sec_num */
+		/* minus one because of the way we calculated indt_sec_num, and it
+		   isn't an index */
 		if((i_file_sector-1) < NUM_IND_BLK){
 
 			ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
@@ -351,7 +354,9 @@ static void free_block_sectors(uint32_t *array, uint32_t size){
 		if(array[i] != ZERO_SECTOR){
 			/* These blocks have already been invalidated in
 			   our cache as long as we don't get them here*/
+			block_write(fs_device, array[i], zeroed_sector);
 			free_map_release (array[i], 1);
+			array[i] = 0;
 		}
 	}
 }
@@ -369,6 +374,7 @@ static void free_indirect_blocks(uint32_t *array, uint32_t size, uint32_t count)
 			}else{
 				free_indirect_blocks(b->ptrs, PTR_PER_BLK, --count);
 			}
+			block_write(fs_device, array[i], zeroed_sector);
 			free_map_release(array[i], 1);
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
 		}
@@ -403,10 +409,10 @@ void inode_close (struct inode *inode){
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
 
-			/* Dump all our data out to disk now then invalidate the
-			   cache so that cache_entries from this file won't be
-			   found and evicted later on in kernel execution*/
-			bcache_flush();
+			/* invalidate the cache so that cache_entries from
+			   this file won't be found and writen out to disk
+			    later on in kernel execution*/
+			//bcache_flush();
 			bcache_invalidate();
 
 			struct cache_entry *entry =
@@ -427,6 +433,8 @@ void inode_close (struct inode *inode){
 			free_map_release (inode->sector, 1);
 
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
+
+			block_write(fs_device, inode->sector, zeroed_sector);
 			//printf("removed and freeing entries in freemap\n");
 
 		}else{
