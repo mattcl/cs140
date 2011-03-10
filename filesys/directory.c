@@ -553,10 +553,13 @@ bool dir_remove (struct dir *dir, const char *name){
 
 	/* Erase directory entry. */
 	e.in_use = false;
+	e.inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs) != sizeof(struct dir_entry)){
 		printf("Goto done 5\n");
 		goto done;
 	}
+
+	dir_file_count(dir);
 
 	lock_release(&dir->dir_lock);
 
@@ -564,7 +567,7 @@ bool dir_remove (struct dir *dir, const char *name){
 	inode_remove (inode);
 	success = true;
 
-	printf("Inode removed\n");
+	printf("Inode removed access count %u\n", inode->open_cnt);
 
 	done:
 	inode_close (inode);
