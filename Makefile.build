@@ -45,14 +45,15 @@ lib_SRC += lib/stdlib.c			# Utility functions.
 lib_SRC += lib/string.c			# String functions.
 lib_SRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
 lib_SRC += lib/ustar.c			# Unix standard tar format utilities.
-lib_SRC += lib/fixed-point.c    # Fixed point arithmetic for kernel
+lib_SRC += lib/fixed-point.c    	# Fixed point arithmetic for kernel
 
 # Kernel-specific library code.
 lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
 lib/kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
 lib/kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
 lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
-lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar().
+lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar()
+lib/kernel_SRC += lib/kernel/uint_set.c # set of unsigned integers
 
 # User process code.
 userprog_SRC  = userprog/process.c	# Process loading.
@@ -66,7 +67,7 @@ userprog_SRC += userprog/tss.c		# TSS management.
 vm_SRC =  vm/frame.c			# Some file.
 vm_SRC += vm/evict.c
 vm_SRC += vm/swap.c
-
+vm_SRC += vm/mmap.c                     #mmap functionailty
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
 filesys_SRC += filesys/free-map.c	# Free sector bitmap.

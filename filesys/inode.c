@@ -145,7 +145,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		/* Read directly from inode */
 		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
 		bcache_unlock(entry, UNLOCK_NORMAL);
-		printf("byte to sector ret reg block sector %u\n", ret);
+		//		printf("byte to sector ret reg block sector %u\n", ret);
 		return ret; /* May be zero sector still ;) */
 	}else{
 		/* The number of the indirect sector that the data resides on*/
