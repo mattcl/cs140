@@ -527,21 +527,23 @@ bool dir_remove (struct dir *dir, const char *name){
 			printf("directory in use by a thread\n");
 			goto done;
 		}
-		lock_release(&dir->dir_lock);
-		lock_release(&open_dirs_lock);
 
-		struct dir *sub_dir = dir_open(inode);
+		struct dir sub_dir;
+		sub_dir.inode = inode;
+		sub_dir.sector = e.inode_sector;
+		lock_init(&sub_dir.dir_lock);
 
+		uint32_t file_count = dir_file_count(&sub_dir);
 
-		uint32_t file_count = dir_file_count(sub_dir);
-		dir_close(sub_dir);
 		if(file_count != 2){
+			lock_release(&dir->dir_lock);
+			lock_release(&open_dirs_lock);
 			printf("File count != 2 goto done\n");
 			goto done;
 		}
-	}else{
-		lock_release(&open_dirs_lock);
 	}
+
+	lock_release(&open_dirs_lock);
 
 	/* Erase directory entry. */
 	e.in_use = false;
@@ -550,10 +552,11 @@ bool dir_remove (struct dir *dir, const char *name){
 		goto done;
 	}
 
+	lock_release(&dir->dir_lock);
+
 	/* Remove inode. */
 	inode_remove (inode);
 	success = true;
-	lock_release(&dir->dir_lock);
 
 	printf("Inode removed\n");
 
