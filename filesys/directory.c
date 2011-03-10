@@ -488,7 +488,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
-	printf("dir remove\n");
+	printf("dir remove in dir %u\n", dir->inode->sector);
 	if(dir == NULL || name == NULL || strlen(name) == 0){
 		printf("invalid parameters\n");
 		return false;
@@ -538,6 +538,8 @@ bool dir_remove (struct dir *dir, const char *name){
 		struct dir sub_dir;
 		sub_dir.inode = inode;
 		sub_dir.sector = e.inode_sector;
+
+		printf("trying to remove subdir at %u %u\n", inode->sector, e.inode_sector);
 
 		uint32_t file_count = dir_file_count(&sub_dir);
 
