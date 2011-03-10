@@ -510,7 +510,7 @@ static bool dir_remove_file(struct dir *dir, struct inode *inode,
 	ASSERT(lock_held_by_current_thread(&open_dirs_lock));
 	ASSERT(lock_held_by_current_thread(&dir->dir_lock));
 
-	printf("removing a file\n");
+	//printf("removing a file\n");
 	lock_release(&open_dirs_lock);
 
 	bool success = true;
@@ -546,7 +546,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	sub_dir.inode = inode;
 	sub_dir.sector = e->inode_sector;
 
-	printf("trying to remove subdir at %u %u\n", inode->sector, e->inode_sector);
+	//printf("trying to remove subdir at %u %u\n", inode->sector, e->inode_sector);
 	uint32_t file_count = dir_file_count(&sub_dir);
 
 	if(file_count != 2){
@@ -578,7 +578,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 		goto done;
 	}
 
-	printf("success removing\n");
+	//printf("success removing\n");
 	success = true;
 done:
 	lock_release(&dir->dir_lock);
@@ -590,7 +590,7 @@ done:
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
-	printf("dir remove in dir %u\n", dir->inode->sector);
+	//printf("dir remove in dir %u\n", dir->inode->sector);
 	if(dir == NULL || name == NULL || strlen(name) == 0){
 		printf("invalid parameters\n");
 		return false;
