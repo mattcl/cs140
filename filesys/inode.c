@@ -391,6 +391,11 @@ void inode_close (struct inode *inode){
 		return;
 	}
 
+	/* Flush the entire cache to disk now because all our
+	   data may be changed and we don't know which sectors
+	   are in the cache so just write all of it out now*/
+	bcache_flush();
+
 	/* Acquire both locks, make sure no IO occurs
 	   with the global lock held*/
 	lock_acquire(&open_inodes_lock);
@@ -408,12 +413,6 @@ void inode_close (struct inode *inode){
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
-
-			/* invalidate the cache so that cache_entries from
-			   this file won't be found and writen out to disk
-			    later on in kernel execution*/
-			bcache_flush();
-			bcache_invalidate();
 
 			struct cache_entry *entry =
 					bcache_get_and_lock(inode->sector, CACHE_DATA);
@@ -434,6 +433,13 @@ void inode_close (struct inode *inode){
 
 			bcache_unlock(entry, UNLOCK_INVALIDATE);
 
+			/* Invalidate the cache because we may have entries
+			   in it from this file which are stale and not to be
+			   written back to disk at all because they may belong
+			   to another file by the time they are evicted!!*/
+			bcache_invalidate();
+
+			/* Zero out the sector */
 			block_write(fs_device, inode->sector, zeroed_sector);
 			//printf("removed and freeing entries in freemap\n");
 
@@ -442,9 +448,6 @@ void inode_close (struct inode *inode){
 			/* the data we were protecting has been read*/
 			lock_release(&inode->meta_data_lock);
 			lock_release(&open_inodes_lock);
-
-			/* Flush any dirty data to disk */
-			bcache_flush();
 		}
 		free (inode);
 	}else{
