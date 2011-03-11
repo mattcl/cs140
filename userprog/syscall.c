@@ -924,12 +924,13 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
-		void *kaddr = pagedir_get_page(pd, uaddr);
-		printf("present %u kaddr %p uaddr %p %u\n", pagedir_is_present(pd, uaddr),kaddr, uaddr, thread_current()->process->pid);
+		void *kaddr;
+
 		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
-		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
+		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr = pagedir_get_page(pd, uaddr))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
+			printf("present %u kaddr %p uaddr %p %u\n", pagedir_is_present(pd, uaddr),kaddr, uaddr, thread_current()->process->pid);
 			//printf("Infinite loop?\n");
 			int x = get_user(uaddr);
 			if(x < 0){
