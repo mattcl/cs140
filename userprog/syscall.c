@@ -839,7 +839,7 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
    the full extent of the buffer. Touches every page to make sure that
    it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
-	printf("start address %p\n", buffer);
+	printf("start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -902,7 +902,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
 
-	printf("uaddr %p size %u\n", buffer, size);
+	printf("uaddr %p size %u %u\n", buffer, size, thread_current()->process->pid);
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
 	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
@@ -923,7 +923,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr = pagedir_get_page(pd, uaddr);
-		printf("kaddr %p uaddr %p\n", kaddr, uaddr);
+		printf("kaddr %p uaddr %p %u\n", kaddr, uaddr, thread_current()->process->pid);
 		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read

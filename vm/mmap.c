@@ -165,7 +165,7 @@ bool mmap_read_in(void *faulting_addr){
 	pagedir_set_dirty(pd, (void*)masked_uaddr, false);
 
 	intr_enable();
-	ASSERT(pagedir_is_present(thread_current()->pagedir, masked_uaddr));
+	ASSERT(pagedir_is_present(thread_current()->pagedir, (void *)masked_uaddr));
 	unpin_frame_entry(kaddr);
 
 	return true;
