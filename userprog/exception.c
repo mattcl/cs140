@@ -190,7 +190,7 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
-			printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
+			//printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
@@ -201,7 +201,7 @@ static void page_fault (struct intr_frame *f){
 			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
 			pagedir_set_medium(pd, uaddr, PTE_STACK);
-			printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
+			//printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
 			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){

@@ -65,7 +65,7 @@ static struct frame_entry *choose_frame_to_evict_random(void){
 		entry = frame_entry_at_pos(index);
 		if(!entry->is_pinned){
 		    entry->is_pinned = true;
-		    printf("selected process %p with pd %p and uaddr %p %u\n", entry->cur_owner, entry->pd, entry->uaddr, entry->cur_owner->pid);
+		    //printf("selected process %p with pd %p and uaddr %p %u\n", entry->cur_owner, entry->pd, entry->uaddr, entry->cur_owner->pid);
 		    break;
 		}
 	}
