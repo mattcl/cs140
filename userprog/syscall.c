@@ -924,7 +924,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 			   in so that we can pin it's frame */
 			printf("Infinite loop?\n");
 			int x = get_user(uaddr);
-			printf("x %d %p\n", x, kaddr);
+			//printf("x %d %p\n", x, kaddr);
 		}
 		intr_enable();
 	}
