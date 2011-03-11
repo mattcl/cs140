@@ -163,7 +163,7 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 	ASSERT(depth > 0);
 	block_sector_t ret;
 	struct cache_entry *entry ;
-	struct indirect_block *i_block;
+	struct indirect_block i_block;
 
 	block_sector_t this_sector =
 			check_alloc_install(array, offset_array[depth], create, changed);
@@ -176,18 +176,18 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 
 	entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
 
-	memcpy(i_block, entry->data, BLOCK_SECTOR_SIZE);
+	memcpy(&i_block, entry->data, BLOCK_SECTOR_SIZE);
 	bcache_unlock(entry, UNLOCK_NORMAL);
 
 	if(depth == 1){
 		/* This is a regular indirect pointer block just check if the sector is set
 		   and set it to a new sector if necessary*/
-		ret = check_alloc_install(i_block->ptrs, offset_array[depth-1], create,
+		ret = check_alloc_install(i_block.ptrs, offset_array[depth-1], create,
 				&lower_level_changed);
 	}else{
 		/* This is a triple or double indirect block so we need to look up the
 		   sector from one of the blocks that we are pointing to */
-		ret = recursive_read_sector(i_block->ptrs, offset_array, depth - 1,
+		ret = recursive_read_sector(i_block.ptrs, offset_array, depth - 1,
 				create, &lower_level_changed);
 	}
 
@@ -195,7 +195,7 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 		/* An entry in this indirect block has been created so we need to update the
 		   cache and write this change out to disk */
 		entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
-		memcpy(entry->data, entry, BLOCK_SECTOR_SIZE);
+		memcpy(entry->data, &i_block, BLOCK_SECTOR_SIZE);
 		bcache_unlock(entry, UNLOCK_FLUSH);
 	}
 	return ret;
@@ -222,9 +222,9 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 
-	struct disk_inode *inode_d;
+	struct disk_inode inode_d;
 
-	memcpy(inode_d, entry->data, BLOCK_SECTOR_SIZE);
+	memcpy(&inode_d, entry->data, BLOCK_SECTOR_SIZE);
 
 	bcache_unlock(entry, UNLOCK_NORMAL);
 
@@ -236,7 +236,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	if(file_sector < NUM_REG_BLK){
 		/* Read directly from inode */
 		printf("read direct\n");
-		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create, &changed);
+		ret = check_alloc_install(inode_d.block_ptrs, file_sector, create, &changed);
 		//bcache_unlock(entry, UNLOCK_NORMAL);
 		printf("byte to sector ret reg block sector %u\n", ret);
 	}else{
@@ -258,7 +258,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 			//ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
 			//						i_sec_offset, create, &changed);
 
-			ret = recursive_read_sector(inode_d->i_ptrs, offset_array, 1, create, &changed);
+			ret = recursive_read_sector(inode_d.i_ptrs, offset_array, 1, create, &changed);
 
 			printf("byte to sector ret ind block sector %u\n", ret);
 		}else{
@@ -280,7 +280,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 				//ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
 				//		    				 d_sec_offset, i_sec_offset, create, &changed);
 
-				ret = recursive_read_sector(inode_d->d_ptrs, offset_array, 1, create, &changed);
+				ret = recursive_read_sector(inode_d.d_ptrs, offset_array, 1, create, &changed);
 
 				//bcache_unlock(entry, UNLOCK_NORMAL);
 				printf("byte to sector ret dbl block sector %u\n", ret);
@@ -307,7 +307,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 				//ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
 				//		t_sec_offset, d_sec_offset, i_sec_offset, create, &changed);
 
-				ret = recursive_read_sector(inode_d->t_ptrs, offset_array, 1, create, &changed);
+				ret = recursive_read_sector(inode_d.t_ptrs, offset_array, 1, create, &changed);
 
 				printf("byte to sector ret trip block sector %u\n", ret);
 			}
@@ -317,7 +317,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	if(changed){
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		ASSERT(entry != NULL);
-		memcpy(entry->data, inode_d, BLOCK_SECTOR_SIZE);
+		memcpy(entry->data, &inode_d, BLOCK_SECTOR_SIZE);
 		bcache_unlock(entry, UNLOCK_FLUSH);
 	}
 	return ret;
