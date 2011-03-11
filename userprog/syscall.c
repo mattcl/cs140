@@ -922,9 +922,9 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr = pagedir_get_page(pd, uaddr))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
-			printf("Infinite loop?\n");
+			//printf("Infinite loop?\n");
 			int x = get_user(uaddr);
-			//printf("x %d %p\n", x, kaddr);
+			printf("x %d %p\n", x, kaddr);
 		}
 		intr_enable();
 	}
