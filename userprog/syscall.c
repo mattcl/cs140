@@ -839,7 +839,7 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
    the full extent of the buffer. Touches every page to make sure that
    it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
-	printf("bread start address %p %u\n", buffer, thread_current()->process->pid);
+	//printf("bread start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -863,7 +863,7 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
    is read only segment. Touches every page in buffer to make sure it is
    writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
-	printf("bwrite start address %p %u\n", buffer, thread_current()->process->pid);
+	//printf("bwrite start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	int byte;
 	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
@@ -877,7 +877,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
 
 			uaddr += increment;
-			printf("get uaddr %p\n", uaddr);
+			//printf("get uaddr %p\n", uaddr);
 			if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 				return false;
 			}
@@ -904,7 +904,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
 
-	printf("uaddr %p size %u %u\n", buffer, size, thread_current()->process->pid);
+	//printf("uaddr %p size %u %u\n", buffer, size, thread_current()->process->pid);
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
 	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);

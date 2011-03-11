@@ -190,7 +190,7 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
-			printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
+			//printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
