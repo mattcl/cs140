@@ -157,7 +157,7 @@ bool swap_read_in (void *faulting_addr){
 	bitmap_set(used_swap_slots, swap_slot, false);
 	lock_release(&swap_slots_lock);
 
-	ASSERT(pagedir_is_preset(thread_current()->pagedir, masked_uaddr));
+	ASSERT(pagedir_is_present(thread_current()->pagedir, masked_uaddr));
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);

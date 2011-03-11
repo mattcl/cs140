@@ -970,7 +970,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
 
 
-	ASSERT(pagedir_is_preset(thread_current()->pagedir, upage));
+	ASSERT(pagedir_is_present(thread_current()->pagedir, upage));
 	unpin_frame_entry(kpage);
 
 	//lock_release(&filesys_lock);
@@ -991,7 +991,7 @@ static bool setup_stack (void **esp){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
 					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
-			ASSERT(pagedir_is_preset(thread_current()->pagedir, ((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK));
+			ASSERT(pagedir_is_present(thread_current()->pagedir, ((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK));
 			unpin_frame_entry(kpage);
 		}else{
 			/* remove this frame cause we failed*/
