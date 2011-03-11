@@ -196,7 +196,7 @@ static void page_fault (struct intr_frame *f){
 			   with interrupts on because it may try to move some
 			   other page to the disk.*/
 			uint32_t *kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
-
+			ASSERT(kaddr != NULL);
 			/* Atomically set the page table entry to be present and mapped */
 			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
