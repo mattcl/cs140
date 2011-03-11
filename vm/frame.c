@@ -334,7 +334,7 @@ void frame_clear_page (void *kaddr){
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
 
-	printf("Clear page\n");
+	//printf("Clear page\n");
 
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
@@ -345,7 +345,7 @@ void frame_clear_page (void *kaddr){
 		   of another thread and doesn't need its frame table
 		   entry updated here*/
 		lock_release(&f_table.frame_table_lock);
-		printf("was pinned\n");
+		//printf("was pinned\n");
 		return;
 	}
 
@@ -355,7 +355,7 @@ void frame_clear_page (void *kaddr){
 	entry->pd = NULL;
 	entry->is_pinned = false;
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
-	printf("cleared and bitmap set \n");
+	//printf("cleared and bitmap set \n");
 	lock_release(&f_table.frame_table_lock);
 }
 
