@@ -925,7 +925,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr = pagedir_get_page(pd, uaddr);
-		printf("kaddr %p uaddr %p %u\n", kaddr, uaddr, thread_current()->process->pid);
+		printf("present %u kaddr %p uaddr %p %u\n", pagedir_is_present(pd, uaddr),kaddr, uaddr, thread_current()->process->pid);
 		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read
