@@ -215,7 +215,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	old_level = intr_disable();
 
 	if(!pagedir_is_present(pd, entry->uaddr)){
-		printf("uaddr %x not present\n", entry->uaddr);
+		printf("entry %p uaddr %x not present\n", entry, entry->uaddr);
 	}
 
 	/* Atomically set the pagedir of the passed in uaddr
