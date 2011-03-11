@@ -214,6 +214,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        fault and their ish will fail miserably*/
 	old_level = intr_disable();
 
+	pd = entry->pd;
 	if(!pagedir_is_present(pd, entry->uaddr)){
 		PANIC("entry %p uaddr %x not present\n", entry, entry->uaddr);
 	}
@@ -221,7 +222,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	/* Atomically set the pagedir of the passed in uaddr
 	   to point to where it can find its memory and set
 	   it's present bit to 0 */
-	pd = entry->pd;
 	medium = pagedir_get_medium(pd, entry->uaddr);
 	if(pagedir_is_dirty(pd, entry->uaddr)){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
