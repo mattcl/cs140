@@ -920,6 +920,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr = pagedir_get_page(pd, uaddr);
 		kaddr =  (void *)((uint32_t)kaddr & PTE_ADDR);
+		printf("kaddr %p\n", kaddr);
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
