@@ -126,7 +126,6 @@ void *pagedir_get_page (uint32_t *pd, const void *uaddr){
 	if(pte != NULL && (*pte & PTE_P) != 0){
 		return pte_get_page (*pte) + pg_ofs (uaddr);
 	}else{
-	  printf("pte null ? %u\n", pte == NULL);
 		return NULL;
 	}
 }
