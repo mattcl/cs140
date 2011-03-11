@@ -377,8 +377,10 @@ void unpin_frame_entry(void *kaddr){
    current thread is not in the frame or if the frame
    is allready pinned */
 bool pin_frame_entry(void *kaddr){
-	ASSERT(kaddr >= f_table.base &&
-			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+	if(kaddr < f_table.base ||
+			(uint8_t*)kaddr  >= (uint8_t*)f_table.base + (f_table.size * PGSIZE)){
+		PANIC("kaddr %p not between base %p and end %p \n", kaddr, (uint8_t*)f_table.base, (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+	}
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){
