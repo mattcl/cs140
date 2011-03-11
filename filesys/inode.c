@@ -23,7 +23,9 @@ static inline size_t bytes_to_sectors (off_t size){
 /* Checks if the index in the array is set, if it is then will return that
    block sector. Otherwise if create is true then it will create that sector
    allocating from the free list then return the new sector */
-static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool create){
+static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx,
+		bool create, bool *changed){
+
 	block_sector_t alloc = ZERO_SECTOR;
 	if(array[idx] == ZERO_SECTOR){
 		//printf("Array index ZERO\n");
@@ -37,39 +39,48 @@ static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx, bool cr
 		}
 		ASSERT(alloc != 1953394531);
 		array[idx] = alloc;
+		*changed = true;
 	}/*else{
 		//printf("Array index nonZERO\n");
+
 	}*/
 	return array[idx];
 }
 
 /* Array can be from either a double indirect block or an inode */
 static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
-		uint32_t sector_off, bool create){
+		uint32_t sector_off, bool create, bool *changed){
 
 	/* Read indirect block from inode and
 	   then read the sector from there*/
 	block_sector_t ret;
 
 	block_sector_t i_sector =
-			check_alloc_install(array, i_off, create);
+			check_alloc_install(array, i_off, create, *changed);
 
 	if(i_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
 	}
 
+	bool lower_changed = false;
+
 	//printf("i_sector %u\n", i_sector);
 
-	struct cache_entry *i_entry =
-			bcache_get_and_lock(i_sector, CACHE_INDIRECT);
+	struct cache_entry *i_entry = bcache_get_and_lock(i_sector, CACHE_INDIRECT);
+	struct indirect_block *i_block;
+	memcpy(i_block, i_entry->data, BLOCK_SECTOR_SIZE);
+	bcache_unlock(i_entry, UNLOCK_NORMAL);
 
-	struct indirect_block *i_block = (struct indirect_block*)i_entry->data;
+	ret = check_alloc_install(i_block->ptrs, sector_off, create, &lower_changed);
 
-	ret = check_alloc_install(i_block->ptrs, sector_off, create);
+	if(lower_changed){
+		struct cache_entry *i_entry = bcache_get_and_lock(i_sector, CACHE_INDIRECT);
+		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
+		bcache_unlock(i_entry, UNLOCK_FLUSH);
+	}
 
 	//printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
 
-	bcache_unlock(i_entry, UNLOCK_NORMAL);
 	return ret; /* May be ZERO_SECTOR */
 }
 
@@ -77,47 +88,118 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
    in our case either the array in the inode or an array in a triple
    indirect block*/
 static block_sector_t d_read_sector(uint32_t *array, uint32_t d_off,
-		uint32_t i_off, uint32_t sector_off, bool create){
+		uint32_t i_off, uint32_t sector_off, bool create, bool *changed){
 	/*Read in dbl, then read in indirect, then return
 	  the address there */
 	block_sector_t ret;
 
 	block_sector_t d_sector =
-			check_alloc_install(array, d_off, create);
+			check_alloc_install(array, d_off, create, changed);
 	if(d_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
 	}
 
-	struct cache_entry *d_entry =
-			bcache_get_and_lock(d_sector, CACHE_INDIRECT);
-	struct indirect_block *d_block = (struct indirect_block*)d_entry->data;
+	bool lower_changed = false;
 
+	struct cache_entry *d_entry = bcache_get_and_lock(d_sector, CACHE_INDIRECT);
+	struct indirect_block *d_block;
+	memcpy(d_block, d_entry->data, BLOCK_SECTOR_SIZE);
+	bcache_unlock(d_entry, UNLOCK_NORMAL);
 	/* read sector from indirect */
 
-	ret = i_read_sector(d_block->ptrs, i_off, sector_off, create);
+	ret = i_read_sector(d_block->ptrs, i_off, sector_off, create, &lower_changed);
 
-	bcache_unlock(d_entry, UNLOCK_NORMAL);
+	if(lower_changed){
+		struct cache_entry *i_entry = bcache_get_and_lock(d_sector, CACHE_INDIRECT);
+		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
+		bcache_unlock(i_entry, UNLOCK_FLUSH);
+	}
+
 	return ret; /* May be ZERO_SECTOR */
 }
 
-static block_sector_t t_read_sector(uint32_t *array, uint32_t t_off,
-		uint32_t d_off, uint32_t i_off, uint32_t sector_off, bool create){
+static block_sector_t t_read_sector(uint32_t *array, uint32_t t_off,uint32_t d_off,
+		uint32_t i_off, uint32_t sector_off, bool create, bool *changed){
 	block_sector_t ret;
 
-	block_sector_t t_sector =
-			check_alloc_install(array, t_off, create);
+	block_sector_t t_sector =check_alloc_install(array, t_off, create);
 	if(t_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
 	}
 
-	struct cache_entry *t_entry =
-			bcache_get_and_lock(t_sector, CACHE_INDIRECT);
-	struct indirect_block *t_block = (struct indirect_block*)t_entry->data;
+	bool lower_changed = false;
+
+	struct cache_entry *t_entry = bcache_get_and_lock(t_sector, CACHE_INDIRECT);
+	struct indirect_block *t_block;
+	memcpy(t_block, t_entry->data, BLOCK_SECTOR_SIZE);
+	bcache_unlock(t_entry, UNLOCK_NORMAL);
 
 	/* read sector from double indirect block */
-	ret = d_read_sector(t_block->ptrs, d_off, i_off, sector_off, create);
-	bcache_unlock(t_entry, UNLOCK_NORMAL);
+	ret = d_read_sector(t_block->ptrs, d_off, i_off, sector_off, create, &lower_changed);
+
+	if(lower_changed){
+		struct cache_entry *i_entry = bcache_get_and_lock(t_sector, CACHE_INDIRECT);
+		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
+		bcache_unlock(i_entry, UNLOCK_FLUSH);
+	}
+
 	return ret;
+}
+
+
+/* Offset array is an array starting with the offset of the sector
+   in the block, the offset of the indirect sector in the array,
+   then the offset of the double indirect block in the array,
+   then the offset of the triple indirect block in the array.
+   Array changes between calls to this recursive function the caller
+   of the function will provide an array in the base inode and the offset
+   of the sector in the correct place in the offset array. The depth will
+   be the following triple indirect blocks depth = 3, double indirect blocks
+   depth = 2, regular indirect blocks depth = 1. Depth should never be passed
+   in 0 or something bad will happen */
+static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_array,
+		uint32_t depth, bool create, bool *changed){
+
+	ASSERT(depth > 0);
+	block_sector_t ret;
+	struct cache_entry *entry ;
+	struct indirect_block *i_block;
+
+	block_sector_t this_sector =
+			check_alloc_install(array, offset_array[depth], create, changed);
+
+	if(this_sector = ZERO_SECTOR){
+		return ZERO_SECTOR;
+	}
+
+	bool lower_level_changed = false;
+
+	entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
+
+	memcpy(i_block, entry->data, BLOCK_SECTOR_SIZE);
+	bcache_unlock(entry, UNLOCK_NORMAL);
+
+	if(depth == 1){
+		/* This is a regular indirect pointer block just check if the sector is set
+		   and set it to a new sector if necessary*/
+		ret = check_alloc_install(i_block->ptrs, offset_array[depth-1], create,
+				&lower_level_changed);
+	}else{
+		/* This is a triple or double indirect block so we need to look up the
+		   sector from one of the blocks that we are pointing to */
+		ret = recursive_read_sector(i_block->ptrs, offset_array, depth - 1,
+				create, &lower_level_changed);
+	}
+
+	if(lower_level_changed){
+		/* An entry in this indirect block has been created so we need to update the
+		   cache and write this change out to disk */
+		entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
+		memcpy(entry->data, entry, BLOCK_SECTOR_SIZE);
+		bcache_unlock(entry, UNLOCK_FLUSH);
+	}
+	return ret;
+
 }
 
 /* Returns the block device sector that contains byte offset at pos,
@@ -134,11 +216,19 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 	block_sector_t ret = ZERO_SECTOR;
 
+	uint32_t offset_array[4];
+
 	ASSERT(inode->sector != ZERO_SECTOR);
 
 	struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 
-	struct disk_inode *inode_d = (struct disk_inode*)entry->data;
+	struct disk_inode *inode_d;
+
+	memcpy(inode_d, entry->data, BLOCK_SECTOR_SIZE);
+
+	bcache_unlock(entry, UNLOCK_NORMAL);
+
+	bool changed = false;
 
 	/* For conciseness in space the i suffix/prefix signifies an indirect block
 	   a d signifies a double indirect block and a t signifies a triply
@@ -146,10 +236,9 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	if(file_sector < NUM_REG_BLK){
 		/* Read directly from inode */
 		printf("read direct\n");
-		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create);
-		bcache_unlock(entry, UNLOCK_NORMAL);
+		ret = check_alloc_install(inode_d->block_ptrs, file_sector, create, &changed);
+		//bcache_unlock(entry, UNLOCK_NORMAL);
 		printf("byte to sector ret reg block sector %u\n", ret);
-		return ret; /* May be zero sector still ;) */
 	}else{
 		/* The number of the indirect sector that the data resides on*/
 		uint32_t i_file_sector =
@@ -161,13 +250,17 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		/* minus one because of the way we calculated indt_sec_num, and it
 		   isn't an index */
 		if((i_file_sector-1) < NUM_IND_BLK){
-			printf("read indirect\n");
-			ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
-									i_sec_offset, create);
 
-			bcache_unlock(entry, UNLOCK_NORMAL);
+			offset_array[0] = i_sec_offset;
+			offset_array[1] = i_file_sector -1;
+
+			printf("read indirect\n");
+			//ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
+			//						i_sec_offset, create, &changed);
+
+			ret = recursive_read_sector(inode_d->i_ptrs, offset_array, 1, create, &changed);
+
 			printf("byte to sector ret ind block sector %u\n", ret);
-			return ret; /* May be ZERO_SECTOR */
 		}else{
 
 			/* The number of the double indirect sector that the indirect sector
@@ -178,13 +271,19 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 			/* Minus one because of the way that dbl indt sec is calculated*/
 			if((d_file_sector-1) < NUM_DBL_BLK){
-				printf("read double indirect\n");
-				ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
-						    				 d_sec_offset, i_sec_offset, create);
 
-				bcache_unlock(entry, UNLOCK_NORMAL);
+				offset_array[0] = i_sec_offset;
+				offset_array[2] = d_sec_offset;
+				offset_array[3] = d_file_sector -1;
+
+				printf("read double indirect\n");
+				//ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
+				//		    				 d_sec_offset, i_sec_offset, create, &changed);
+
+				ret = recursive_read_sector(inode_d->d_ptrs, offset_array, 1, create, &changed);
+
+				//bcache_unlock(entry, UNLOCK_NORMAL);
 				printf("byte to sector ret dbl block sector %u\n", ret);
-				return ret;
 			}else{
 				printf("read triple indirect\n");
 				/* The number of the triple indirect block that this sector
@@ -196,18 +295,32 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 					/* our inodes only support at most one triple indirect sector
 					   so the request for this offset is greater than 1 GB and can
 					   not be satisfied*/
-					bcache_unlock(entry, UNLOCK_NORMAL);
+					//bcache_unlock(entry, UNLOCK_NORMAL);
 					//printf("byte to sector ret trip1 block sector %u\n", ZERO_SECTOR);
 					return ZERO_SECTOR;
 				}
-				ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
-						t_sec_offset, d_sec_offset, i_sec_offset, create);
-				bcache_unlock(entry, UNLOCK_NORMAL);
+				offset_array[0] = i_sec_offset;
+				offset_array[1] = d_sec_offset;
+				offset_array[2] = t_sec_offset;
+				offset_array[3] = (t_file_sector-1);
+
+				//ret = t_read_sector(inode_d->t_ptrs, (t_file_sector-1),
+				//		t_sec_offset, d_sec_offset, i_sec_offset, create, &changed);
+
+				ret = recursive_read_sector(inode_d->t_ptrs, offset_array, 1, create, &changed);
+
 				printf("byte to sector ret trip block sector %u\n", ret);
-				return ret;
 			}
 		}
 	}
+
+	if(changed){
+		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
+		ASSERT(entry != NULL);
+		memcpy(entry->data, inode_d, BLOCK_SECTOR_SIZE);
+		bcache_unlock(entry, UNLOCK_FLUSH);
+	}
+	return ret;
 }
 
 /* Initializes the inode module. */
