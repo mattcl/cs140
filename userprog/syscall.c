@@ -877,6 +877,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
 
 			uaddr += increment;
+			printf("get uaddr %p\n", uaddr);
 			if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 				return false;
 			}
