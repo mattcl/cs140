@@ -93,10 +93,10 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 
 	if(lower_level_changed){
 		/* An entry in this indirect block has been created so we need to update the
-		   cache and write this change out to disk */
+		   cache (maybe flush to disk??? UNLOCK_FLUSH)*/
 		entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
 		memcpy(entry->data, &i_block, BLOCK_SECTOR_SIZE);
-		bcache_unlock(entry, UNLOCK_FLUSH);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 	}
 	return ret;
 
@@ -215,12 +215,12 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	}
 
 	/* The block that we looked at to get the sector was updated by this call
-	   so we need to update the cache and write the change out to disk */
+	   so we need to update the cache (maybe flush to disk??? UNLOCK_FLUSH)*/
 	if(changed){
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		ASSERT(entry != NULL);
 		memcpy(entry->data, &inode_d, BLOCK_SECTOR_SIZE);
-		bcache_unlock(entry, UNLOCK_FLUSH);
+		bcache_unlock(entry, UNLOCK_NORMAL);
 	}
 	return ret;
 }
