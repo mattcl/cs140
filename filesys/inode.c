@@ -56,7 +56,7 @@ static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
 	block_sector_t ret;
 
 	block_sector_t i_sector =
-			check_alloc_install(array, i_off, create, *changed);
+			check_alloc_install(array, i_off, create, changed);
 
 	if(i_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
@@ -122,7 +122,7 @@ static block_sector_t t_read_sector(uint32_t *array, uint32_t t_off,uint32_t d_o
 		uint32_t i_off, uint32_t sector_off, bool create, bool *changed){
 	block_sector_t ret;
 
-	block_sector_t t_sector =check_alloc_install(array, t_off, create);
+	block_sector_t t_sector =check_alloc_install(array, t_off, create, changed);
 	if(t_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
 	}
@@ -168,7 +168,7 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 	block_sector_t this_sector =
 			check_alloc_install(array, offset_array[depth], create, changed);
 
-	if(this_sector = ZERO_SECTOR){
+	if(this_sector == ZERO_SECTOR){
 		return ZERO_SECTOR;
 	}
 
