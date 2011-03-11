@@ -405,7 +405,7 @@ static void system_filesize(struct intr_frame *f, int fd){
    or if the buffer refers to memory that is read only. Checks to make
    sure that buffer is contiguous*/
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	//printf("system read\n");
+	printf("system read\n");
 	if(!buffer_is_valid_writable(buffer, size)){
 		system_exit(f, -1);
 	}
@@ -449,7 +449,7 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
    to the fd. If the buffer does not refer to contiguous valid memory then this
    will kill the process.*/
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	//printf("system write\n");
+	printf("system write\n");
 	if(!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
 	}
