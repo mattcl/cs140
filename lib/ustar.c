@@ -113,7 +113,6 @@ ustar_make_header (const char *file_name, enum ustar_type type,
 
   /* Compute and fill in final checksum. */
   snprintf (h->chksum, sizeof h->chksum, "%07o", calculate_chksum (h));
-
   return true;
 }
 

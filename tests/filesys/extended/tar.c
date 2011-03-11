@@ -140,7 +140,9 @@ archive_ordinary_file (const char *file_name, int file_fd,
     {
       static char buf[512];
       int chunk_size = file_size > 512 ? 512 : file_size;
+      //printf("reading\n");
       int read_retval = read (file_fd, buf, chunk_size);
+      //printf("read return\n");
       int bytes_read = read_retval > 0 ? read_retval : 0;
 
       if (bytes_read != chunk_size && !read_error) 
@@ -155,6 +157,7 @@ archive_ordinary_file (const char *file_name, int file_fd,
         success = false;
 
       file_size -= chunk_size;
+      //printf("file size %u\n", file_size);
     }
 
   //printf("archive ordinary ret 2\n");
@@ -198,19 +201,25 @@ static bool
 write_header (const char *file_name, enum ustar_type type, int size,
               int archive_fd, bool *write_error) 
 {
+	//printf("write header\n");
   static char header[512];
-  return (ustar_make_header (file_name, type, size, header)
+  bool success = (ustar_make_header (file_name, type, size, header)
           && do_write (archive_fd, header, 512, write_error));
+  //printf("write header return\n");
+  return success;
 }
 
 static bool do_write (int fd, const char *buffer, int size, bool *write_error){
+	//printf("do write\n");
 	if (write (fd, buffer, size) == size) {
+		//printf("write return1\n");
 		return true;
 	}else{
 		if (!*write_error){
-			printf ("error writing archive\n");
+			//printf ("error writing archive\n");
 			*write_error = true;
 		}
+		//printf("write return2\n");
 		return false;
 	}
 }

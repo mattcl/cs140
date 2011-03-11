@@ -113,6 +113,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
+			printf("waiting\n");
 			cond_wait(&c_entry->eviction_done, &cache_lock);
 		}
 
@@ -195,6 +196,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
+			printf("waiting 1\n");
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
 		}
 
@@ -217,6 +219,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
+			printf("waiting 2\n");
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 
