@@ -839,7 +839,7 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
    the full extent of the buffer. Touches every page to make sure that
    it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
-	printf("start address %p %u\n", buffer, thread_current()->process->pid);
+	printf("bread start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -863,6 +863,7 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
    is read only segment. Touches every page in buffer to make sure it is
    writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
+	printf("bwrite start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	int byte;
 	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
