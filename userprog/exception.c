@@ -217,7 +217,7 @@ static void page_fault (struct intr_frame *f){
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
 
-					 printf("extending the stack %p %u\n", uaddr, thread_current()->process->pid);
+					 //printf("extending the stack %p %u\n", uaddr, thread_current()->process->pid);
 
 					 intr_disable();
 					/* Succeeded, so setup all of the stack pages to be on
