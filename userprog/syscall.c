@@ -258,9 +258,9 @@ void system_exit (struct intr_frame *f UNUSED, int status){
 	lock_release(&proc->mmap_table_lock);
 
 	/*close our executable allowing write access again */
-	lock_acquire(&filesys_lock);
+	////lock_acquire(&filesys_lock);
 	file_close(proc->executable_file);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	/* Free all open files Done without exterior locking
 	   each file will close with the filesys lock held */
@@ -317,9 +317,9 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	}
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 	pin_all_frames_for_buffer(file_name, length);
-	lock_acquire(&filesys_lock);
+	////lock_acquire(&filesys_lock);
 	f->eax = filesys_create(file_name, initial_size);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 }
 
@@ -332,9 +332,9 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 
 	pin_all_frames_for_buffer(file_name, length);
-	lock_acquire(&filesys_lock);
+	////lock_acquire(&filesys_lock);
 	f->eax = filesys_remove(file_name);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 }
 
@@ -348,9 +348,9 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 	struct file *opened_file;
 	pin_all_frames_for_buffer(file_name, length);
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	opened_file = filesys_open(file_name);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 	if(opened_file  == NULL){
 		f->eax = -1;
@@ -395,9 +395,9 @@ static void system_filesize(struct intr_frame *f, int fd){
 		return;
 	}
 
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	f->eax = file_length(open_file);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 }
 
 /* Reads size bytes into buffer an returns the number of bytes
@@ -437,9 +437,9 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 		return;
 	}
 	pin_all_frames_for_buffer(buffer, size);
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_read;
 	//printf("system read return4\n");
@@ -491,9 +491,9 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 	}
 
 	pin_all_frames_for_buffer(buffer, size);
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	bytes_written = file_write(open_file, buffer, size);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
 	//printf("system write return 4\n");
@@ -516,9 +516,9 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 		return;
 	}
 
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	file_seek(file, position);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	f->eax = 1;
 }
@@ -532,9 +532,9 @@ static void system_tell(struct intr_frame *f, int fd){
 		return;
 	}
 
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	f->eax = file_tell(open_file);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 }
 
 /* Closes the file described by fd and removes fd from the list of open
@@ -557,9 +557,9 @@ static void system_close(struct intr_frame *f, int fd ){
 	   again on system munmap, which will decrement the reference
 	   count to this fd and then call system close if it is 0.*/
 	if(entry->num_mmaps == 0){
-		lock_acquire(&filesys_lock);
+		////lock_acquire(&filesys_lock);
 		file_close(entry->open_file);
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 		struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
@@ -592,9 +592,9 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	}
 
 	/* Bounds checking */
-	lock_acquire(&filesys_lock);
+	////lock_acquire(&filesys_lock);
 	int32_t length = file_length(entry->open_file);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	if(length < 1){
 		f->eax = -1;
 		return;
