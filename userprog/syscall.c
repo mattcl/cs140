@@ -923,7 +923,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 			   in so that we can pin it's frame */
 			printf("Infinite loop?\n");
 			get_user(uaddr);
-			unpin_frame_entry(pagedir_get_page(pd, uaddr));
+			unpin_frame_entry(pagedir_get_page(pd, uaddr) & PTE_ADDR);
 		}
 		intr_enable();
 	}
