@@ -902,7 +902,8 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint32_t *pd = thread_current()->pagedir;
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
-	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t back = trailing == 0 ? 0 :PGSIZE - trailing;
 	size += (front + back);
 
 	uaddr -= front;
@@ -920,7 +921,6 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr = pagedir_get_page(pd, uaddr);
 		printf("kaddr %p uaddr %p\n", kaddr, uaddr);
-		kaddr =  (void *)((uint32_t)kaddr & PTE_ADDR);
 		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read
