@@ -914,20 +914,23 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* pin_frame_entry returns false when the current frame
 		   in question is in the process of being evicted. We want
 		   the page address so we mask off the lower 12 bits*/
-		//intr_disable();
+		intr_disable();
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
-		void *kaddr;
-		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr = pagedir_get_page(pd, uaddr))){
+		void *kaddr = pagedir_get_page(pd, uaddr);
+		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
 			//printf("Infinite loop?\n");
 			int x = get_user(uaddr);
-			timer_sleep(10);
+			if(x < 0){
+				PANIC(" User address went from being valid to being invalid???");
+			}
+
 			//printf("x %d\n", x);
 		}
-		//intr_enable();
+		intr_enable();
 	}
 }
 
