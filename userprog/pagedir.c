@@ -396,14 +396,15 @@ bool pagedir_install_page (void *uaddr, void *kaddr, bool writable){
 bool pagedir_setup_demand_page(uint32_t *pd, void *uaddr, medium_t medium ,
 	uint32_t data, bool writable){
 
+	enum intr_level old_level = intr_disable();
+
 	/* Ensure the PTE exists because the following functions won't create it.*/
 	uint32_t *pte = lookup_page(pd, uaddr, true);
 
 	if(pte == NULL){
+		intr_set_level(old_level);
 		return false;
 	}
-
-	enum intr_level old_level = intr_disable();
 
 	/*Set writable bit */
 	*pte |= (writable ? PTE_W : 0);

@@ -214,6 +214,8 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        fault and their ish will fail miserably*/
 	old_level = intr_disable();
 
+	ASSERT(pagedir_is_present(pd, entry->uaddr));
+
 	/* Atomically set the pagedir of the passed in uaddr
 	   to point to where it can find its memory and set
 	   it's present bit to 0 */
@@ -229,7 +231,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 					((uint32_t)entry->uaddr & PTE_ADDR), true);
 			move_to_disk = true;
 		}else{
-		        printf("upper 20 bits %x \n", pagedir_get_aux(pd, entry->uaddr));
+			printf("upper 20 bits %x \n", pagedir_get_aux(pd, entry->uaddr));
 			PANIC("realocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{
