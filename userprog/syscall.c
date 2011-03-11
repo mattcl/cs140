@@ -919,7 +919,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr = pagedir_get_page(pd, uaddr);
-		(uint32_t)kaddr &= PTE_ADDR;
+		((uint32_t)kaddr) &= PTE_ADDR;
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr)){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
