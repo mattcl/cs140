@@ -990,8 +990,8 @@ static bool setup_stack (void **esp){
 		if(success){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
-					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
-			ASSERT(pagedir_is_present(thread_current()->pagedir, ((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK));
+					((uint8_t *) PHYS_BASE) - PGSIZE, PTE_STACK);
+			ASSERT(pagedir_is_present(thread_current()->pagedir, ((uint8_t *) PHYS_BASE) - PGSIZE));
 			unpin_frame_entry(kpage);
 		}else{
 			/* remove this frame cause we failed*/
