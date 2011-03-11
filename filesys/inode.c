@@ -96,10 +96,10 @@ static block_sector_t recursive_read_sector(uint32_t *array, uint32_t *offset_ar
 		   cache (maybe flush to disk??? UNLOCK_FLUSH)*/
 		entry = bcache_get_and_lock(this_sector, CACHE_INDIRECT);
 		memcpy(entry->data, &i_block, BLOCK_SECTOR_SIZE);
+		entry->flags |= CACHE_E_DIRTY;
 		bcache_unlock(entry, UNLOCK_NORMAL);
 	}
 	return ret;
-
 }
 
 /* Returns the block device sector that contains byte offset at pos,
@@ -173,8 +173,8 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 			if((d_file_sector-1) < NUM_DBL_BLK){
 
 				offset_array[0] = i_sec_offset;
-				offset_array[2] = d_sec_offset;
-				offset_array[3] = d_file_sector -1;
+				offset_array[1] = d_sec_offset;
+				offset_array[2] = d_file_sector -1;
 
 				//printf("read double indirect\n");
 				//ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
@@ -220,6 +220,7 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		ASSERT(entry != NULL);
 		memcpy(entry->data, &inode_d, BLOCK_SECTOR_SIZE);
+		entry->flags |= CACHE_E_DIRTY;
 		bcache_unlock(entry, UNLOCK_NORMAL);
 	}
 	return ret;
