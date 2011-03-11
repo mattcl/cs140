@@ -68,7 +68,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 
 			if(pin_frame_entry(kaddr_for_pg)){
 				/* It is now pinned so it will not be evicted */
-				//lock_acquire(&filesys_lock);
+				lock_acquire(&filesys_lock);
 				original_position = file_tell(fd_entry->open_file);
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
 				file_seek(fd_entry->open_file, offset);
@@ -78,7 +78,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
 				file_seek(fd_entry->open_file, original_position);
 
-				//lock_release(&filesys_lock);
+				lock_release(&filesys_lock);
 				ASSERT(pagedir_is_present(thread_current()->pagedir, pg_ptr));
 				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
