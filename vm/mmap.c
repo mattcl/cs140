@@ -109,6 +109,8 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
+	printf("mmap read in\n");
+
 	mmap_wait_until_saved(pd, faulting_addr);
 
 	intr_enable();
@@ -181,6 +183,8 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 		   access any of the processes memory */
 		return false;
 	}
+
+	printf("mmap write out\n");
 
 	ASSERT(lock_held_by_current_thread(&cur_process->mmap_table_lock));
 
