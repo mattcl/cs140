@@ -382,6 +382,7 @@ bool pin_frame_entry(void *kaddr){
 		lock_release(&f_table.frame_table_lock);
 		return false;
 	}
+	printf("pin frame entry ++\n");
 	entry->is_pinned = true;
 	lock_release(&f_table.frame_table_lock);
 	return true;
