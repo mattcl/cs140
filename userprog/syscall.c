@@ -900,10 +900,12 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
+
+	printf("uaddr %p size %u\n", buffer, size);
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
 	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
-	uint32_t back = trailing == 0 ? 0 :PGSIZE - trailing;
+	uint32_t back = trailing == 0 ? 0 : PGSIZE - trailing;
 	size += (front + back);
 
 	uaddr -= front;
