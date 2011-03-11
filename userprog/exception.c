@@ -190,6 +190,7 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
+			printf("get new stack frame\n");
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
@@ -223,7 +224,7 @@ static void page_fault (struct intr_frame *f){
 							pagedir_get_medium(pd, uaddr) == PTE_AVL_ERROR){
 
 						pagedir_setup_demand_page(pd, uaddr,
-								PTE_STACK,0 , true);
+								PTE_STACK, 0, true);
 
 						uaddr += PGSIZE;
 					}
