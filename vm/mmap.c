@@ -21,6 +21,7 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
+		printf("8 ms sleep\n");
 		timer_msleep(8);
 		intr_disable();
 	}

@@ -80,6 +80,7 @@ bool swap_read_in (void *faulting_addr){
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
+		printf("waiting swap\n");
 		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
 	}
