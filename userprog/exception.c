@@ -197,10 +197,12 @@ static void page_fault (struct intr_frame *f){
 			   other page to the disk.*/
 			uint32_t *kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
 			ASSERT(kaddr != NULL);
+			printf("kaddr was %p\n", kaddr);
 			/* Atomically set the page table entry to be present and mapped */
 			intr_disable();
 			ASSERT(pagedir_install_page(uaddr, kaddr, true));
 			pagedir_set_medium(pd, uaddr, PTE_STACK);
+			ASSERT(pagedir_get_page(thread_current()->pagedir, uaddr) == kaddr);
 			//printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
 			unpin_frame_entry(kaddr);
 
