@@ -43,13 +43,13 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 	uint32_t j;
 	void *kaddr_for_pg;
 
-	off_t offset, original_position, write_bytes, f_length, last_page_length;
+	off_t offset, original_position, write_bytes, last_page_length;
 
 	//lock_acquire(&filesys_lock);
-	f_length = file_length(fd_entry->open_file);
+	//f_length = file_length(fd_entry->open_file);
 	//lock_release(&filesys_lock);
 
-	last_page_length = PGSIZE - ((entry->num_pages*PGSIZE) - f_length);
+	last_page_length = PGSIZE - ((entry->num_pages*PGSIZE) - entry->length_of_file);
 
 	/* Pin all of the frames that we are going to be
 	   removing so they can not be evicted*/
@@ -70,14 +70,14 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 			if(pin_frame_entry(kaddr_for_pg)){
 				/* It is now pinned so it will not be evicted */
 				//lock_acquire(&filesys_lock);
-				original_position = file_tell(fd_entry->open_file);
+				//original_position = file_tell(fd_entry->open_file);
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
-				file_seek(fd_entry->open_file, offset);
+				//file_seek(fd_entry->open_file, offset);
 
 				write_bytes = (entry->num_pages -1 == j)  ? last_page_length : PGSIZE;
 
-				file_write(fd_entry->open_file, pg_ptr, write_bytes);
-				file_seek(fd_entry->open_file, original_position);
+				file_write_at(fd_entry->open_file, pg_ptr, write_bytes, offset);
+				//file_seek(fd_entry->open_file, original_position);
 
 				//lock_release(&filesys_lock);
 				ASSERT(pagedir_is_present(thread_current()->pagedir, pg_ptr));
@@ -109,7 +109,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
-	printf("mmap read in\n");
+	//printf("mmap read in\n");
 
 	mmap_wait_until_saved(pd, faulting_addr);
 
@@ -146,13 +146,13 @@ bool mmap_read_in(void *faulting_addr){
 	   never more so we know we will only read the appropriate amount
 	   of data into our zero page*/
 	//lock_acquire(&filesys_lock);
-	off_t original_spot = file_tell(fd_entry->open_file);
-	file_seek(fd_entry->open_file, offset);
-	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
+	//off_t original_spot = file_tell(fd_entry->open_file);
+	//file_seek(fd_entry->open_file, offset);
+	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, PGSIZE, offset);
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
-	file_seek(fd_entry->open_file, original_spot);
+	//file_seek(fd_entry->open_file, original_spot);
 	//lock_release(&filesys_lock);
 
 	intr_disable();
@@ -184,7 +184,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 		return false;
 	}
 
-	printf("mmap write out\n");
+	//printf("mmap write out\n");
 
 	ASSERT(lock_held_by_current_thread(&cur_process->mmap_table_lock));
 
@@ -215,10 +215,12 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	//lock_acquire(&filesys_lock);
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
-	file_seek(fd_entry->open_file, offset);
+
+	//file_seek(fd_entry->open_file, offset)
+
 	/* If this is the last page only read the appropriate number of bytes*/
 	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
-			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+			entry->length_of_file % PGSIZE : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
 	   kernel virtual address without worrying about getting
@@ -226,7 +228,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	if(kaddr == NULL){
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
-	file_write(fd_entry->open_file, kaddr, write_bytes);
+	file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
 	//lock_release(&filesys_lock);
 

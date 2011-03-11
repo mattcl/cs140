@@ -367,6 +367,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		return;
 	}
 
+
 	fd_entry->fd = ++(process->fd_count);
 	fd_entry->open_file = opened_file;
 	fd_entry->is_closed = false;
@@ -584,6 +585,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 		f->eax = -1;
 		return;
 	}
+
+	/* Disallow writing to a directory here */
+	if(inode_is_dir(file_get_inode(entry->open_file))){
+		f->eax = -1;
+		return;
+	}
+
 	/* verify the virtual addr */
 	if( ((uint32_t)masked_uaddr % PGSIZE) != 0 || masked_uaddr == NULL
 			|| !is_user_vaddr(masked_uaddr)){
@@ -673,7 +681,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	mmap_entry->fd = entry->fd;
 	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
-
+	mmap_entry->length_of_file = length;
 	lock_acquire(&process->mmap_table_lock);
 
 	struct hash_elem *returned =

@@ -16,6 +16,9 @@ struct mmap_hash_entry{
 	int fd;					/* FD for this mapping*/
 	uint32_t num_pages;		/* Number of pages so I don't have to think*/
 	struct hash_elem elem;  /* hash elem*/
+	off_t length_of_file;   /* The length of the file at creation
+							   because the length of the file that
+							   was mmaped can now be changed */
 };
 
 
