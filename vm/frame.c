@@ -229,6 +229,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 					((uint32_t)entry->uaddr & PTE_ADDR), true);
 			move_to_disk = true;
 		}else{
+		        printf("upper 20 bits %x \n", pagedir_get_aux(pd, entry->uaddr));
 			PANIC("realocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{

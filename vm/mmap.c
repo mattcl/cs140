@@ -217,6 +217,10 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	   kernel virtual address without worrying about getting
 	   kicked off*/
 	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
+	if(kaddr == NULL){
+	  PANIC("kaddr is null when should never be null masked_uaddr is\
+	%p\n", (void *)masked_uaddr );
+	}
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 
 	//lock_release(&filesys_lock);
