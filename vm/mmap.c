@@ -79,6 +79,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 				file_seek(fd_entry->open_file, original_position);
 
 				//lock_release(&filesys_lock);
+				ASSERT(pagedir_is_preset(thread_current()->pagedir, pg_ptr));
 				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
 			}else{
@@ -163,7 +164,7 @@ bool mmap_read_in(void *faulting_addr){
 	pagedir_set_dirty(pd, (void*)masked_uaddr, false);
 
 	intr_enable();
-
+	ASSERT(pagedir_is_preset(thread_current()->pagedir, masked_uaddr));
 	unpin_frame_entry(kaddr);
 
 	return true;
