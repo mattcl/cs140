@@ -86,7 +86,7 @@ bool filesys_create (const char *path, off_t initial_size){
 
 
 	if(!success){
-		printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
+		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
 	}
 
 	if(!success && inode_sector != 0){
