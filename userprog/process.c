@@ -559,23 +559,23 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	process_activate ();
 
 	/* Acquire the lock so we can read in file info */
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 
 
 	/* Open executable file. */
 	file = filesys_open (f_name);
 	if(file == NULL){
 		printf ("load: %s: open failed\n", file_name);
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 		goto done;
 	}
 
 	if(!read_elf_headers(file, &ehdr, cur_process, t)){
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 		goto done;
 	}
 
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
@@ -930,7 +930,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	file_seek (file, ofs);
 
 	/* Calculate how to fill this page.
@@ -944,7 +944,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Load this page. */
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 		/* remove this frame cause we failed*/
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -955,7 +955,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	   virtual address doesn't already have something mapped to it,
 	   I.E. the present bit is on. */
 	if(!pagedir_install_page (upage, kpage, writable)){
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 		/* remove this frame cause we failed*/
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
@@ -969,7 +969,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 	unpin_frame_entry(kpage);
 
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 	return true;
 }
 
@@ -1135,9 +1135,9 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 /* call all destructor for hash_destroy */
 void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	/*File close needs to be called here */
-    lock_acquire(&filesys_lock);
+    //lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }
