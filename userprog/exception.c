@@ -190,7 +190,7 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
-			printf("get new stack frame\n");
+			printf("get new stack frame for uaddr %p\n", uaddr);
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
@@ -214,6 +214,8 @@ static void page_fault (struct intr_frame *f){
 				if(fault_addr < PHYS_BASE &&
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
+
+					 printf("extending the stack %p\n", uaddr);
 
 					/* Succeeded, so setup all of the stack pages to be on
 					   demand. And to be created when they are dereferenced
