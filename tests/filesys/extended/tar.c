@@ -90,7 +90,7 @@ archive_file (char file_name[], size_t file_name_size,
               int archive_fd, bool *write_error) 
 {
 
-	printf("archive file %s \n", file_name);
+	//printf("archive file %s \n", file_name);
   int file_fd = open (file_name);
   if (file_fd >= 0) 
     {
@@ -112,7 +112,7 @@ archive_file (char file_name[], size_t file_name_size,
         }
   
       close (file_fd);
-      printf("archive file return\n");
+      //printf("archive file return\n");
       return success;
     }
   else
@@ -129,10 +129,10 @@ archive_ordinary_file (const char *file_name, int file_fd,
   bool read_error = false;
   bool success = true;
   int file_size = filesize (file_fd);
-  printf("archive ordinary file %s\n", file_name);
+  //printf("archive ordinary file %s\n", file_name);
   if (!write_header (file_name, USTAR_REGULAR, file_size,
                      archive_fd, write_error)){
-	  printf("archive ordinary ret 1\n");
+	  //printf("archive ordinary ret 1\n");
 	  return false;
   }
 
@@ -140,9 +140,9 @@ archive_ordinary_file (const char *file_name, int file_fd,
     {
       static char buf[512];
       int chunk_size = file_size > 512 ? 512 : file_size;
-      printf("reading\n");
+      //printf("reading\n");
       int read_retval = read (file_fd, buf, chunk_size);
-      printf("read return\n");
+      //printf("read return\n");
       int bytes_read = read_retval > 0 ? read_retval : 0;
 
       if (bytes_read != chunk_size && !read_error) 
@@ -157,10 +157,10 @@ archive_ordinary_file (const char *file_name, int file_fd,
         success = false;
 
       file_size -= chunk_size;
-      printf("file size %u\n", file_size);
+      //printf("file size %u\n", file_size);
     }
 
-  printf("archive ordinary ret 2\n");
+  //printf("archive ordinary ret 2\n");
 
   return success;
 }
@@ -172,7 +172,7 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
   size_t dir_len;
   bool success = true;
 
-  printf("archive directory %s\n", file_name);
+  //printf("archive directory %s\n", file_name);
 
   dir_len = strlen (file_name);
   if (dir_len + 1 + READDIR_MAX_LEN + 1 > file_name_size) 
@@ -186,13 +186,13 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
       
   file_name[dir_len] = '/';
   while (readdir (file_fd, &file_name[dir_len + 1])){
-	  printf("loop\n");
+	  //printf("loop\n");
 	  if (!archive_file (file_name, file_name_size, archive_fd, write_error)){
 		  success = false;
 	  }
   }
   file_name[dir_len] = '\0';
-  printf("name %s !\n", file_name);
+  //printf("name %s !\n", file_name);
 
   return success;
 }
@@ -201,25 +201,25 @@ static bool
 write_header (const char *file_name, enum ustar_type type, int size,
               int archive_fd, bool *write_error) 
 {
-	printf("write header\n");
+	//printf("write header\n");
   static char header[512];
   bool success = (ustar_make_header (file_name, type, size, header)
           && do_write (archive_fd, header, 512, write_error));
-  printf("write header return\n");
+  //printf("write header return\n");
   return success;
 }
 
 static bool do_write (int fd, const char *buffer, int size, bool *write_error){
-	printf("do write\n");
+	//printf("do write\n");
 	if (write (fd, buffer, size) == size) {
-		printf("write return1\n");
+		//printf("write return1\n");
 		return true;
 	}else{
 		if (!*write_error){
-			printf ("error writing archive\n");
+			//printf ("error writing archive\n");
 			*write_error = true;
 		}
-		printf("write return2\n");
+		//printf("write return2\n");
 		return false;
 	}
 }
