@@ -47,106 +47,6 @@ static block_sector_t check_alloc_install(uint32_t *array, uint32_t idx,
 	return array[idx];
 }
 
-/* Array can be from either a double indirect block or an inode */
-static block_sector_t i_read_sector(uint32_t*array, uint32_t i_off,
-		uint32_t sector_off, bool create, bool *changed){
-
-	/* Read indirect block from inode and
-	   then read the sector from there*/
-	block_sector_t ret;
-
-	block_sector_t i_sector =
-			check_alloc_install(array, i_off, create, changed);
-
-	if(i_sector == ZERO_SECTOR){
-		return ZERO_SECTOR;
-	}
-
-	bool lower_changed = false;
-
-	//printf("i_sector %u\n", i_sector);
-
-	struct cache_entry *i_entry = bcache_get_and_lock(i_sector, CACHE_INDIRECT);
-	struct indirect_block *i_block;
-	memcpy(i_block, i_entry->data, BLOCK_SECTOR_SIZE);
-	bcache_unlock(i_entry, UNLOCK_NORMAL);
-
-	ret = check_alloc_install(i_block->ptrs, sector_off, create, &lower_changed);
-
-	if(lower_changed){
-		struct cache_entry *i_entry = bcache_get_and_lock(i_sector, CACHE_INDIRECT);
-		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
-		bcache_unlock(i_entry, UNLOCK_FLUSH);
-	}
-
-	//printf("i return %u sector_offs %u create %u\n", ret, sector_off, create);
-
-	return ret; /* May be ZERO_SECTOR */
-}
-
-/* array is the array in which to find the dbl indirect sector num
-   in our case either the array in the inode or an array in a triple
-   indirect block*/
-static block_sector_t d_read_sector(uint32_t *array, uint32_t d_off,
-		uint32_t i_off, uint32_t sector_off, bool create, bool *changed){
-	/*Read in dbl, then read in indirect, then return
-	  the address there */
-	block_sector_t ret;
-
-	block_sector_t d_sector =
-			check_alloc_install(array, d_off, create, changed);
-	if(d_sector == ZERO_SECTOR){
-		return ZERO_SECTOR;
-	}
-
-	bool lower_changed = false;
-
-	struct cache_entry *d_entry = bcache_get_and_lock(d_sector, CACHE_INDIRECT);
-	struct indirect_block *d_block;
-	memcpy(d_block, d_entry->data, BLOCK_SECTOR_SIZE);
-	bcache_unlock(d_entry, UNLOCK_NORMAL);
-	/* read sector from indirect */
-
-	ret = i_read_sector(d_block->ptrs, i_off, sector_off, create, &lower_changed);
-
-	if(lower_changed){
-		struct cache_entry *i_entry = bcache_get_and_lock(d_sector, CACHE_INDIRECT);
-		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
-		bcache_unlock(i_entry, UNLOCK_FLUSH);
-	}
-
-	return ret; /* May be ZERO_SECTOR */
-}
-
-static block_sector_t t_read_sector(uint32_t *array, uint32_t t_off,uint32_t d_off,
-		uint32_t i_off, uint32_t sector_off, bool create, bool *changed){
-	block_sector_t ret;
-
-	block_sector_t t_sector =check_alloc_install(array, t_off, create, changed);
-	if(t_sector == ZERO_SECTOR){
-		return ZERO_SECTOR;
-	}
-
-	bool lower_changed = false;
-
-	struct cache_entry *t_entry = bcache_get_and_lock(t_sector, CACHE_INDIRECT);
-	struct indirect_block *t_block;
-	memcpy(t_block, t_entry->data, BLOCK_SECTOR_SIZE);
-	bcache_unlock(t_entry, UNLOCK_NORMAL);
-
-	/* read sector from double indirect block */
-	ret = d_read_sector(t_block->ptrs, d_off, i_off, sector_off, create, &lower_changed);
-
-	if(lower_changed){
-		struct cache_entry *i_entry = bcache_get_and_lock(t_sector, CACHE_INDIRECT);
-		memcpy(i_entry->data, i_entry, BLOCK_SECTOR_SIZE);
-		bcache_unlock(i_entry, UNLOCK_FLUSH);
-	}
-
-	return ret;
-}
-
-
 /* Offset array is an array starting with the offset of the sector
    in the block, the offset of the indirect sector in the array,
    then the offset of the double indirect block in the array,
@@ -235,10 +135,10 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 	   indirect block */
 	if(file_sector < NUM_REG_BLK){
 		/* Read directly from inode */
-		printf("read direct\n");
+		//printf("read direct\n");
 		ret = check_alloc_install(inode_d.block_ptrs, file_sector, create, &changed);
 		//bcache_unlock(entry, UNLOCK_NORMAL);
-		printf("byte to sector ret reg block sector %u\n", ret);
+		//printf("byte to sector ret reg block sector %u\n", ret);
 	}else{
 		/* The number of the indirect sector that the data resides on*/
 		uint32_t i_file_sector =
@@ -254,13 +154,13 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 			offset_array[0] = i_sec_offset;
 			offset_array[1] = i_file_sector -1;
 
-			printf("read indirect\n");
+			//printf("read indirect\n");
 			//ret = i_read_sector(inode_d->i_ptrs, (i_file_sector-1),
 			//						i_sec_offset, create, &changed);
 
 			ret = recursive_read_sector(inode_d.i_ptrs, offset_array, 1, create, &changed);
 
-			printf("byte to sector ret ind block sector %u\n", ret);
+			//printf("byte to sector ret ind block sector %u\n", ret);
 		}else{
 
 			/* The number of the double indirect sector that the indirect sector
@@ -276,16 +176,16 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 				offset_array[2] = d_sec_offset;
 				offset_array[3] = d_file_sector -1;
 
-				printf("read double indirect\n");
+				//printf("read double indirect\n");
 				//ret = d_read_sector(inode_d->d_ptrs, (d_file_sector-1),
 				//		    				 d_sec_offset, i_sec_offset, create, &changed);
 
 				ret = recursive_read_sector(inode_d.d_ptrs, offset_array, 1, create, &changed);
 
 				//bcache_unlock(entry, UNLOCK_NORMAL);
-				printf("byte to sector ret dbl block sector %u\n", ret);
+				//printf("byte to sector ret dbl block sector %u\n", ret);
 			}else{
-				printf("read triple indirect\n");
+				//printf("read triple indirect\n");
 				/* The number of the triple indirect block that this sector
 				   resides on. Can really only be 1 or zero*/
 				uint32_t t_file_sector =
@@ -309,11 +209,13 @@ static block_sector_t byte_to_sector (const struct inode *inode, off_t pos, bool
 
 				ret = recursive_read_sector(inode_d.t_ptrs, offset_array, 1, create, &changed);
 
-				printf("byte to sector ret trip block sector %u\n", ret);
+				//printf("byte to sector ret trip block sector %u\n", ret);
 			}
 		}
 	}
 
+	/* The block that we looked at to get the sector was updated by this call
+	   so we need to update the cache and write the change out to disk */
 	if(changed){
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		ASSERT(entry != NULL);
@@ -691,16 +593,16 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	off_t eof = inode->cur_length;
 	lock_release(&inode->reader_lock);
 
-	printf("eof is %d\n", eof);
+	//printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
 		extending = true;
-		printf("extending!\n");
+		//printf("extending!\n");
 	}else{
 		lock_release(&inode->writer_lock);
 	}
 
-	printf("locks acquired\n");
+	//printf("locks acquired\n");
 	/* We do nothing special for the sectors between
 	   eof and the write that we are making, this means
 	   that the block pointers for them will still be
@@ -712,10 +614,10 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		/* Sector to write, starting byte offset within sector.
 		   byte_to_sector will allocate and install the sector in
 		   the inode for us! It will not, however, be in the cache*/
-		printf("Byte to sector\n");
+		//printf("Byte to sector\n");
 		block_sector_t sector_idx = byte_to_sector (inode, offset, true);
 
-		printf("sector idx %u\n", sector_idx);
+		//printf("sector idx %u\n", sector_idx);
 
 		if(sector_idx == 0){
 			if(extending){
@@ -737,7 +639,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		printf("bcache get sector %u offset %u\n", sector_idx, offset);
+		//printf("bcache get sector %u offset %u\n", sector_idx, offset);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		if(entry == NULL){
@@ -751,7 +653,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
-		printf("Change flag\n");
+		//printf("Change flag\n");
 		entry->flags |= CACHE_E_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
@@ -764,7 +666,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if(extending){
 		lock_acquire(&inode->reader_lock);
-		printf("New eof %u\n", offset);
+		//printf("New eof %u\n", offset);
 		inode->cur_length = offset;
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
@@ -774,7 +676,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		lock_release(&inode->writer_lock);
 	}
 
-	printf("inode write end %u\n", bytes_written);
+	//printf("inode write end %u\n", bytes_written);
 	return bytes_written;
 }
 
