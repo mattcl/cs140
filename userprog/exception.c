@@ -200,7 +200,7 @@ static void page_fault (struct intr_frame *f){
 			/* Atomically set the page table entry to be present and mapped */
 			intr_disable();
 			pagedir_install_page(uaddr, kaddr, true);
-			printf("the medium bit was set to %x\n",pagedir_get_medium(pd, fault_addr));
+			printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
 			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){
