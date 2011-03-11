@@ -214,10 +214,10 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	/* If this is the last page only read the appropriate number of bytes*/
 	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
 			file_length(fd_entry->open_file) % PGSIZE : PGSIZE;
+
 	/* because this frame is pinned we know we can write from the
 	   kernel virtual address without worrying about getting
 	   kicked off*/
-	kaddr = pagedir_get_page(pd, (void*)masked_uaddr);
 	if(kaddr == NULL){
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
