@@ -367,6 +367,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		return;
 	}
 
+
 	fd_entry->fd = ++(process->fd_count);
 	fd_entry->open_file = opened_file;
 	fd_entry->is_closed = false;
@@ -584,6 +585,13 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 		f->eax = -1;
 		return;
 	}
+
+	/* Disallow writing to a directory here */
+	if(inode_is_dir(file_get_inode(entry->open_file))){
+		f->eax = -1;
+		return;
+	}
+
 	/* verify the virtual addr */
 	if( ((uint32_t)masked_uaddr % PGSIZE) != 0 || masked_uaddr == NULL
 			|| !is_user_vaddr(masked_uaddr)){
@@ -673,7 +681,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	mmap_entry->fd = entry->fd;
 	mmap_entry->mmap_id = process->mapid_counter++;
 	mmap_entry->num_pages = num_pages;
-
+	mmap_entry->length_of_file = length;
 	lock_acquire(&process->mmap_table_lock);
 
 	struct hash_elem *returned =
@@ -839,6 +847,7 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
    the full extent of the buffer. Touches every page to make sure that
    it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
+	//printf("bread start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -862,6 +871,7 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
    is read only segment. Touches every page in buffer to make sure it is
    writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
+	//printf("bwrite start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	int byte;
 	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
@@ -875,6 +885,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
 
 			uaddr += increment;
+			//printf("get uaddr %p\n", uaddr);
 			if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 				return false;
 			}
@@ -900,9 +911,12 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
+
+	//printf("uaddr %p size %u %u\n", buffer, size, thread_current()->process->pid);
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
-	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t back = trailing == 0 ? 0 : PGSIZE - trailing;
 	size += (front + back);
 
 	uaddr -= front;
@@ -918,11 +932,20 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		/* only get complete changes to our PTE, if we page fault
 		   it should be read in and then we can continue. pin_frame_entry
 		   may reenable interrupts to acquire the frame lock*/
-		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(pagedir_get_page(pd, uaddr))){
+		void *kaddr;
+
+		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
+		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr = pagedir_get_page(pd, uaddr))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
+			//printf("present %u kaddr %p uaddr %p %u\n", pagedir_is_present(pd, uaddr),kaddr, uaddr, thread_current()->process->pid);
 			//printf("Infinite loop?\n");
-			get_user(uaddr);
+			int x = get_user(uaddr);
+			if(x < 0){
+				PANIC(" User address went from being valid to being invalid???");
+			}
+
+			//printf("x %d\n", x);
 		}
 		intr_enable();
 	}
@@ -935,7 +958,8 @@ static void unpin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
-	uint32_t back = PGSIZE - (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
+	uint32_t back = trailing == 0 ? 0 : PGSIZE - trailing;
 	size += (front + back);
 	uaddr -= front;
 

@@ -945,6 +945,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 		/* remove this frame cause we failed*/
 		//lock_release(&filesys_lock);
+		printf("fail2\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -957,6 +958,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	if(!pagedir_install_page (upage, kpage, writable)){
 		//lock_release(&filesys_lock);
 		/* remove this frame cause we failed*/
+		printf("fail3\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -967,6 +969,8 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	   if it is still clean*/
 	pagedir_set_medium(thread_current()->pagedir, upage, PTE_EXEC);
 
+
+	ASSERT(pagedir_is_present(thread_current()->pagedir, upage));
 	unpin_frame_entry(kpage);
 
 	//lock_release(&filesys_lock);
@@ -986,7 +990,8 @@ static bool setup_stack (void **esp){
 		if(success){
 			*esp = PHYS_BASE;
 			pagedir_set_medium(thread_current()->pagedir,
-					((uint8_t *) PHYS_BASE) - PGSIZE,PTE_STACK);
+					((uint8_t *) PHYS_BASE) - PGSIZE, PTE_STACK);
+			ASSERT(pagedir_is_present(thread_current()->pagedir, ((uint8_t *) PHYS_BASE) - PGSIZE));
 			unpin_frame_entry(kpage);
 		}else{
 			/* remove this frame cause we failed*/

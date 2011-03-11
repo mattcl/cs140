@@ -651,7 +651,9 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			return bytes_written;
 		}
 
-		//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+		//printf("Got entry with sector %u looking at sector idx %u \
+		//sector offset %u chunk size %u bytes written %u\n",
+		//entry->sector_num, sector_idx, sector_ofs, chunk_size, bytes_written);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
 		//printf("Change flag\n");

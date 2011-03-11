@@ -190,15 +190,18 @@ static void page_fault (struct intr_frame *f){
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
+			//printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
 			   other page to the disk.*/
-			uint32_t* kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
-
+			uint32_t *kaddr  = frame_get_page(PAL_USER | PAL_ZERO, uaddr);
+			ASSERT(kaddr != NULL);
 			/* Atomically set the page table entry to be present and mapped */
 			intr_disable();
-			pagedir_install_page(uaddr, kaddr, true);
+			ASSERT(pagedir_install_page(uaddr, kaddr, true));
+			pagedir_set_medium(pd, uaddr, PTE_STACK);
+			//printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
 			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){
@@ -214,6 +217,9 @@ static void page_fault (struct intr_frame *f){
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
 
+					 //printf("extending the stack %p %u\n", uaddr, thread_current()->process->pid);
+
+					 intr_disable();
 					/* Succeeded, so setup all of the stack pages to be on
 					   demand. And to be created when they are dereferenced
 					   this will also mean that when the user process tries
@@ -223,10 +229,11 @@ static void page_fault (struct intr_frame *f){
 							pagedir_get_medium(pd, uaddr) == PTE_AVL_ERROR){
 
 						pagedir_setup_demand_page(pd, uaddr,
-								PTE_STACK,0 , true);
+								PTE_STACK, 0, true);
 
 						uaddr += PGSIZE;
 					}
+					intr_enable();
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/

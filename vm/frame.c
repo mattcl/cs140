@@ -65,6 +65,7 @@ static struct frame_entry *choose_frame_to_evict_random(void){
 		entry = frame_entry_at_pos(index);
 		if(!entry->is_pinned){
 		    entry->is_pinned = true;
+		    //printf("selected process %p with pd %p and uaddr %p %u\n", entry->cur_owner, entry->pd, entry->uaddr, entry->cur_owner->pid);
 		    break;
 		}
 	}
@@ -214,10 +215,14 @@ static void *evict_page(void *new_uaddr, bool zero_out){
        fault and their ish will fail miserably*/
 	old_level = intr_disable();
 
+	pd = entry->pd;
+	if(!pagedir_is_present(pd, entry->uaddr)){
+		PANIC("entry %p uaddr %x not present\n", entry, entry->uaddr);
+	}
+
 	/* Atomically set the pagedir of the passed in uaddr
 	   to point to where it can find its memory and set
 	   it's present bit to 0 */
-	pd = entry->pd;
 	medium = pagedir_get_medium(pd, entry->uaddr);
 	if(pagedir_is_dirty(pd, entry->uaddr)){
 		if(medium == PTE_STACK || medium == PTE_EXEC){
@@ -229,6 +234,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 					((uint32_t)entry->uaddr & PTE_ADDR), true);
 			move_to_disk = true;
 		}else{
+			printf("upper 20 bits %x \n", pagedir_get_aux(pd, entry->uaddr));
 			PANIC("realocate_page called with dirty page of medium_t: %x", medium);
 		}
 	}else{
@@ -328,6 +334,9 @@ void frame_clear_page (void *kaddr){
 		PANIC("kaddr %p, base %p end %u size %u\n", kaddr, f_table.base,
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
+
+	//printf("Clear page\n");
+
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -337,6 +346,7 @@ void frame_clear_page (void *kaddr){
 		   of another thread and doesn't need its frame table
 		   entry updated here*/
 		lock_release(&f_table.frame_table_lock);
+		//printf("was pinned\n");
 		return;
 	}
 
@@ -346,7 +356,7 @@ void frame_clear_page (void *kaddr){
 	entry->pd = NULL;
 	entry->is_pinned = false;
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
-
+	//printf("cleared and bitmap set \n");
 	lock_release(&f_table.frame_table_lock);
 }
 
@@ -367,8 +377,11 @@ void unpin_frame_entry(void *kaddr){
    current thread is not in the frame or if the frame
    is allready pinned */
 bool pin_frame_entry(void *kaddr){
-	ASSERT(kaddr >= f_table.base &&
-			(uint8_t*)kaddr  < (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+	if(kaddr < f_table.base ||
+			(uint8_t*)kaddr  >= (uint8_t*)f_table.base + (f_table.size * PGSIZE)){
+		PANIC("kaddr %p not between base %p and end %p \n", kaddr,
+				(uint8_t*)f_table.base, (uint8_t*)f_table.base + (f_table.size * PGSIZE));
+	}
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 	if(entry->is_pinned){

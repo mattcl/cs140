@@ -80,6 +80,7 @@ bool swap_read_in (void *faulting_addr){
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
+		printf("waiting swap\n");
 		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
 	}
@@ -156,6 +157,8 @@ bool swap_read_in (void *faulting_addr){
 	/* Set this swap slot to usable */
 	bitmap_set(used_swap_slots, swap_slot, false);
 	lock_release(&swap_slots_lock);
+
+	ASSERT(pagedir_is_present(thread_current()->pagedir, (void*)masked_uaddr));
 
 	/* allow this frame to be freed now */
 	unpin_frame_entry(kaddr);
