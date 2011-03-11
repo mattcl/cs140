@@ -68,7 +68,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 
 			if(pin_frame_entry(kaddr_for_pg)){
 				/* It is now pinned so it will not be evicted */
-				lock_acquire(&filesys_lock);
+				//lock_acquire(&filesys_lock);
 				original_position = file_tell(fd_entry->open_file);
 				offset = (uint32_t) pg_ptr - entry->begin_addr;
 				file_seek(fd_entry->open_file, offset);
@@ -78,7 +78,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 				file_write(fd_entry->open_file, pg_ptr, write_bytes);
 				file_seek(fd_entry->open_file, original_position);
 
-				lock_release(&filesys_lock);
+				//lock_release(&filesys_lock);
 				ASSERT(pagedir_is_present(thread_current()->pagedir, pg_ptr));
 				unpin_frame_entry(kaddr_for_pg);
 				intr_disable();
@@ -142,7 +142,7 @@ bool mmap_read_in(void *faulting_addr){
 	   file_read will only read up untill the end of the file and
 	   never more so we know we will only read the appropriate amount
 	   of data into our zero page*/
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	off_t original_spot = file_tell(fd_entry->open_file);
 	file_seek(fd_entry->open_file, offset);
 	off_t amount_read = file_read(fd_entry->open_file, kaddr, PGSIZE);
@@ -150,7 +150,7 @@ bool mmap_read_in(void *faulting_addr){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
 	file_seek(fd_entry->open_file, original_spot);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	intr_disable();
 
@@ -207,7 +207,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	   mmapping to it */
 	ASSERT(fd_entry != NULL);
 
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 
 	uint32_t offset = masked_uaddr - entry->begin_addr;
 	file_seek(fd_entry->open_file, offset);
@@ -223,7 +223,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	}
 	file_write(fd_entry->open_file, kaddr, write_bytes);
 
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 
 	lock_release(&cur_process->mmap_table_lock);
 	/* Clear this page so that it can be used, and set this PTE
