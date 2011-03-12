@@ -43,7 +43,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 	uint32_t j;
 	void *kaddr_for_pg;
 
-	off_t offset, original_position, write_bytes, last_page_length;
+	off_t offset, write_bytes, last_page_length;
 
 	//lock_acquire(&filesys_lock);
 	//f_length = file_length(fd_entry->open_file);
