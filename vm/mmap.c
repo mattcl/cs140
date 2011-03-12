@@ -151,7 +151,7 @@ bool mmap_read_in(void *faulting_addr){
 
 
 	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
-	printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
+	printf("Reading in %u's user address %p file write at offset %u fd %u\n", cur_process->pid, masked_uaddr, offset, fd_entry->fd);
 
 	uint32_t read_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
