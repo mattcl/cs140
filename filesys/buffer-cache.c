@@ -115,6 +115,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		while(c_entry->flags & CACHE_E_EVICTING){
 			printf("waiting bc1 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
+			printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
 
 		c_entry->num_accessors ++;
@@ -198,6 +199,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		while(c_entry->num_accessors != 0){
 			printf("waiting bc2 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
+			printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
 
 		/* Check to see here if the item has been invalidated
@@ -221,6 +223,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		while(uint_set_is_member(&evicted_sectors, sector)){
 			printf("waiting bc3 %u\n", thread_current()->process->pid);
 			cond_wait(&evicted_sector_wait, &cache_lock);
+			printf("return from cond bc3 %u\n", thread_current()->process->pid);
 		}
 
 		lock_release(&cache_lock);
@@ -430,6 +433,7 @@ static struct cache_entry *bcache_evict(void){
 	while(all_evict_lists_empty()){
 		printf("waiting %u\n", thread_current()->process->pid);
 		cond_wait(&evict_list_changed, &cache_lock);
+		printf("return from cond %u\n", thread_current()->process->pid);
 	}
 
 	/* There is a non empty list we can evict
