@@ -95,7 +95,7 @@ void bcache_init(void){
    how important this cache entry is, otherwise the parameter is ignored.
    Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	printf("bcache get sector %u\n", sector);
+	//printf("bcache get sector %u\n", sector);
 	/* Requests for the zero sector will return NULL */
 	if(sector == ZERO_SECTOR){
 		return NULL;
@@ -110,7 +110,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			struct cache_entry, lookup_e)->flags & CACHE_E_INVALID)){
 		c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 
-		printf("Exists and evicting %u\n", c_entry->flags & CACHE_E_EVICTING);
+		//printf("Exists and evicting %u\n", c_entry->flags & CACHE_E_EVICTING);
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
@@ -162,7 +162,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 		}
 
-		printf("choosing %u to delete invalid %u initialized %u\n", c_entry->sector_num,c_entry->flags & CACHE_E_INVALID , (c_entry->flags & CACHE_E_INITIALIZED));
+		//printf("choosing %u to delete invalid %u initialized %u\n", c_entry->sector_num,c_entry->flags & CACHE_E_INVALID , (c_entry->flags & CACHE_E_INITIALIZED));
 
 		if(c_entry->flags & CACHE_E_INITIALIZED){
 			check =	hash_delete(&lookup_hash, &c_entry->lookup_e);
@@ -235,7 +235,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, c_entry->data);
 		}else{
-			printf("bcache not writing sector %u\n", sector_to_save);
+			printf("bcache not writing sector %u %u %u %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid ,  (c_entry->flags & CACHE_E_DIRTY));
 		}
 
 		/* Read the new data from disk into the cache data section*/
