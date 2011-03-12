@@ -7,6 +7,7 @@
 #include "free-map.h"
 #include "devices/timer.h"
 #include "threads/malloc.h"
+#include "userprog/process.h"
 
 /* If accesses are greater than (cur_pri)*PROMOTE_THRESHOLD
    then we will move the priority of this cache block up to
