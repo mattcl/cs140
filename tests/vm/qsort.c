@@ -78,6 +78,7 @@ partition (unsigned char *array, size_t size, int pivot)
 
           if (first == last)
             {
+        	  printf("array %p\n", array);
               ASSERT (is_partitioned (array, size, pivot, left_size));
               return left_size;
             }
