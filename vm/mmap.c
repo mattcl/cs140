@@ -21,7 +21,7 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		printf("8 ms sleep\n");
+		//printf("8 ms sleep\n");
 		timer_msleep(8);
 		intr_disable();
 	}
@@ -149,7 +149,7 @@ bool mmap_read_in(void *faulting_addr){
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
 	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
-	//	printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
+	//printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
 
 	uint32_t read_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
@@ -237,7 +237,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
 
-	printf("Writing out %u's user address %p file write at offset %u fd %u\n", pid, uaddr, offset, fd_entry->fd);
+	//printf("Writing out %u's user address %p file write at offset %u fd %u\n", pid, uaddr, offset, fd_entry->fd);
 
 	file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
