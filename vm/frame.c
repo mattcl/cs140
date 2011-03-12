@@ -174,7 +174,7 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
    ever have its data pulled out from underneath it.*/
 void frame_init(void){
 	//f_table.size = palloc_number_user_pages();
-	f_table.size = 60;
+	f_table.size = 100;
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
 	ASSERT(f_table.base != NULL);
 	f_table.used_frames = bitmap_create(f_table.size);
