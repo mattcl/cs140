@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <random.h>
+#include <stdio.h>
 
 /* Picks a pivot for the quicksort from the SIZE bytes in BUF. */
 static unsigned char
