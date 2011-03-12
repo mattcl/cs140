@@ -670,7 +670,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		//printf("Change flag\n");
 		entry->flags |= CACHE_E_DIRTY;
 
-		bcache_unlock(entry, UNLOCK_NORMAL);
+		bcache_unlock(entry, UNLOCK_FLUSH);
 
 		/* Advance. */
 		size -= chunk_size;
