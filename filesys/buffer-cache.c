@@ -82,7 +82,7 @@ void bcache_init(void){
 		memset(&cache[i].data, 0, BLOCK_SECTOR_SIZE);
 		list_push_back(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
 	}
-	spawn_daemon_thread();
+	//spawn_daemon_thread();
 }
 
 /* This function looks up the sector in our buffer cache, if it finds it it will
