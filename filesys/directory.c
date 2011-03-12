@@ -555,7 +555,7 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	   out because we hold the open_dirs lock and if the
 	   directory is closed we know that the file count
 	   is not going to change when we test it.*/
-	struct hash_elem h_elem = hash_find(&open_dirs, &sub_dir.e);
+	struct hash_elem *h_elem = hash_find(&open_dirs, &sub_dir.e);
 	if(h_elem != NULL){
 		lock_release(&open_dirs_lock);
 		goto done;
