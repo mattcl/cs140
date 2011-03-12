@@ -551,7 +551,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		}else{
 			struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-			//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+			printf("Got entry with sector %u looking at sector idx %u offset %u pid %u\n", entry->sector_num, sector_idx, offset, thread_current()->process->pid);
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
@@ -646,7 +646,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		//printf("bcache get sector %u offset %u\n", sector_idx, offset);
+		printf("bcache get sector %u offset %u pid %u\n", sector_idx, offset, thread_current()->process->pid);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		if(entry == NULL){
