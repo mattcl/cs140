@@ -14,63 +14,89 @@
 /* The number of meta priorities */
 #define NUM_PRIORITIES 3
 
-enum meta_priority{
-	CACHE_INODE,		/* This cache entry will represent
-						   inode datat and should be highly
-						   valued */
-	CACHE_INDIRECT,     /* This cache entry represents an indirect
-						   Block and is somewhat valued  */
-	CACHE_DATA			/* This cache entry represents plain data
-						   and should only be really valued if there
-						   are major accesses to it */
-};
-
-#define CACHE_E_DIRTY  1          /* Whether this cache entry is dirty
-							             set by the caller of bcache_get_lock*/
-#define CACHE_E_EVICTING  (1<<1)  /* Whether this cache entry is in the
-										 the middle of being evicted*/
-#define CACHE_E_INITIALIZED (1<<2)/* Whether this cache entry has been used
-										 before */
-#define CACHE_E_INVALID (1<<3) 	  /* The cache entry is invalid */
-
 /* The zero sector counts toward our size of the cache*/
 uint8_t zeroed_sector[BLOCK_SECTOR_SIZE];
 
+enum meta_priority{
+	/* This cache entry will represent  inode datat and
+	   should be highly valued */
+	CACHE_INODE,
+
+	/* This cache entry represents an indirect block and is somewhat valued*/
+	CACHE_INDIRECT,
+
+	/* This cache entry represents plain data and should only be really
+	 valued if there are major accesses to it (i.e. it gets promoted)*/
+	CACHE_DATA
+};
+
+/* Whether this cache entry is dirty set by the caller of bcache_get_lock*/
+#define CACHE_E_DIRTY  1
+
+/* Whether this cache entry is in the the middle of being evicted*/
+#define CACHE_E_EVICTING  (1<<1)
+
+/* Whether this cache entry has been used before */
+#define CACHE_E_INITIALIZED (1<<2)
+
+/* The cache entry is invalid */
+#define CACHE_E_INVALID (1<<3)
+
 struct cache_entry{
-	block_sector_t sector_num;        /* The sector that this entry holds*/
-	uint8_t data [BLOCK_SECTOR_SIZE]; /* The almighty DATA */
+	/* The sector that this entry holds*/
+	block_sector_t sector_num;
 
-	uint8_t flags;					  /* Flags for the cache_entry */
+	 /* The almighty DATA */
+	uint8_t data [BLOCK_SECTOR_SIZE];
 
-	struct lock entry_lock;           /* Lock on the cache_entry, this is valid
-										 because we must guarantee atomicity on
-										 the block level so only one thread can
-										 access this entry at any given time */
-	struct list_elem eviction_elem;   /* list elem for one of the eviction lists*/
-	struct hash_elem lookup_e;     /* hash_elem to quickly look up this entry */
-	uint32_t num_hits;			      /* A count to be incremented in bcache_get
-										 and used to premote the priority of the
-										 cache entry if necessary */
-	enum meta_priority cur_pri;		  /* The current priority of this cache entry*/
+ 	/* Flags for the cache_entry */
+	uint8_t flags;
 
-	uint32_t num_accessors;			  /* The number of threads that are actively
-										 trying to access this cache block,
-										 incremented in bcache_get. This is to
-										 make sure that one thread does not read
-										 new data because it's data got evicted*/
-	struct condition num_accessors_dec;/*Condition that is signaled on in bcache
-										 unlock. Wakes up the evicting thread so
-										 that it may finish evicting the cache
-										 block*/
+	/* Lock on the cache_entry, this is valid because we must
+	   guarantee atomicity on the block level so only one thread
+	   can access this entry at any given time */
+	struct lock entry_lock;
 
+	/* list elem for one of the eviction lists*/
+	struct list_elem eviction_elem;
+
+	/* hash_elem to quickly look up this entry */
+	struct hash_elem lookup_e;
+
+	/* A count to be incremented in bcache_get and used to
+	   premote the priority of the cache entry if necessary */
+	uint32_t num_hits;
+
+	/* The current priority of this cache entry used for eviction*/
+	enum meta_priority cur_pri;
+
+
+	/* The number of threads that are actively trying to access this
+	   cache block, incremented in bcache_get. This is to make sure
+	   that one thread does not read new data because it's data got evicted */
+	uint32_t num_accessors;
+
+	/* Condition that is signaled on in bcache unlock.
+	   Wakes up the evicting thread so that it may finish
+	   evicting the cache block*/
+	struct condition num_accessors_dec;
+
+	/* A condition that wakes all people waitin
+   	   on eviction to finish for this cache entry */
 	struct condition eviction_done;
 
 };
 
+/* definitions to change the behavior of the unlock function */
+
+/* Unlocks the cache entry normally*/
 #define UNLOCK_NORMAL 0
+
+/* Unlocks the cache entry after forcing disk update*/
 #define UNLOCK_FLUSH 1
+
+/*Unlocks the cache entry after setting its status to an invalid entry */
 #define UNLOCK_INVALIDATE 2
-//#define UNLOCK_ZERO 3
 
 void bcache_init(void);
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri);

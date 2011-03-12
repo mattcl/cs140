@@ -579,6 +579,8 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 
+	uint32_t filesys_size =(block_size(fs_device)*BLOCK_SECTOR_SIZE);
+
 	bool extending = false;
 	//printf("Acquire meta\n");
 	lock_acquire(&inode->meta_data_lock);
@@ -597,6 +599,10 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	//printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
+		if((offset+size) >= filesys_size){
+			size = filesys_size - offset;
+		}
+
 		extending = true;
 		//printf("extending!\n");
 	}else{

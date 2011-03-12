@@ -8,17 +8,28 @@
 #include <debug.h>
 
 struct mmap_hash_entry{
-	mapid_t mmap_id;     	/* Key into the hash table*/
-	uint32_t begin_addr;	/* start address of this mmapping*/
-	uint32_t end_addr;		/* While we can calculate this from the filesize
-							   accessing the disk in any way is too slow so just
-							   keep it stored in memory*/
-	int fd;					/* FD for this mapping*/
-	uint32_t num_pages;		/* Number of pages so I don't have to think*/
-	struct hash_elem elem;  /* hash elem*/
-	off_t length_of_file;   /* The length of the file at creation
-							   because the length of the file that
-							   was mmaped can now be changed */
+	/* Key into the hash table*/
+	mapid_t mmap_id;
+
+	/* start address of this mmapping*/
+	uint32_t begin_addr;
+
+	/* While we can calculate this from the filesize accessing the
+	   disk in any way is too slow so just keep it stored in memory*/
+	uint32_t end_addr;
+
+	/* FD for this mapping*/
+	int fd;
+
+	/* Number of pages so I don't have to think*/
+	uint32_t num_pages;
+
+	/* hash elem*/
+	struct hash_elem elem;
+
+	/* The length of the file at creation because the length
+	   of the file that was mmaped can now be changed */
+	off_t length_of_file;
 };
 
 

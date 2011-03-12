@@ -109,7 +109,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
-	//printf("mmap read in\n");
+	printf("mmap read in\n");
 
 	mmap_wait_until_saved(pd, faulting_addr);
 

@@ -9,12 +9,17 @@
 #include "userprog/process.h"
 
 struct swap_entry{
-	uint32_t uaddr; 		/* Key into the hash table*/
-	uint32_t swap_slot; 	/* The swap slot that this vaddr's page
-							   resides*/
-	medium_t org_medium;	/* The original medium of the thing now on
-							   disk */
-	struct hash_elem elem;  /* The hash elem */
+	/* Key into the hash table*/
+	uint32_t uaddr;
+
+	/* The swap slot that this vaddr's page resides*/
+	uint32_t swap_slot;
+
+	/* The original medium of the thing now on disk */
+	medium_t org_medium;
+
+	/* The hash elem */
+	struct hash_elem elem;
 };
 
 void destroy_swap_table(struct hash *to_destroy);

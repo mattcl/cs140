@@ -113,7 +113,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			printf("waiting\n");
+			//printf("waiting\n");
 			cond_wait(&c_entry->eviction_done, &cache_lock);
 		}
 
@@ -196,7 +196,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
-			printf("waiting 1\n");
+			//printf("waiting 1\n");
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
 		}
 
@@ -219,7 +219,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			printf("waiting 2\n");
+			//printf("waiting 2\n");
 			cond_wait(&evicted_sector_wait, &cache_lock);
 		}
 
@@ -376,7 +376,10 @@ void bcache_asynch_read(block_sector_t sector){
 	block_sector_t *sector_to_send = (block_sector_t*)malloc(sizeof(block_sector_t));
 	ASSERT(sector_to_send != NULL);
 	*sector_to_send = sector;
-	thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, (void*)sector_to_send);
+	tid_t err = thread_create_kernel("extra", PRI_MAX, bcache_asynch_read_, (void*)sector_to_send);
+	if(err == TID_ERROR){
+		free(sector_to_send);
+	}
 }
 
 /* Flushes the buffer cache to disk */
