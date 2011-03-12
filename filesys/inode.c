@@ -559,6 +559,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
+			printf("after memcpy sector %u\n", entry->sector_num);
 			bcache_unlock(entry, UNLOCK_NORMAL);
 
 		}
@@ -666,7 +667,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		//entry->sector_num, sector_idx, sector_ofs, chunk_size, bytes_written);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
 
-		//printf("Change flag\n");
+		printf("Change flag\n");
 		entry->flags |= CACHE_E_DIRTY;
 
 		bcache_unlock(entry, UNLOCK_NORMAL);
