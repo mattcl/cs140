@@ -253,7 +253,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 	}
 	intr_set_level(old_level);
 
-
 	void * old_uaddr =  entry->uaddr;
 	struct process * old_frame_process = entry->cur_owner;
 	pid_t old_process_id = entry->cur_owner->pid;
