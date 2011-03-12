@@ -114,7 +114,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			printf("waiting bc1 %u\n", thread_current()->process->pid);
+			printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
 			printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
@@ -263,6 +263,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wake up threads that might have found an empty evict list */
 		cond_broadcast(&evict_list_changed, &cache_lock);
+
+		cond_broadcast(&c_entry->eviction_done, &cache_lock);
 
 		lock_release(&cache_lock);
 
