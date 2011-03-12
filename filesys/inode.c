@@ -599,7 +599,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	//printf("eof is %d\n", eof);
 
 	if((offset+size) >= eof){
-		if((offset+size) >= filesys_size){
+		if((uint32_t)(offset+size) >= filesys_size){
 			size = filesys_size - offset;
 		}
 
