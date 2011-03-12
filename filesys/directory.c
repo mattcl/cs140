@@ -550,6 +550,17 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	sub_dir.inode = inode;
 	sub_dir.sector = e->inode_sector;
 
+	/* Check if the folder is open, if it is we just
+	   break out. We know the directory is either in or
+	   out because we hold the open_dirs lock and if the
+	   directory is closed we know that the file count
+	   is not going to change when we test it.*/
+	struct hash_elem *h_elem = hash_find(&open_dirs, &sub_dir.e);
+	if(h_elem != NULL){
+		lock_release(&open_dirs_lock);
+		goto done;
+	}
+
 	//printf("trying to remove subdir at %u %u\n", inode->sector, e->inode_sector);
 	uint32_t file_count = dir_file_count(&sub_dir);
 

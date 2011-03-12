@@ -115,6 +115,7 @@ struct process {
 	   be synchronized*/
 	struct lock mmap_table_lock;
 
+	/* The current working directory of the process :) */
 	struct dir *cwd;
 
 };

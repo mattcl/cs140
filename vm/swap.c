@@ -169,6 +169,7 @@ bool swap_read_in (void *faulting_addr){
    medium and swap slot for the frame entry. */
 bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 		void *uaddr, void *kaddr, medium_t medium){
+
 	struct process *cur_process = cur;
 	uint32_t i;
 	uint32_t masked_uaddr = (((uint32_t)uaddr & PTE_ADDR));

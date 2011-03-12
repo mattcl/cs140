@@ -217,7 +217,7 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 
 	pd = entry->pd;
 	if(!pagedir_is_present(pd, entry->uaddr)){
-		PANIC("entry %p uaddr %x not present\n", entry, entry->uaddr);
+		PANIC("entry %p uaddr %p not present\n", entry, entry->uaddr);
 	}
 
 	/* Atomically set the pagedir of the passed in uaddr
@@ -252,7 +252,6 @@ static void *evict_page(void *new_uaddr, bool zero_out){
 		}
 	}
 	intr_set_level(old_level);
-
 
 	void * old_uaddr =  entry->uaddr;
 	struct process * old_frame_process = entry->cur_owner;

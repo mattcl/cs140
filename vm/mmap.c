@@ -43,7 +43,7 @@ void mmap_save_all(struct mmap_hash_entry *entry){
 	uint32_t j;
 	void *kaddr_for_pg;
 
-	off_t offset, original_position, write_bytes, last_page_length;
+	off_t offset, write_bytes, last_page_length;
 
 	//lock_acquire(&filesys_lock);
 	//f_length = file_length(fd_entry->open_file);
@@ -109,7 +109,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
-	//printf("mmap read in\n");
+	//printf("Reading in %u's user address %p\n", thread_current()->process->pid, masked_uaddr);
 
 	mmap_wait_until_saved(pd, faulting_addr);
 
@@ -148,11 +148,13 @@ bool mmap_read_in(void *faulting_addr){
 	//lock_acquire(&filesys_lock);
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
-	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
-	  (entry->begin_addr + entry->length_of_file) - masked_uaddr :
-	   PGSIZE;
+	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
+	//	printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
 
-	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, PGSIZE, offset);
+	uint32_t read_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
+			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
+
+	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, read_bytes, offset);
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
@@ -187,6 +189,8 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 		   access any of the processes memory */
 		return false;
 	}
+
+	//printf("Writing out %u's user address %p\n", pid, uaddr);
 
 	//printf("mmap write out\n");
 
@@ -224,7 +228,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	/* If this is the last page only read the appropriate number of bytes*/
 	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
-	  (entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
+			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
 	   kernel virtual address without worrying about getting
@@ -232,6 +236,9 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	if(kaddr == NULL){
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
+
+	printf("Writing out %u's user address %p file write at offset %u fd %u\n", pid, uaddr, offset, fd_entry->fd);
+
 	file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
 	//lock_release(&filesys_lock);
