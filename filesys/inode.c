@@ -496,7 +496,7 @@ void inode_remove (struct inode *inode){
 off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset){
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
-
+	//	printf("process: %p calling inode_read_at\n", thread_current());
 	//printf("size %u, offset %u ino length %u ino%u\n", size, offset, inode->cur_length, inode->sector);
 
 	lock_acquire(&inode->reader_lock);
@@ -506,6 +506,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 	/* offset is beyond the end of file no
 	   reading to be done */
 	if(offset >= eof){
+	  //	  printf("process: %p calling inode_read_at\n", thread_current());
 		return 0;
 	}
 
@@ -564,7 +565,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		bytes_read += chunk_size;
 		//printf("size %d\n", size);
 	}
-
+	//	printf("process: %p calling inode_read_at\n", thread_current());
 	//printf("read ret\n");
 	return bytes_read;
 }
@@ -575,6 +576,7 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
    write goes past the end of file marker. */
 off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset){
+  //  printf("process: %p calling inode_read_at\n", thread_current());
 	//printf("inode write %u %u inode %u\n", size, offset, inode->sector);
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
@@ -584,6 +586,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	lock_acquire(&inode->meta_data_lock);
 	if (inode->deny_write_cnt){
 		lock_release(&inode->meta_data_lock);
+		//		printf("process: %p calling inode_read_at\n", thread_current());
 		return 0;
 	}
 	lock_release(&inode->meta_data_lock);
@@ -647,7 +650,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			if(extending){
 				lock_release(&inode->writer_lock);
 			}
-
+			//printf("process: %p calling inode_read_at\n", thread_current());
 			return bytes_written;
 		}
 
@@ -680,6 +683,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 	}
 
 	//printf("inode write end %u\n", bytes_written);
+	//printf("process: %p calling inode_read_at\n", thread_current());
 	return bytes_written;
 }
 

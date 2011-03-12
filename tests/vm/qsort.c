@@ -20,14 +20,20 @@ is_partitioned (const unsigned char *array, size_t size,
                 unsigned char pivot, size_t left_size) 
 {
   size_t i;
-  
-  for (i = 0; i < left_size; i++)
-    if (array[i] >= pivot)
+  printf("checking partioning of left with size: %d\n", left_size);
+  for (i = 0; i < left_size; i++){
+    printf("%d: %d < %d ?\n",i, array[i], pivot);
+    if (array[i] >= pivot){
       return false;
-
-  for (; i < size; i++)
-    if (array[i] < pivot)
+    }
+  }
+  printf("checking partioning of right with size: %d/n", size);
+  for (; i < size; i++){
+    printf("%d >= %d ?\n", array[i], pivot); 
+    if (array[i] < pivot){
       return false;
+    }
+  }
 
   return true;
 }

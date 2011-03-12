@@ -148,6 +148,10 @@ bool mmap_read_in(void *faulting_addr){
 	//lock_acquire(&filesys_lock);
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
+	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
+	  (entry->begin_addr + entry->length_of_file) - masked_uaddr :
+	   PGSIZE;
+
 	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, PGSIZE, offset);
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
@@ -220,7 +224,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	/* If this is the last page only read the appropriate number of bytes*/
 	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
-			entry->length_of_file % PGSIZE : PGSIZE;
+	  (entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
 	   kernel virtual address without worrying about getting
