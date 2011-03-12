@@ -109,7 +109,7 @@ bool mmap_read_in(void *faulting_addr){
 	uint32_t offset;
 	void * kaddr;
 
-	printf("Reading in %u's user address %p\n", thread_current()->process->pid, masked_uaddr);
+	//printf("Reading in %u's user address %p\n", thread_current()->process->pid, masked_uaddr);
 
 	mmap_wait_until_saved(pd, faulting_addr);
 
@@ -151,9 +151,12 @@ bool mmap_read_in(void *faulting_addr){
 
 
 	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
+	printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
 
+	uint32_t read_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
+			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
-	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, PGSIZE, offset);
+	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, read_bytes, offset);
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
@@ -189,8 +192,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 		return false;
 	}
 
-	printf("Writing out %u's user address %p\n", pid, uaddr);
-
+	//printf("Writing out %u's user address %p\n", pid, uaddr);
 
 	//printf("mmap write out\n");
 
@@ -237,7 +239,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
 
-	//printf("file write at offset %u fd %u\n", offset, fd_entry->fd);
+	printf("Writing out %u's user address %p file write at offset %u fd %u\n", pid, uaddr, offset, fd_entry->fd);
 
 	file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
