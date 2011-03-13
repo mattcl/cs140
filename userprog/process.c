@@ -329,7 +329,7 @@ int process_wait (tid_t child_tid){
 	/* Wait for process to signal us
 	   If child == NULL it has already exited */
 	if(child != NULL){
-		printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
+		//printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
@@ -365,7 +365,7 @@ void process_exit (void){
 	}
 	uint32_t *pd;
 
-	printf("%u exiting\n", cur_process->pid);
+	//printf("%u exiting\n", cur_process->pid);
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -427,7 +427,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		printf("parent is non null %u\n", parent->pid);
+		//printf("parent is non null %u\n", parent->pid);
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -443,7 +443,7 @@ void process_exit (void){
 
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			printf("waking up parent %u\n", parent->pid);
+			//printf("waking up parent %u\n", parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		}
 
