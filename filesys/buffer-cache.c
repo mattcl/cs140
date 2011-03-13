@@ -175,7 +175,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		block_sector_t sector_to_save = c_entry->sector_num;
 
 		c_entry->sector_num = sector;
-		c_entry->flags |= (CACHE_E_EVICTING); /*Evicting = true*/
+		c_entry->flags |= CACHE_E_EVICTING; /*Evicting = true*/
 
 		check = hash_insert(&lookup_hash, &c_entry->lookup_e);
 		if(check != NULL){
@@ -230,7 +230,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		lock_release(&cache_lock);
 
-		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID), (c_entry->flags & CACHE_E_EVICTING));
+		printf("sector to save %u, init %u, valid %u, dirty %u, invalid %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID), (c_entry->flags & CACHE_E_EVICTING));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){

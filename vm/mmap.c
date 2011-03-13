@@ -149,7 +149,7 @@ bool mmap_read_in(void *faulting_addr){
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
 
-	uint32_t read_bytes =(entry->end_addr - masked_uaddr) == PGSIZE ?
+	uint32_t read_bytes = (entry->end_addr - masked_uaddr) == PGSIZE ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
