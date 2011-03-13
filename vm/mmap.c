@@ -156,9 +156,9 @@ bool mmap_read_in(void *faulting_addr){
 	//printf("Reading in %u's user address %p file read at offset %u size %u fd %u\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
 
 	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, read_bytes, offset);
-	if(amount_read != read_bytes){
+	/*if(amount_read != read_bytes){
 		PANIC("Error reading file in MMAP\n");
-	}
+	}*/
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
@@ -247,9 +247,9 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	off_t amount_read = file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
-	if(amount_read != write_bytes){
+	/*if(amount_read != write_bytes){
 		PANIC("Error reading file in MMAP\n");
-	}
+	}*/
 
 	//printf("Writing out %u's user address %p file write at offset %u size %u fd %u complete\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
