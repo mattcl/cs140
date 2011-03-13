@@ -329,7 +329,7 @@ int process_wait (tid_t child_tid){
 	/* Wait for process to signal us
 	   If child == NULL it has already exited */
 	if(child != NULL){
-		//printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
+		printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
@@ -365,7 +365,7 @@ void process_exit (void){
 	}
 	uint32_t *pd;
 
-	//printf("%u exiting\n", cur_process->pid);
+	printf("%u exiting\n", cur_process->pid);
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -402,7 +402,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		//printf("parent is non null %u\n", parent->pid);
+		printf("parent is non null %u\n", parent->pid);
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -418,7 +418,7 @@ void process_exit (void){
 
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			//printf("waking up parent %u\n", parent->pid);
+			printf("waking up parent %u\n", parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		}
 
@@ -463,7 +463,7 @@ void process_activate (void){
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
 typedef uint16_t Elf32_Half;
 
-/* For use with ELF types in //printf(). */
+/* For use with ELF types in printf(). */
 #define PE32Wx PRIx32   /* Print Elf32_Word in hexadecimal. */
 #define PE32Ax PRIx32   /* Print Elf32_Addr in hexadecimal. */
 #define PE32Ox PRIx32   /* Print Elf32_Off in hexadecimal. */
@@ -571,7 +571,7 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	/* Open executable file. */
 	file = filesys_open (f_name);
 	if(file == NULL){
-		//printf ("load: %s: open failed\n", file_name);
+		printf ("load: %s: open failed\n", file_name);
 		//lock_release(&filesys_lock);
 		goto done;
 	}
@@ -951,7 +951,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 		/* remove this frame cause we failed*/
 		//lock_release(&filesys_lock);
-		//printf("fail2\n");
+		printf("fail2\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -964,7 +964,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	if(!pagedir_install_page (upage, kpage, writable)){
 		//lock_release(&filesys_lock);
 		/* remove this frame cause we failed*/
-		//printf("fail3\n");
+		printf("fail3\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;

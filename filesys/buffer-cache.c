@@ -110,13 +110,13 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			struct cache_entry, lookup_e)->flags & CACHE_E_INVALID)){
 		c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 
-		//printf("Exists and %u\n", c_entry->flags & CACHE_E_EVICTING);
+		//printf("Exists and evicting %u\n", c_entry->flags & CACHE_E_EVICTING);
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			//printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
+			printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
-			//printf("return from cond bc1 %u\n", thread_current()->process->pid);
+			printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
 
 		c_entry->num_accessors ++;
@@ -162,8 +162,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 		}
 
-		//printf("Doesn't exist choosing %u to delete %u\n", c_entry->sector_num,\
-				(c_entry->flags & CACHE_E_INITIALIZED));
+		//printf("choosing %u to delete invalid %u initialized %u\n", c_entry->sector_num,c_entry->flags & CACHE_E_INVALID , (c_entry->flags & CACHE_E_INITIALIZED));
 
 		if(c_entry->flags & CACHE_E_INITIALIZED){
 			check =	hash_delete(&lookup_hash, &c_entry->lookup_e);
@@ -198,10 +197,12 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
-			//printf("waiting bc2 %u\n", thread_current()->process->pid);
+			printf("waiting bc2 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
-			//printf("return from cond bc2 %u\n", thread_current()->process->pid);
+			printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
+
+		ASSERT(c_entry->num_accessors == 0);
 
 		/* Check to see here if the item has been invalidated
 		   while we waited, should not have become valid if it
@@ -222,12 +223,14 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			//printf("waiting bc3 %u\n", thread_current()->process->pid);
+			printf("waiting bc3 %u\n", thread_current()->process->pid);
 			cond_wait(&evicted_sector_wait, &cache_lock);
-			//printf("return from cond bc3 %u\n", thread_current()->process->pid);
+			printf("return from cond bc3 %u\n", thread_current()->process->pid);
 		}
 
 		lock_release(&cache_lock);
+
+		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){
@@ -235,6 +238,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			   cache entry is brand new. Or when it has been invalidated*/
 			//printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, c_entry->data);
+		}else{
+			//printf("bcache not writing sector %u %u %u %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid ,  (c_entry->flags & CACHE_E_DIRTY));
 		}
 
 		/* Read the new data from disk into the cache data section*/
@@ -260,6 +265,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		c_entry->flags &= ~(CACHE_E_DIRTY);   /*Dirty = false*/
 		c_entry->flags &= ~(CACHE_E_EVICTING);/*evicting = false*/
 		c_entry->flags |= CACHE_E_INITIALIZED;/*Initialized = true*/
+		c_entry->flags &= ~(CACHE_E_INVALID); /*invalid = false */
 
 		/* Wake up threads that might have found an empty evict list */
 		cond_broadcast(&evict_list_changed, &cache_lock);
@@ -434,9 +440,9 @@ static struct cache_entry *bcache_evict(void){
 	ASSERT(lock_held_by_current_thread(&cache_lock));
 
 	while(all_evict_lists_empty()){
-		//printf("waiting %u\n", thread_current()->process->pid);
+		printf("waiting %u bc4\n", thread_current()->process->pid);
 		cond_wait(&evict_list_changed, &cache_lock);
-		//printf("return from cond %u\n", thread_current()->process->pid);
+		printf("return from cond %u bc4\n", thread_current()->process->pid);
 	}
 
 	/* There is a non empty list we can evict

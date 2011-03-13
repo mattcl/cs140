@@ -21,7 +21,7 @@ static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
 	while(pagedir_get_medium(pd, uaddr) != PTE_MMAP){
 		/* Wait for write to disk to complete*/
 		intr_enable();
-		//printf("8 ms sleep\n");
+		printf("8 ms sleep\n");
 		timer_msleep(8);
 		intr_disable();
 	}
@@ -148,16 +148,21 @@ bool mmap_read_in(void *faulting_addr){
 	//	lock_acquire(&filesys_lock);
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
-	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
-	//printf("Reading in %u's user aWritingddress %p file write at offset %u fd %u\n", cur_process, masked_uaddr, offset, fd_entry->fd);
-
-	uint32_t read_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
+	uint32_t read_bytes =(entry->end_addr - masked_uaddr) == PGSIZE ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
+	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
+	printf("Reading in %u's user address %p file read at offset %u size %u fd %u\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
+
 	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, read_bytes, offset);
+	if(amount_read != read_bytes){
+		PANIC("Error reading file in MMAP\n");
+	}
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
+
+	printf("Reading in %u's user address %p file read at offset %u size %u fd %u complete\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
 	//file_seek(fd_entry->open_file, original_spot);
 	//	lock_release(&filesys_lock);
 
@@ -227,7 +232,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	//file_seek(fd_entry->open_file, offset)
 
 	/* If this is the last page only read the appropriate number of bytes*/
-	uint32_t write_bytes = (entry->end_addr - masked_uaddr) / PGSIZE == 1 ?
+	uint32_t write_bytes = (entry->end_addr - masked_uaddr) == PGSIZE  ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
@@ -237,9 +242,15 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
 
-	//printf("Writing out %u's user address %p file write at offset %u fd %u\n", pid, uaddr, offset, fd_entry->fd);
+	printf("Writing out %u's user address %p file write at offset %u size %u fd %u\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
-	file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
+	off_t amount_read = file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
+
+	if(amount_read != write_bytes){
+		PANIC("Error reading file in MMAP\n");
+	}
+
+	printf("Writing out %u's user address %p file write at offset %u size %u fd %u complete\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
 	//	lock_release(&filesys_lock);
 

@@ -8,6 +8,10 @@
 #include "buffer-cache.h"
 #include "devices/block.h"
 
+/* Debug */
+#include "threads/thread.h"
+#include "userprog/process.h"
+
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
 static struct list open_inodes;
@@ -552,10 +556,11 @@ off_t inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offse
 		}else{
 			struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
-			//printf("Got entry with sector %u looking at sector idx %u\n", entry->sector_num, sector_idx);
+			//printf("Got entry with sector %u looking at sector idx %u offset %u pid %u\n", entry->sector_num, sector_idx, offset, thread_current()->process->pid);
 
 			memcpy (buffer + bytes_read, entry->data + sector_ofs, chunk_size);
 
+			//printf("after memcpy sector %u\n", entry->sector_num);
 			bcache_unlock(entry, UNLOCK_NORMAL);
 
 		}
@@ -601,8 +606,8 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	//printf("eof is %d\n", eof);
 
-	if((offset+size) >= eof){
-		if((uint32_t)(offset+size) >= filesys_size){
+	if((offset+size) > eof){
+		if((uint32_t)(offset+size) > filesys_size){
 			size = filesys_size - offset;
 		}
 
@@ -649,7 +654,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			break;
 		}
 
-		//printf("bcache get sector %u offset %u\n", sector_idx, offset);
+		//printf("bcache get sector %u offset %u pid %u\n", sector_idx, offset, thread_current()->process->pid);
 		struct cache_entry *entry = bcache_get_and_lock(sector_idx, CACHE_DATA);
 
 		if(entry == NULL){
@@ -660,7 +665,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			return bytes_written;
 		}
 
-		//printf("Got entry with sector %u looking at sector idx %u \
+		//printf("Got entry with sector %u looking at sector idx %u
 		//sector offset %u chunk size %u bytes written %u\n",
 		//entry->sector_num, sector_idx, sector_ofs, chunk_size, bytes_written);
 		memcpy (entry->data + sector_ofs, buffer + bytes_written, chunk_size);
@@ -678,7 +683,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if(extending){
 		lock_acquire(&inode->reader_lock);
-		//printf("New eof %u\n", offset);
+		printf("New eof %u\n", offset);
 		inode->cur_length = offset;
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;

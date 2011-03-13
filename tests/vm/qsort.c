@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <random.h>
+#include <stdio.h>
 
 /* Picks a pivot for the quicksort from the SIZE bytes in BUF. */
 static unsigned char
@@ -63,6 +64,7 @@ partition (unsigned char *array, size_t size, int pivot)
         {
           if (first == last)
             {
+        	  printf("array %p and size %u\n", array, size);
               ASSERT (is_partitioned (array, size, pivot, left_size));
               return left_size;
             }
@@ -81,6 +83,7 @@ partition (unsigned char *array, size_t size, int pivot)
 
           if (first == last)
             {
+        	  printf("array %p size %u\n", array, size);
               ASSERT (is_partitioned (array, size, pivot, left_size));
               return left_size;
             }
