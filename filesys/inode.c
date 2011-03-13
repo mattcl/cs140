@@ -680,7 +680,7 @@ off_t inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	if(extending){
 		lock_acquire(&inode->reader_lock);
-		printf("New eof %u\n", offset);
+		//printf("New eof %u\n", offset);
 		inode->cur_length = offset;
 		struct cache_entry *entry = bcache_get_and_lock(inode->sector, CACHE_INODE);
 		struct disk_inode *inode_d = (struct disk_inode*)entry->data;
