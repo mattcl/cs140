@@ -230,13 +230,13 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		lock_release(&cache_lock);
 
-		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID));
+		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID), (c_entry->flags & CACHE_E_EVICTING));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){
 			/* Write the dirty old block out except when the
 			   cache entry is brand new. Or when it has been invalidated*/
-			//printf("bcache writing sector %u\n", sector_to_save);
+			printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, c_entry->data);
 		}else{
 			//printf("bcache not writing sector %u %u %u %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid ,  (c_entry->flags & CACHE_E_DIRTY));
