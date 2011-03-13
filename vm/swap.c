@@ -80,7 +80,6 @@ bool swap_read_in (void *faulting_addr){
 		/* Wait for write to disk to complete and then atomically check
 		   our medium to see if our write has completed*/
 		intr_enable();
-		//printf("waiting swap\n");
 		cond_wait(&swap_free_condition, &cur_process->swap_table_lock);
 		intr_disable();
 	}
@@ -127,13 +126,11 @@ bool swap_read_in (void *faulting_addr){
 
 	/* Necessary, to prevent other threads which are evicting
 	   to use the swap device*/
-	//lock_acquire(&filesys_lock);
 	/* Read the contents of this swap slot into memory */
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++,kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_read(swap_device, start_sector, kaddr_ptr );
 	}
-	//lock_release(&filesys_lock);
 
 	/* Disable interrupts while atomically setting medium
 	   dirty and clear bits*/
@@ -227,12 +224,10 @@ bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 	/* Write this out to disk now so that it is saved */
 	start_sector = swap_slot * SECTORS_PER_SLOT;
 
-	//lock_acquire(&filesys_lock);
 	for(i = 0; i < SECTORS_PER_SLOT;
 			i++, start_sector++, kaddr_ptr += BLOCK_SECTOR_SIZE){
 		block_write(swap_device, start_sector, kaddr_ptr);
 	}
-	//lock_release(&filesys_lock);
 
 	/* Tell the process who just got this page evicted that the
 	   can find it on swap, pagedir_setup_demand_page does this
