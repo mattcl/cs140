@@ -187,7 +187,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* Make any threads that want the sector that we are right
 		   now evicting wait until we are done writing the sector
 		   to disk. */
-		if(c_entry->flags & CACHE_E_INITIALIZED && is_valid){
+		if((c_entry->flags & CACHE_E_INITIALIZED) && is_valid){
 			/* If the entry is initialized and valid then add the
 			   int to the set, otherwise we will have deadlock
 			   because we are evicting the sector that we are
