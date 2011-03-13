@@ -317,7 +317,7 @@ void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
 	struct mmap_hash_entry *entry = hash_entry(e, struct mmap_hash_entry, elem);
 	mmap_save_all(entry);
-	pagedir_clear_pages(thread_current()->process->pid,
+	pagedir_clear_pages(thread_current()->pagedir,
 			(uint32_t*)entry->begin_addr, entry->num_pages);
 	free(hash_entry(e, struct mmap_hash_entry, elem));
 }
