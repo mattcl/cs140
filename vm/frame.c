@@ -65,7 +65,6 @@ static struct frame_entry *choose_frame_to_evict_random(void){
 		entry = frame_entry_at_pos(index);
 		if(!entry->is_pinned){
 		    entry->is_pinned = true;
-		    //printf("selected process %p with pd %p and uaddr %p %u\n", entry->cur_owner, entry->pd, entry->uaddr, entry->cur_owner->pid);
 		    break;
 		}
 	}
@@ -174,7 +173,6 @@ static struct frame_entry *choose_frame_to_evict_lockstep(void){
    ever have its data pulled out from underneath it.*/
 void frame_init(void){
 	f_table.size = palloc_number_user_pages();
-	//f_table.size = 200;
 	f_table.base = palloc_get_multiple(PAL_USER, f_table.size);
 	ASSERT(f_table.base != NULL);
 	f_table.used_frames = bitmap_create(f_table.size);
@@ -335,8 +333,6 @@ void frame_clear_page (void *kaddr){
 				((uint32_t)f_table.base + (f_table.size * PGSIZE)), f_table.size);
 	}
 
-	//printf("Clear page\n");
-
 	lock_acquire(&f_table.frame_table_lock);
 	struct frame_entry *entry = frame_entry_at_kaddr(kaddr);
 
@@ -346,7 +342,6 @@ void frame_clear_page (void *kaddr){
 		   of another thread and doesn't need its frame table
 		   entry updated here*/
 		lock_release(&f_table.frame_table_lock);
-		//printf("was pinned\n");
 		return;
 	}
 
@@ -356,7 +351,6 @@ void frame_clear_page (void *kaddr){
 	entry->pd = NULL;
 	entry->is_pinned = false;
 	bitmap_set(f_table.used_frames, frame_entry_pos(entry), false);
-	//printf("cleared and bitmap set \n");
 	lock_release(&f_table.frame_table_lock);
 }
 
