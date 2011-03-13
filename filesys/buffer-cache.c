@@ -370,7 +370,7 @@ static void spawn_daemon_thread(void){
 }
 
 /* Reads in the sector */
-static void bcache_asynch_read_(void *sector){
+void bcache_asynch_read_(void *sector){
 	//printf("asynch got here %u\n", *(block_sector_t*)sector);
 	struct cache_entry *e =
 			bcache_get_and_lock(*(block_sector_t*)sector, CACHE_DATA);

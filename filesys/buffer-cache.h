@@ -106,4 +106,7 @@ void bcache_asynch_read(block_sector_t sector);
 void bcache_flush(void);
 void bcache_invalidate(void);
 
+
+void bcache_asynch_read_(void *sector);
+
 #endif /* BUFFER_CACHE_H_ */
