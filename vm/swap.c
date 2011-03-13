@@ -195,7 +195,7 @@ bool swap_write_out (struct process *cur, uint32_t *pd, pid_t pid,
 		lock_acquire(&swap_slots_lock);
 		bitmap_set(used_swap_slots, swap_slot, false);
 		lock_release(&swap_slots_lock);
-		return false;
+		return true;
 	}
 
 	/* We set the page to not present in memory in evict so assert it*/

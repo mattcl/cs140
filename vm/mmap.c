@@ -194,7 +194,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	if(!process_lock(pid, &cur_process->mmap_table_lock)){
 		/* Process has exited so we know that we can't
 		   access any of the processes memory */
-		return false;
+		return true;
 	}
 
 	//printf("Writing out %u's user address %p\n", pid, uaddr);
