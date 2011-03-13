@@ -329,7 +329,7 @@ int process_wait (tid_t child_tid){
 	/* Wait for process to signal us
 	   If child == NULL it has already exited */
 	if(child != NULL){
-		printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
+		//printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
@@ -365,7 +365,7 @@ void process_exit (void){
 	}
 	uint32_t *pd;
 
-	printf("%u exiting\n", cur_process->pid);
+	//printf("%u exiting\n", cur_process->pid);
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -374,6 +374,31 @@ void process_exit (void){
 	lock_acquire(&processes_hash_lock);
 
 	destroy_swap_table(&cur_process->swap_table);
+
+	intr_enable();
+
+	/* We Need to clear out the mmap table before exiting
+	   and before thread exit because freeing the mmap table
+	   may require I.O. that will wait and can't be done with
+	   interrupts off*/
+	lock_acquire(&cur_process->mmap_table_lock);
+	hash_destroy(&cur_process->mmap_table, &mmap_hash_entry_destroy);
+	lock_release(&cur_process->mmap_table_lock);
+
+	/*close our executable allowing write access again */
+	////lock_acquire(&filesys_lock);
+	file_close(cur_process->executable_file);
+	//lock_release(&filesys_lock);
+
+	/* Free all open files Done without exterior locking because
+	   the only way to get to these files is through the mmap
+	   table but we destroyed it and no one can get any data from
+	   this table any more*/
+	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
+
+	dir_close(cur_process->cwd);
+
+	intr_disable();
 
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
@@ -402,7 +427,7 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		printf("parent is non null %u\n", parent->pid);
+		//printf("parent is non null %u\n", parent->pid);
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -418,7 +443,7 @@ void process_exit (void){
 
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			printf("waking up parent %u\n", parent->pid);
+			//printf("waking up parent %u\n", parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		}
 

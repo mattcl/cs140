@@ -14,6 +14,7 @@
 #include "vm/mmap.h"
 #include <stdio.h>
 
+
 /* Wait until the PTE status goes from PTE_MMAP_WAIT to
    PTE_MMAP */
 static void mmap_wait_until_saved(uint32_t *pd, void *uaddr){
@@ -148,21 +149,21 @@ bool mmap_read_in(void *faulting_addr){
 	//	lock_acquire(&filesys_lock);
 	//off_t original_spot = file_tell(fd_entry->open_file);
 	//file_seek(fd_entry->open_file, offset);
-	uint32_t read_bytes =(entry->end_addr - masked_uaddr) == PGSIZE ?
+	uint32_t read_bytes = (entry->end_addr - masked_uaddr) == PGSIZE ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	//printf("file_read_at offset %u fd %u\n", offset, fd_entry->fd);
-	printf("Reading in %u's user address %p file read at offset %u size %u fd %u\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
+	//printf("Reading in %u's user address %p file read at offset %u size %u fd %u\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
 
 	off_t amount_read = file_read_at(fd_entry->open_file, kaddr, read_bytes, offset);
-	if(amount_read != read_bytes){
+	/*if(amount_read != read_bytes){
 		PANIC("Error reading file in MMAP\n");
-	}
+	}*/
 	if(amount_read < PGSIZE){
 		memset((uint8_t*)kaddr + amount_read, 0, PGSIZE - amount_read);
 	}
 
-	printf("Reading in %u's user address %p file read at offset %u size %u fd %u complete\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
+	//printf("Reading in %u's user address %p file read at offset %u size %u fd %u complete\n", cur_process->pid, masked_uaddr, offset, read_bytes, fd_entry->fd);
 	//file_seek(fd_entry->open_file, original_spot);
 	//	lock_release(&filesys_lock);
 
@@ -192,7 +193,7 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	if(!process_lock(pid, &cur_process->mmap_table_lock)){
 		/* Process has exited so we know that we can't
 		   access any of the processes memory */
-		return false;
+		return true;
 	}
 
 	//printf("Writing out %u's user address %p\n", pid, uaddr);
@@ -227,12 +228,12 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	//	lock_acquire(&filesys_lock);
 
-	uint32_t offset = masked_uaddr - entry->begin_addr;
+	off_t offset = masked_uaddr - entry->begin_addr;
 
 	//file_seek(fd_entry->open_file, offset)
 
 	/* If this is the last page only read the appropriate number of bytes*/
-	uint32_t write_bytes = (entry->end_addr - masked_uaddr) == PGSIZE  ?
+	off_t write_bytes = (entry->end_addr - masked_uaddr) == PGSIZE  ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
@@ -242,15 +243,15 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 	  PANIC("kaddr is null when should never be null masked_uaddr is %p\n", (void *)masked_uaddr );
 	}
 
-	printf("Writing out %u's user address %p file write at offset %u size %u fd %u\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
+	//printf("Writing out %u's user address %p file write at offset %u size %u fd %u\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
 	off_t amount_read = file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
-	if(amount_read != write_bytes){
+	if(amount_read < write_bytes){
 		PANIC("Error reading file in MMAP\n");
 	}
 
-	printf("Writing out %u's user address %p file write at offset %u size %u fd %u complete\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
+	//printf("Writing out %u's user address %p file write at offset %u size %u fd %u complete\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
 	//	lock_release(&filesys_lock);
 
@@ -313,6 +314,9 @@ bool mmap_hash_compare (const struct hash_elem *a,
 /* call all destructor for hash_destroy */
 void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
-	mmap_save_all(hash_entry(e, struct mmap_hash_entry, elem));
+	struct mmap_hash_entry *entry = hash_entry(e, struct mmap_hash_entry, elem);
+	mmap_save_all(entry);
+	pagedir_clear_pages(thread_current()->pagedir,
+			(uint32_t*)entry->begin_addr, entry->num_pages);
 	free(hash_entry(e, struct mmap_hash_entry, elem));
 }

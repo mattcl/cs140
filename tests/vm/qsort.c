@@ -64,7 +64,7 @@ partition (unsigned char *array, size_t size, int pivot)
         {
           if (first == last)
             {
-        	  printf("array %p and size %u\n", array, size);
+        	  //printf("array %p and size %u\n", array, size);
               ASSERT (is_partitioned (array, size, pivot, left_size));
               return left_size;
             }
@@ -83,7 +83,7 @@ partition (unsigned char *array, size_t size, int pivot)
 
           if (first == last)
             {
-        	  printf("array %p size %u\n", array, size);
+        	  //printf("array %p size %u\n", array, size);
               ASSERT (is_partitioned (array, size, pivot, left_size));
               return left_size;
             }

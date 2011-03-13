@@ -380,7 +380,7 @@ void thread_exit (void){
 
 	process_exit ();
 
-	release_locks();
+	//release_locks();
 	thread_current ()->status = THREAD_DYING;
 	schedule ();
 	NOT_REACHED ();

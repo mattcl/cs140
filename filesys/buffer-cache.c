@@ -114,9 +114,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
+			//printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
-			printf("return from cond bc1 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
 
 		c_entry->num_accessors ++;
@@ -175,7 +175,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		block_sector_t sector_to_save = c_entry->sector_num;
 
 		c_entry->sector_num = sector;
-		c_entry->flags |= (CACHE_E_EVICTING); /*Evicting = true*/
+		c_entry->flags |= CACHE_E_EVICTING; /*Evicting = true*/
 
 		check = hash_insert(&lookup_hash, &c_entry->lookup_e);
 		if(check != NULL){
@@ -187,7 +187,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* Make any threads that want the sector that we are right
 		   now evicting wait until we are done writing the sector
 		   to disk. */
-		if(c_entry->flags & CACHE_E_INITIALIZED && is_valid){
+		if((c_entry->flags & CACHE_E_INITIALIZED) && is_valid){
 			/* If the entry is initialized and valid then add the
 			   int to the set, otherwise we will have deadlock
 			   because we are evicting the sector that we are
@@ -197,9 +197,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
-			printf("waiting bc2 %u\n", thread_current()->process->pid);
+			//printf("waiting bc2 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
-			printf("return from cond bc2 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
 
 		ASSERT(c_entry->num_accessors == 0);
@@ -223,14 +223,14 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			printf("waiting bc3 %u\n", thread_current()->process->pid);
+			//printf("waiting bc3 %u\n", thread_current()->process->pid);
 			cond_wait(&evicted_sector_wait, &cache_lock);
-			printf("return from cond bc3 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc3 %u\n", thread_current()->process->pid);
 		}
 
 		lock_release(&cache_lock);
 
-		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID));
+		//printf("sector to save %u, init %u, valid %u, dirty %u, invalid %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID), (c_entry->flags & CACHE_E_EVICTING));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){
@@ -370,7 +370,7 @@ static void spawn_daemon_thread(void){
 }
 
 /* Reads in the sector */
-static void bcache_asynch_read_(void *sector){
+void bcache_asynch_read_(void *sector){
 	//printf("asynch got here %u\n", *(block_sector_t*)sector);
 	struct cache_entry *e =
 			bcache_get_and_lock(*(block_sector_t*)sector, CACHE_DATA);
@@ -379,7 +379,7 @@ static void bcache_asynch_read_(void *sector){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
 	//printf("asynch got here p3\n");
-	free(sector);
+	//free(sector);
 }
 
 /* Fetches the given sector and puts it in the cache. Will evict a current
