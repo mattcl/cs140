@@ -174,21 +174,21 @@ static void page_fault (struct intr_frame *f){
 							   then return so that dereference becomes valid*/
 			if(!swap_read_in(uaddr)){
 				/*Reading in from swap failed so we will kill*/
-				printf("Fail to read in from SWAP pid %u\n", pid);
+				//printf("Fail to read in from SWAP pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_EXEC){
 			/* Read in executable from disk */
 			if(!process_exec_read_in(uaddr)){
 				/* Failed to read it in so fail*/
-				printf("Fail to read in EXEC pid %u\n", pid);
+				//printf("Fail to read in EXEC pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			/* Read in from mmaped file on disk */
 			if(!mmap_read_in(uaddr)){
 				/* Read in from mmapp's fil on disk failed so kill */
-				printf("Fail to MMAP read in pid %u\n", pid);
+				//printf("Fail to MMAP read in pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_STACK){
@@ -240,7 +240,7 @@ static void page_fault (struct intr_frame *f){
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/
-					printf("PTE AVL ERROR KILL!! pid %u\n", pid);
+					//printf("PTE AVL ERROR KILL!! pid %u\n", pid);
 					kill(f);
 				}
 			}else{
@@ -262,7 +262,7 @@ static void page_fault (struct intr_frame *f){
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
 		if(user){
-			printf("Writing to read only memory! pid %u\n", pid);
+			//printf("Writing to read only memory! pid %u\n", pid);
 			kill(f);
 		}else{
 			f->eip = (void*)f->eax;
