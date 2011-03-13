@@ -375,6 +375,32 @@ void process_exit (void){
 
 	destroy_swap_table(&cur_process->swap_table);
 
+
+	intr_enable();
+
+	/* We Need to clear out the mmap table before exiting
+	   and before thread exit because freeing the mmap table
+	   may require I.O. that will wait and can't be done with
+	   interrupts off*/
+	lock_acquire(&cur_process->mmap_table_lock);
+	hash_destroy(&cur_process->mmap_table, &mmap_hash_entry_destroy);
+	lock_release(&cur_process->mmap_table_lock);
+
+	/*close our executable allowing write access again */
+	////lock_acquire(&filesys_lock);
+	file_close(cur_process->executable_file);
+	//lock_release(&filesys_lock);
+
+	/* Free all open files Done without exterior locking because
+	   the only way to get to these files is through the mmap
+	   table but we destroyed it and no one can get any data from
+	   this table any more*/
+	hash_destroy(&cur_process->open_files, &fd_hash_entry_destroy);
+
+	dir_close(cur_process->cwd);
+
+	intr_disable();
+
 	/* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
 	pd = cur->pagedir;

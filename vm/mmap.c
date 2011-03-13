@@ -229,12 +229,12 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	//lock_acquire(&filesys_lock);
 
-	uint32_t offset = masked_uaddr - entry->begin_addr;
+	off_t offset = masked_uaddr - entry->begin_addr;
 
 	//file_seek(fd_entry->open_file, offset)
 
 	/* If this is the last page only read the appropriate number of bytes*/
-	uint32_t write_bytes = (entry->end_addr - masked_uaddr) == PGSIZE  ?
+	off_t write_bytes = (entry->end_addr - masked_uaddr) == PGSIZE  ?
 			(entry->begin_addr + entry->length_of_file) - masked_uaddr : PGSIZE;
 
 	/* because this frame is pinned we know we can write from the
@@ -248,9 +248,9 @@ bool mmap_write_out(struct process *cur_process, uint32_t *pd,
 
 	off_t amount_read = file_write_at(fd_entry->open_file, kaddr, write_bytes, offset);
 
-	/*if(amount_read != write_bytes){
+	if(amount_read < write_bytes){
 		PANIC("Error reading file in MMAP\n");
-	}*/
+	}
 
 	//printf("Writing out %u's user address %p file write at offset %u size %u fd %u complete\n", pid, uaddr, offset, write_bytes, fd_entry->fd);
 
@@ -315,6 +315,9 @@ bool mmap_hash_compare (const struct hash_elem *a,
 /* call all destructor for hash_destroy */
 void mmap_hash_entry_destroy (struct hash_elem *e, void *aux UNUSED){
 	/*File close needs to be called here */
-	mmap_save_all(hash_entry(e, struct mmap_hash_entry, elem));
+	struct mmap_hash_entry *entry = hash_entry(e, struct mmap_hash_entry, elem);
+	mmap_save_all(entry);
+	pagedir_clear_pages(thread_current()->process->pid,
+			(uint32_t*)entry->begin_addr, entry->num_pages);
 	free(hash_entry(e, struct mmap_hash_entry, elem));
 }
