@@ -477,13 +477,9 @@ struct list_elem *list_min (struct list *list, list_less_func *less, void *aux){
 return min;
 }
 
-//---------Begin Changes ----------------//
-
-/*
- * Takes the list and the less function for that list and returns the
- * maximum element of the list, removing it from the list. Will return
- * NULL if the list is empty.
- */
+/* Takes the list and the less function for that list and returns the
+  maximum element of the list, removing it from the list. Will return
+  NULL if the list is empty.*/
 struct list_elem *remove_list_max (struct list *list, list_less_func *less){
 	struct list_elem *e = list_max(list, less, NULL);
 	if (e!= NULL) list_remove(e);
@@ -503,4 +499,3 @@ void printList(struct list *list){
 	}
 }
 
-//------------End Changes -------------//

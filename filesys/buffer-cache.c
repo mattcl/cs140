@@ -95,7 +95,6 @@ void bcache_init(void){
    how important this cache entry is, otherwise the parameter is ignored.
    Returns NULL with no lock held if the sector is the ZERO_SECTOR */
 struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priority pri){
-	//printf("bcache get sector %u\n", sector);
 	/* Requests for the zero sector will return NULL */
 	if(sector == ZERO_SECTOR){
 		return NULL;
@@ -110,13 +109,10 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			struct cache_entry, lookup_e)->flags & CACHE_E_INVALID)){
 		c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 
-		//printf("Exists and evicting %u\n", c_entry->flags & CACHE_E_EVICTING);
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			//printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
-			//printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
 
 		c_entry->num_accessors ++;
@@ -162,8 +158,6 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			c_entry = hash_entry(ret_entry, struct cache_entry, lookup_e);
 		}
 
-		//printf("choosing %u to delete invalid %u initialized %u\n", c_entry->sector_num,c_entry->flags & CACHE_E_INVALID , (c_entry->flags & CACHE_E_INITIALIZED));
-
 		if(c_entry->flags & CACHE_E_INITIALIZED){
 			check =	hash_delete(&lookup_hash, &c_entry->lookup_e);
 			ASSERT(check != NULL);
@@ -197,9 +191,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
-			//printf("waiting bc2 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
-			//printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
 
 		ASSERT(c_entry->num_accessors == 0);
@@ -223,27 +215,19 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			//printf("waiting bc3 %u\n", thread_current()->process->pid);
 			cond_wait(&evicted_sector_wait, &cache_lock);
-			//printf("return from cond bc3 %u\n", thread_current()->process->pid);
 		}
 
 		lock_release(&cache_lock);
-
-		//printf("sector to save %u, init %u, valid %u, dirty %u, invalid %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID), (c_entry->flags & CACHE_E_EVICTING));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){
 			/* Write the dirty old block out except when the
 			   cache entry is brand new. Or when it has been invalidated*/
-			//printf("bcache writing sector %u\n", sector_to_save);
 			block_write(fs_device, sector_to_save, c_entry->data);
-		}else{
-			//printf("bcache not writing sector %u %u %u %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid ,  (c_entry->flags & CACHE_E_DIRTY));
 		}
 
 		/* Read the new data from disk into the cache data section*/
-		//printf("bcache read sector %u\n", to_return->sector_num);
 		block_read (fs_device, c_entry->sector_num, c_entry->data);
 
 		lock_acquire(&cache_lock);
@@ -371,15 +355,12 @@ static void spawn_daemon_thread(void){
 
 /* Reads in the sector */
 void bcache_asynch_read_(void *sector){
-	//printf("asynch got here %u\n", *(block_sector_t*)sector);
 	struct cache_entry *e =
 			bcache_get_and_lock(*(block_sector_t*)sector, CACHE_DATA);
-	//printf("asynch got here p2\n");
 	if(e != NULL){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
-	//printf("asynch got here p3\n");
-	//free(sector);
+	free(sector);
 }
 
 /* Fetches the given sector and puts it in the cache. Will evict a current
@@ -396,10 +377,8 @@ void bcache_asynch_read(block_sector_t sector){
 
 /* Flushes the buffer cache to disk */
 void bcache_flush(void){
-	//printf("flush\n");
 	uint32_t i;
 	for(i = 0; i < MAX_CACHE_SLOTS; i ++){
-		//printf("acquire\n");
 		lock_acquire(&cache[i].entry_lock);
 		/* We only flush if the following conditions apply:
 		   the entry must be initialized, dirty, not in the middle
@@ -410,12 +389,10 @@ void bcache_flush(void){
 				!(cache[i].flags & CACHE_E_EVICTING) &&
 				!(cache[i].flags & CACHE_E_INVALID) &&
 				(cache[i].flags & CACHE_E_INITIALIZED)){
-			//printf("write\n");
 			block_write(fs_device, cache[i].sector_num, cache[i].data);
 			cache[i].flags &= ~(CACHE_E_DIRTY);
 		}
 		lock_release(&cache[i].entry_lock);
-		//printf("release\n");
 	}
 }
 
@@ -440,9 +417,7 @@ static struct cache_entry *bcache_evict(void){
 	ASSERT(lock_held_by_current_thread(&cache_lock));
 
 	while(all_evict_lists_empty()){
-		printf("waiting %u bc4\n", thread_current()->process->pid);
 		cond_wait(&evict_list_changed, &cache_lock);
-		printf("return from cond %u bc4\n", thread_current()->process->pid);
 	}
 
 	/* There is a non empty list we can evict

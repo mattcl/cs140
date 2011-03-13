@@ -75,9 +75,7 @@ off_t file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs)
    not yet implemented.)
    Advances FILE's position by the number of bytes read. */
 off_t file_write (struct file *file, const void *buffer, off_t size){
-	//printf("file write\n");
 	off_t bytes_written = inode_write_at (file->inode, buffer, size, file->pos);
-	//printf("file write return\n");
 	file->pos += bytes_written;
 	return bytes_written;
 }
@@ -91,7 +89,6 @@ off_t file_write (struct file *file, const void *buffer, off_t size){
    The file's current position is unaffected. */
 off_t file_write_at (struct file *file, const void *buffer, off_t size,
 		off_t file_ofs){
-	//printf("%u, %u, %p %p, %d\n", size, file_ofs, file, buffer, *(uint32_t*)buffer);
 	return inode_write_at (file->inode, buffer, size, file_ofs);
 }
 

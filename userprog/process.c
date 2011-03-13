@@ -329,7 +329,6 @@ int process_wait (tid_t child_tid){
 	/* Wait for process to signal us
 	   If child == NULL it has already exited */
 	if(child != NULL){
-		//printf("child non null waiting on %u pid %u\n", child->pid, cur->pid);
 		cur->child_waiting_on_pid = child->pid;
 		lock_release(&processes_hash_lock);
 		sema_down(&cur->waiting_semaphore);
@@ -365,7 +364,6 @@ void process_exit (void){
 	}
 	uint32_t *pd;
 
-	//printf("%u exiting\n", cur_process->pid);
 	/* We are no longer viable processes and are being removed from the
 	   list of processes. The lock here also ensures that our parent
 	   has either exited or hasn't exited while we update information
@@ -386,9 +384,7 @@ void process_exit (void){
 	lock_release(&cur_process->mmap_table_lock);
 
 	/*close our executable allowing write access again */
-	////lock_acquire(&filesys_lock);
 	file_close(cur_process->executable_file);
-	//lock_release(&filesys_lock);
 
 	/* Free all open files Done without exterior locking because
 	   the only way to get to these files is through the mmap
@@ -427,7 +423,6 @@ void process_exit (void){
 	struct process *parent = parent_process_from_child(cur_process);
 
 	if(parent != NULL){
-		//printf("parent is non null %u\n", parent->pid);
 		/* Get our list entry */
 		struct list_elem *our_entry =
 				child_list_entry_gen(parent, &cur_process->pid, &is_equal_func_pid);
@@ -443,7 +438,6 @@ void process_exit (void){
 
 		/*Wake parent up with this if */
 		if(parent->child_waiting_on_pid == cur_process->pid){
-			//printf("waking up parent %u\n", parent->pid);
 			sema_up(&parent->waiting_semaphore);
 		}
 
@@ -590,23 +584,17 @@ bool load (const char *file_name, void (**eip) (void), void **esp){
 	process_activate ();
 
 	/* Acquire the lock so we can read in file info */
-	//lock_acquire(&filesys_lock);
-
 
 	/* Open executable file. */
 	file = filesys_open (f_name);
 	if(file == NULL){
 		printf ("load: %s: open failed\n", file_name);
-		//lock_release(&filesys_lock);
 		goto done;
 	}
 
 	if(!read_elf_headers(file, &ehdr, cur_process, t)){
-		//lock_release(&filesys_lock);
 		goto done;
 	}
-
-	//lock_release(&filesys_lock);
 
 	/* Set up stack. */
 	if(!setup_stack (esp)){
@@ -961,7 +949,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Get a page of memory. */
 	uint8_t *kpage = frame_get_page(PAL_USER, upage);
 
-	//lock_acquire(&filesys_lock);
 	file_seek (file, ofs);
 
 	/* Calculate how to fill this page.
@@ -975,8 +962,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	/* Load this page. */
 	if(file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
 		/* remove this frame cause we failed*/
-		//lock_release(&filesys_lock);
-		printf("fail2\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -987,9 +972,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	   virtual address doesn't already have something mapped to it,
 	   I.E. the present bit is on. */
 	if(!pagedir_install_page (upage, kpage, writable)){
-		//lock_release(&filesys_lock);
 		/* remove this frame cause we failed*/
-		printf("fail3\n");
 		unpin_frame_entry(kpage);
 		frame_clear_page(kpage);
 		return false;
@@ -1004,7 +987,6 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT(pagedir_is_present(thread_current()->pagedir, upage));
 	unpin_frame_entry(kpage);
 
-	//lock_release(&filesys_lock);
 	return true;
 }
 
@@ -1171,9 +1153,7 @@ static unsigned file_hash_func (HASH_ELEM *e, AUX){
 /* call all destructor for hash_destroy */
 void fd_hash_entry_destroy (struct hash_elem *e, AUX){
 	/*File close needs to be called here */
-    //lock_acquire(&filesys_lock);
 	file_close(hash_entry(e, struct fd_hash_entry, elem)->open_file);
-	//lock_release(&filesys_lock);
 
 	free(hash_entry(e, struct fd_hash_entry, elem));
 }

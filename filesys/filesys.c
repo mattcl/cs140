@@ -73,21 +73,11 @@ bool filesys_create (const char *path, off_t initial_size){
 		return false;
 	}
 
-	/* debug variables */
-	bool s1 = false;
-	bool s2 = false;
-	bool s3 = false;
-
-	//printf("Creating filename %s at path %s \n", file_name, path);
 	bool success = (dir != NULL
-			&& (s1 = free_map_allocate (1, &inode_sector))
-			&& (s2 = inode_create (inode_sector, initial_size, false))
-			&& (s3 = dir_add (dir, file_name, inode_sector)));
+			&& (free_map_allocate (1, &inode_sector))
+			&& (inode_create (inode_sector, initial_size, false))
+			&& (dir_add (dir, file_name, inode_sector)));
 
-
-	if(!success){
-		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
-	}
 
 	if(!success && inode_sector != 0){
 		free_map_release (inode_sector, 1);
@@ -109,14 +99,10 @@ bool filesys_create_dir(const char *path){
 		return false;
 	}
 
-	//printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
-
 	if(file_name == NULL){
 		dir_close(dir);
 		return false;
 	}
-
-	//printf("creating a directory %s at path %s\n", file_name, path);
 
 	/* special consideration for creating /, we don't allow it sorry! :)*/
 	if(file_is_root(file_name, dir)){
@@ -124,28 +110,16 @@ bool filesys_create_dir(const char *path){
 		return false;
 	}
 
-	/* debug variables */
-	bool s1 = false;
-	bool s2 = false;
-	bool s3 = false;
-
-
 	bool success = (dir != NULL
-			&& (s1 = free_map_allocate (1, &inode_sector))
-			&& (s2 = dir_create (inode_sector, dir_get_inode(dir)->sector))
-			&& (s3 = dir_add (dir, file_name, inode_sector)));
-
-	if(!success){
-		//printf("dir null %u, freemap alloc %u, inode create %u, dir add %u\n", dir == NULL, s1, s2, s3);
-	}
-
+			&& (free_map_allocate (1, &inode_sector))
+			&& (dir_create (inode_sector, dir_get_inode(dir)->sector))
+			&& (dir_add (dir, file_name, inode_sector)));
 
 	if(!success && inode_sector != 0){
 		free_map_release (inode_sector, 1);
 	}
 
 	dir_close (dir);
-	//printf("filesys create dir end\n");
 	return success;
 }
 
@@ -163,10 +137,6 @@ struct file * filesys_open (const char *path){
 		return NULL;
 	}
 
-	//printf("filesys open dir_path %s file_name is %s\n",path, file_name);
-	//printf("dir null %u, dir sector %u vs root sector %u\n",dir == NULL, dir->sector, ROOT_DIR_SECTOR);
-	//printf("process pid %u\n", thread_current()->process->pid);
-
 	/* special consideration for opening / because
 	   / is not actually in the directory. */
 	if(file_is_root(file_name, dir)){
@@ -179,7 +149,6 @@ struct file * filesys_open (const char *path){
 	if(dir != NULL){
 		dir_lookup (dir, file_name, &inode);
 	}
-	//printf("inode sector %u\n", inode->sector);
 	dir_close (dir);
 
 	return file_open (inode);
@@ -214,7 +183,6 @@ bool filesys_remove (const char *path){
 
 /* Formats the file system. */
 static void do_format (void){
-	//printf ("Formatting file system...\n");
 	free_map_create ();
 	if(!dir_create (ROOT_DIR_SECTOR, ROOT_DIR_SECTOR)){
 		PANIC ("root directory creation failed");
