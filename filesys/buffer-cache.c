@@ -379,7 +379,7 @@ void bcache_asynch_read_(void *sector){
 		bcache_unlock(e, UNLOCK_NORMAL);
 	}
 	//printf("asynch got here p3\n");
-	free(sector);
+	//free(sector);
 }
 
 /* Fetches the given sector and puts it in the cache. Will evict a current
