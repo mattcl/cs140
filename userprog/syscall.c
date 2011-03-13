@@ -298,9 +298,7 @@ static void system_create (struct intr_frame *f, const char *file_name, unsigned
 	}
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 	pin_all_frames_for_buffer(file_name, length);
-	////lock_acquire(&filesys_lock);
 	f->eax = filesys_create(file_name, initial_size);
-	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 }
 
@@ -313,29 +311,23 @@ static void system_remove(struct intr_frame *f, const char *file_name){
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 
 	pin_all_frames_for_buffer(file_name, length);
-	////lock_acquire(&filesys_lock);
 	f->eax = filesys_remove(file_name);
-	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 }
 
 /* Opens the file by the name of file_name returns -1 if the file
    wasn't opened. Kills if the file_name refers to invalid memory*/
 static void system_open (struct intr_frame *f, const char *file_name){
-	//printf("system open\n");
 	if(!string_is_valid(file_name)){
 		system_exit(f, -1);
 	}
 	uint32_t length = strlen(file_name) + 1; /* plus one for the null */
 	struct file *opened_file;
 	pin_all_frames_for_buffer(file_name, length);
-	//lock_acquire(&filesys_lock);
 	opened_file = filesys_open(file_name);
-	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(file_name, length);
 	if(opened_file  == NULL){
 		f->eax = -1;
-		//printf("system open done1\n");
 		return;
 	}
 
@@ -344,7 +336,6 @@ static void system_open (struct intr_frame *f, const char *file_name){
 	struct fd_hash_entry *fd_entry = calloc(1, sizeof(struct fd_hash_entry));
 	if(fd_entry == NULL){
 		f->eax = -1;
-		//printf("system open done2\n");
 		return;
 	}
 
@@ -362,10 +353,7 @@ static void system_open (struct intr_frame *f, const char *file_name){
 		PANIC("ERROR WITH HASH IN PROCESS EXIT!!");
 	}
 
-	//printf("file descriptor %u\n", fd_entry->fd);
-
 	f->eax = fd_entry->fd;
-	//printf("system open done3\n");
 }
 
 /* Returns the size of the file for the fd, or -1 if the fd
@@ -377,9 +365,7 @@ static void system_filesize(struct intr_frame *f, int fd){
 		return;
 	}
 
-	//lock_acquire(&filesys_lock);
 	f->eax = file_length(open_file);
-	//lock_release(&filesys_lock);
 }
 
 /* Reads size bytes into buffer an returns the number of bytes
@@ -387,14 +373,12 @@ static void system_filesize(struct intr_frame *f, int fd){
    or if the buffer refers to memory that is read only. Checks to make
    sure that buffer is contiguous*/
 static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned int size){
-	//printf("system read\n");
 	if(!buffer_is_valid_writable(buffer, size)){
 		system_exit(f, -1);
 	}
 
 	if(fd == STDOUT_FILENO){
 		f->eax = 0;
-		//printf("system read return1\n");
 		return;
 	}
 
@@ -407,7 +391,6 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 			charBuffer[bytes_read]= input_getc();
 		}
 		f->eax = bytes_read;
-		//printf("system read return2\n");
 		return;
 	}
 
@@ -415,23 +398,18 @@ static void system_read(struct intr_frame *f , int fd , void *buffer, unsigned i
 
 	if(file == NULL){
 		f->eax = 0;
-		//printf("system read return3\n");
 		return;
 	}
 	pin_all_frames_for_buffer(buffer, size);
-	//lock_acquire(&filesys_lock);
 	bytes_read = file_read(file, buffer, size);
-	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_read;
-	//printf("system read return4\n");
 }
 
 /* Writes size bytes from buffer to the fd. Returns the number of bytes written
    to the fd. If the buffer does not refer to contiguous valid memory then this
    will kill the process.*/
 static void system_write(struct intr_frame *f, int fd, const void *buffer, unsigned int size){
-	//printf("system write\n");
 	if(!buffer_is_valid(buffer, size)){
 		system_exit(f, -1);
 	}
@@ -454,7 +432,6 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 			}
 		}
 		f->eax = size; /* return size*/
-		//printf("system write return 1\n");
 		return;
 	}
 
@@ -462,23 +439,18 @@ static void system_write(struct intr_frame *f, int fd, const void *buffer, unsig
 
 	if(open_file == NULL){
 		f->eax = 0;
-		//printf("system write return 2\n");
 		return;
 	}
 
 	if(inode_is_dir(file_get_inode(open_file))){
 		f->eax = -1;
-		//printf("system write return 3\n");
 		return;
 	}
 
 	pin_all_frames_for_buffer(buffer, size);
-	//lock_acquire(&filesys_lock);
 	bytes_written = file_write(open_file, buffer, size);
-	//lock_release(&filesys_lock);
 	unpin_all_frames_for_buffer(buffer, size);
 	f->eax = bytes_written;
-	//printf("system write return 4\n");
 }
 
 /* Seeks to the position in the file described by fd. If the offset is
@@ -498,9 +470,7 @@ static void system_seek(struct intr_frame *f, int fd, unsigned int position){
 		return;
 	}
 
-	//lock_acquire(&filesys_lock);
 	file_seek(file, position);
-	//lock_release(&filesys_lock);
 
 	f->eax = 1;
 }
@@ -514,20 +484,16 @@ static void system_tell(struct intr_frame *f, int fd){
 		return;
 	}
 
-	//lock_acquire(&filesys_lock);
 	f->eax = file_tell(open_file);
-	//lock_release(&filesys_lock);
 }
 
 /* Closes the file described by fd and removes fd from the list of open
    files for this process. Does nothing if fd is invalid*/
 static void system_close(struct intr_frame *f, int fd ){
-	//printf("system close\n");
 	struct fd_hash_entry *entry =fd_to_fd_hash_entry(fd);
 	/* Can't close something that is already closed */
 	if(entry == NULL || entry->is_closed){
 		f->eax = -1;
-		//printf("system closed return1\n");
 		return;
 	}
 
@@ -539,9 +505,7 @@ static void system_close(struct intr_frame *f, int fd ){
 	   again on system munmap, which will decrement the reference
 	   count to this fd and then call system close if it is 0.*/
 	if(entry->num_mmaps == 0){
-		////lock_acquire(&filesys_lock);
 		file_close(entry->open_file);
-		//lock_release(&filesys_lock);
 		struct hash_elem *returned = hash_delete(&thread_current()->process->open_files, &entry->elem);
 		if(returned == NULL){
 			/* We have just tried to delete a fd that was not in our fd table....
@@ -555,7 +519,6 @@ static void system_close(struct intr_frame *f, int fd ){
 		/* Will tell munmap to actually close this file*/
 		entry->is_closed = true;
 	}
-	//printf("system closed return2\n");
 }
 
 static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
@@ -581,9 +544,7 @@ static void system_mmap (struct intr_frame *f, int fd, void *masked_uaddr){
 	}
 
 	/* Bounds checking */
-	////lock_acquire(&filesys_lock);
 	int32_t length = file_length(entry->open_file);
-	//lock_release(&filesys_lock);
 	if(length < 1){
 		f->eax = -1;
 		return;
@@ -743,9 +704,6 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		system_exit(f, -1);
 	}
 
-	//printf("readdir\n");
-	//printf("file descriptor %u\n", fd);
-
 	struct file *file = NULL;
 	struct inode *inode = NULL;
 	struct dir *dir = NULL;
@@ -758,7 +716,6 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 			(dir = dir_open(inode)) != NULL){
 
 		off_t off = file_tell(file);
-		//printf("%u offset\n", off);
 		success = dir_readdir(dir, name, &off);
 		/* Skip over . and .. */
 		while(success && ((!strcmp(name, ".") || !strcmp(name, "..")))){
@@ -768,10 +725,8 @@ static void system_readdir(struct intr_frame *f, int fd, char *name){
 		   this is the only place we need to call dir close */
 		dir_close(dir);
 		file_seek(file, off);
-		//printf("%u offset\n", off);
 	}
 	unpin_all_frames_for_buffer(name, (NAME_MAX + 1));
-	//printf("Readdir done %s\n", name);
 
 	f->eax = success;
 }
@@ -780,7 +735,7 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 	if(!string_is_valid(dir_name)){
 		system_exit(f,-1);
 	}
-	//printf("mkdir\n");
+
 	bool success = false;
 	uint32_t length = strlen(dir_name) + 1; /* plus one for the null */
 	pin_all_frames_for_buffer(dir_name, length);
@@ -789,11 +744,11 @@ static void system_mkdir(struct intr_frame *f, const char *dir_name){
 	}
 	unpin_all_frames_for_buffer(dir_name, length);
 	f->eax = success;
-	//printf("mkdir done\n");
+
 }
 
 static void system_chdir(struct intr_frame *f, const char *dir_name){
-	//printf("chdir\n");
+
 	if(!string_is_valid(dir_name)){
 		system_exit(f,-1);
 	}
@@ -818,7 +773,6 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
 	file_close(fp);
 
 	f->eax = success;
-	//printf("chdir done\n");
 }
 
 
@@ -828,7 +782,6 @@ static void system_chdir(struct intr_frame *f, const char *dir_name){
    the full extent of the buffer. Touches every page to make sure that
    it is readable */
 static bool buffer_is_valid (const void * buffer, unsigned int size){
-	//printf("bread start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	if(!is_user_vaddr(uaddr) || get_user(uaddr) < 0){
 		return false;
@@ -852,7 +805,6 @@ static bool buffer_is_valid (const void * buffer, unsigned int size){
    is read only segment. Touches every page in buffer to make sure it is
    writable */
 static bool buffer_is_valid_writable (void * buffer, unsigned int size){
-	//printf("bwrite start address %p %u\n", buffer, thread_current()->process->pid);
 	uint8_t *uaddr = (uint8_t*)buffer;
 	int byte;
 	if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
@@ -866,7 +818,7 @@ static bool buffer_is_valid_writable (void * buffer, unsigned int size){
 			uint32_t increment = (size > PGSIZE) ? PGSIZE : size;
 
 			uaddr += increment;
-			//printf("get uaddr %p\n", uaddr);
+
 			if(!is_user_vaddr(uaddr) || (byte = get_user(uaddr)) < 0 || !put_user(uaddr, 1)){
 				return false;
 			}
@@ -893,7 +845,7 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 	uint8_t *uaddr = (uint8_t*)buffer;
 	uint32_t *pd = thread_current()->pagedir;
 
-	//printf("uaddr %p size %u %u\n", buffer, size, thread_current()->process->pid);
+
 	uint32_t i;
 	uint32_t front = (uint32_t)buffer % PGSIZE;
 	uint32_t trailing = (((uint32_t)buffer + size) % PGSIZE);
@@ -915,18 +867,16 @@ static void pin_all_frames_for_buffer(const void *buffer, unsigned int size){
 		   may reenable interrupts to acquire the frame lock*/
 		void *kaddr;
 
-		//printf("kaddr %p uaddr %p\n", kaddr, uaddr);
+
 		while(!pagedir_is_present(pd, uaddr) || !pin_frame_entry(kaddr = pagedir_get_page(pd, uaddr))){
 			/* Generate a page fault to get the page read
 			   in so that we can pin it's frame */
-			//printf("present %u kaddr %p uaddr %p %u\n", pagedir_is_present(pd, uaddr),kaddr, uaddr, thread_current()->process->pid);
-			//printf("Infinite loop?\n");
+
 			int x = get_user(uaddr);
 			if(x < 0){
 				PANIC(" User address went from being valid to being invalid???");
 			}
 
-			//printf("x %d\n", x);
 		}
 		intr_enable();
 	}

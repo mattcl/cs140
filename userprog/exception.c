@@ -174,26 +174,22 @@ static void page_fault (struct intr_frame *f){
 							   then return so that dereference becomes valid*/
 			if(!swap_read_in(uaddr)){
 				/*Reading in from swap failed so we will kill*/
-				//printf("Fail to read in from SWAP pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_EXEC){
 			/* Read in executable from disk */
 			if(!process_exec_read_in(uaddr)){
 				/* Failed to read it in so fail*/
-				//printf("Fail to read in EXEC pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_MMAP || type == PTE_MMAP_WAIT){
 			/* Read in from mmaped file on disk */
 			if(!mmap_read_in(uaddr)){
 				/* Read in from mmapp's fil on disk failed so kill */
-				//printf("Fail to MMAP read in pid %u\n", pid);
 				kill(f);
 			}
 		}else if(type == PTE_STACK){
 			intr_enable();
-			//printf("get new stack frame for uaddr %p %u\n", uaddr, thread_current()->process->pid);
 			/* read in zero page, get new frame and install it at
 			   the faulting addr, frame_get_page should be called
 			   with interrupts on because it may try to move some
@@ -204,7 +200,6 @@ static void page_fault (struct intr_frame *f){
 			intr_disable();
 			ASSERT(pagedir_install_page(uaddr, kaddr, true));
 			pagedir_set_medium(pd, uaddr, PTE_STACK);
-			//printf("the medium bit was set to %x %x\n",pagedir_get_medium(pd, fault_addr), pagedir_get_medium(pd, uaddr));
 			unpin_frame_entry(kaddr);
 
 		}else if(type == PTE_AVL_ERROR){
@@ -219,8 +214,6 @@ static void page_fault (struct intr_frame *f){
 				if(fault_addr < PHYS_BASE &&
 					(uint32_t)fault_addr >= ((uint32_t)f->esp - MAX_ASM_PUSH) &&
 					(uint32_t)PHYS_BASE -(stack_size) <= ((uint32_t)f->esp - PGSIZE)){
-
-					 //printf("extending the stack %p %u\n", uaddr, thread_current()->process->pid);
 
 					 intr_disable();
 					/* Succeeded, so setup all of the stack pages to be on
@@ -240,7 +233,6 @@ static void page_fault (struct intr_frame *f){
 				}else{
 					/* This is invalid reference to memory, kill it K-UNIT style
 					   It wasn't trying to grow the stack segment*/
-					//printf("PTE AVL ERROR KILL!! pid %u\n", pid);
 					kill(f);
 				}
 			}else{
@@ -262,7 +254,6 @@ static void page_fault (struct intr_frame *f){
 		   we tried to write to read only memory. This will kill a user
 		   process or return -1 to kernel code*/
 		if(user){
-			//printf("Writing to read only memory! pid %u\n", pid);
 			kill(f);
 		}else{
 			f->eip = (void*)f->eax;
