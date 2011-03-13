@@ -15,7 +15,6 @@ static struct lock free_map_lock;
 void free_map_init (void){
 	free_map = bitmap_create (block_size (fs_device));
 	lock_init(&free_map_lock);
-	//printf("Freemap %p and %d\n", free_map, free_map->bit_cnt);
 	if(free_map == NULL){
 		PANIC ("bitmap creation failed--file system device is too large");
 	}
@@ -33,19 +32,10 @@ bool free_map_allocate (size_t cnt, block_sector_t *sectorp){
 	lock_acquire(&free_map_lock);
 	block_sector_t sector = bitmap_scan_and_flip (free_map, 0, cnt, false);
 	lock_release(&free_map_lock);
-	//printf("free map allocate\n");
 
-	/* make changes permanent
-	if(free_map_file != NULL && sector != BITMAP_ERROR
-			&& !bitmap_write (free_map, free_map_file)){
-		bitmap_set_multiple (free_map, sector, cnt, false);
-		sector = BITMAP_ERROR;
-	}
-	*/
 	if(sector != BITMAP_ERROR){
 		*sectorp = sector;
 	}
-	//printf("free map allocate end\n");
 	return sector != BITMAP_ERROR;
 }
 
@@ -64,10 +54,6 @@ void free_map_release (block_sector_t sector, size_t cnt){
 	lock_acquire(&free_map_lock);
 	bitmap_set_multiple (free_map, sector, cnt, false);
 	lock_release(&free_map_lock);
-	//printf("free map release");
-
-	/* Make changes permanent */
-	//bitmap_write (free_map, free_map_file);
 }
 
 /* Opens the free map file and reads it from disk.
@@ -75,7 +61,6 @@ void free_map_release (block_sector_t sector, size_t cnt){
    because the filesys is only inited by one thread
    before any other threads are allowed to run*/
 void free_map_open (void){
-	//printf("freemap open");
 	struct inode *i = inode_open (FREE_MAP_SECTOR);
 	ASSERT(i != NULL);
 	free_map_file = file_open (i);
@@ -92,7 +77,6 @@ void free_map_open (void){
    map open. This is only called in filesys init and filesys
    format, both running only one thread.*/
 void free_map_close (void){
-	//printf("freemap close\n");
 	free_map_persist();
 	file_close (free_map_file);
 }
@@ -100,7 +84,6 @@ void free_map_close (void){
 /* Creates a new free map file on disk and writes the free map to
    it. No locking on this beezy either.*/
 void free_map_create (void){
-	//printf("freemap create\n");
 	/* Create inode. */
 	if(!inode_create (FREE_MAP_SECTOR, bitmap_file_size (free_map), false)){
 		PANIC ("free map creation failed");
@@ -119,7 +102,6 @@ void free_map_create (void){
 }
 
 void free_map_persist(void){
-	//printf("persist\n");
 	/* This function should have found all of the sectors in the
 	   free map file already allocated*/
 	if(free_map_file == NULL){

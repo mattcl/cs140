@@ -150,10 +150,9 @@ static void page_fault (struct intr_frame *f){
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
-		/* Get the page address of the faulting address, masks off
+	/* Get the page address of the faulting address, masks off
 	   the lower 12 bits and makes it a byte pointer so that
 	   we can increment it easily*/
-	pid_t pid = thread_current()->process->pid;
 	uint8_t *uaddr = (uint8_t*)(((uint32_t)fault_addr & PTE_ADDR));
 
 	if(!user && fault_addr == (void*)0xffffffff){
@@ -171,7 +170,7 @@ static void page_fault (struct intr_frame *f){
 
 		if(type == PTE_SWAP||type == PTE_SWAP_WAIT){
 			/* Data is not present but on swap read it in
-							   then return so that dereference becomes valid*/
+			   then return so that dereference becomes valid*/
 			if(!swap_read_in(uaddr)){
 				/*Reading in from swap failed so we will kill*/
 				kill(f);

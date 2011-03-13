@@ -23,13 +23,11 @@ void dir_init(void){
 	lock_init(&open_dirs_lock);
 	hash_init(&open_dirs, dir_hash_func, dir_hash_comp, NULL);
 	thread_current()->process->cwd = dir_open_root();
-	//printf("dir init pid %u cwd %p sector no %u\n", thread_current()->process->pid, thread_current()->process->cwd, thread_current()->process->cwd->sector);
 }
 
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool dir_create (block_sector_t sector, block_sector_t parent){
-	//printf("dir create sector 1 %u sector 2 %u\n", sector, parent);
 	ASSERT(sector != ZERO_SECTOR && parent != ZERO_SECTOR);
 	struct dir *dir = NULL;
 	struct inode *ino = NULL;
@@ -38,7 +36,6 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
 			&& (dir = dir_open(ino)) != NULL
 			&& dir_add(dir, ".", sector) && dir_add(dir, "..", parent);
 
-	//printf("number of files in dir is %u should be 2\n", dir_file_count(dir));
 	inode_close(ino);
 	dir_close(dir);
 
@@ -49,7 +46,6 @@ bool dir_create (block_sector_t sector, block_sector_t parent){
    it takes ownership.  Returns a null pointer on failure. Caller
    is responsible for calling inode_close */
 struct dir *dir_open (struct inode *inode){
-	//printf("dir open\n");
 	if(inode == NULL){
 		return NULL;
 	}
@@ -63,9 +59,7 @@ struct dir *dir_open (struct inode *inode){
 		lock_acquire(&ret_dir->dir_lock);
 		if(inode_reopen(inode) != NULL){
 			ret_dir->open_cnt ++;
-			//printf("open and incremented count\n");
 		}else{
-			//printf("return null1\n");
 			ret_dir = NULL;
 		}
 		lock_release(&ret_dir->dir_lock);
@@ -82,7 +76,6 @@ struct dir *dir_open (struct inode *inode){
 		if(ret_dir == NULL){
 			lock_release(&open_dirs_lock);
 			free(ret_dir);
-			//printf("return null2");
 			return NULL;
 		}
 
@@ -94,10 +87,8 @@ struct dir *dir_open (struct inode *inode){
 		lock_release(&open_dirs_lock);
 		if(ret_elem != NULL){
 			free(ret_dir);
-			//printf("returned null 3\n");
 			return NULL;
 		}else{
-			//printf("returned  sector %u \n", ret_dir->sector);
 			return ret_dir;
 		}
 	}
@@ -106,7 +97,6 @@ struct dir *dir_open (struct inode *inode){
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
 struct dir *dir_open_root (void){
-	//printf("dir open root\n");
 	struct inode *ino = inode_open (ROOT_DIR_SECTOR);
 	if(ino == NULL){
 		return NULL;
@@ -132,18 +122,14 @@ struct dir *dir_reopen (struct dir *dir){
 		return NULL;
 	}
 
-	//printf("dir reopen\n");
 	return ret_dir;
 }
 
 /* Destroys DIR and frees associated resources. */
 void dir_close (struct dir *dir){
-	//printf("dir close\n");
 	if(dir == NULL){
 		return;
 	}
-
-	//printf("dir close inode num %u\n", dir->inode->sector);
 
 	struct hash_elem *ret_elem;
 	lock_acquire(&open_dirs_lock);
@@ -154,19 +140,16 @@ void dir_close (struct dir *dir){
 	inode_close(dir->inode);
 
 	if(delete){
-		//printf("actually removed\n");
 		ret_elem =	hash_delete(&open_dirs, &dir->e);
 		ASSERT(hash_entry(ret_elem, struct dir, e) == dir);
 		free(dir);
-	}else{
-		//printf("not removed\n");
 	}
+
 	lock_release(&open_dirs_lock);
 }
 
 /* Returns the inode encapsulated by DIR. */
 struct inode *dir_get_inode (struct dir *dir){
-	//printf("dir get inode\n");
 	if(dir == NULL){
 		return NULL;
 	}
@@ -182,7 +165,6 @@ struct inode *dir_get_inode (struct dir *dir){
    otherwise, returns false and ignores EP and OFSP. */
 static bool lookup (const struct dir *dir, const char *name,
 		struct dir_entry *ep, off_t *ofsp){
-	//printf("lookup\n");
 
 	if(dir == NULL|| name == NULL){
 		return false;
@@ -207,11 +189,9 @@ static bool lookup (const struct dir *dir, const char *name,
 			if(ofsp != NULL){
 				*ofsp = ofs;
 			}
-			//printf("lookup true\n");
 			return true;
 		}
 	}
-	//printf("lookup false\n");
 	return false;
 }
 
@@ -225,11 +205,9 @@ static bool lookup (const struct dir *dir, const char *name,
    slash seperating them will be turned into a null character.
    Asserts that the full path passed in has a size greater than 0 */
 static bool dir_path_and_leaf(char *full, char **path, char **leaf){
-	//printf("dir path and leaf\n");
 	uint32_t last_slash = 0;
 	uint32_t count = 0;
 	if(full == NULL || path == NULL || leaf == NULL || strlen(full) == 0){
-		//printf("invalid params path and leaf\n");
 		return false;
 	}
 
@@ -283,12 +261,10 @@ static bool dir_path_and_leaf(char *full, char **path, char **leaf){
    the last item in the path is not a directory*/
 static struct dir *dir_open_path_wrap(const char *path,
 			    struct dir *start_dir, bool first_call){
-	//printf("open path recursive\n");
 	if(path == NULL || start_dir == NULL){
-		//printf("opr ret null 1\n");
 		return NULL;
 	}
-	//printf("dir open path wrap\n");
+
 	bool return_root = false;
 	if(*path == '\0'){
 		return NULL;
@@ -302,15 +278,11 @@ static struct dir *dir_open_path_wrap(const char *path,
 		path ++;
 	}
 
-	//printf("past /\n");
-
 	if(*path == '\0'){
 		/* path ended in a \ */
 		if(return_root){
-			//printf("opr return root 1\n");
 			return dir_open_root();
 		}else{
-			//printf("opr return NULL 1\n");
 			return NULL;
 		}
 	}
@@ -325,7 +297,6 @@ static struct dir *dir_open_path_wrap(const char *path,
 
 	if(*path != '\0' && *path != '/'){
 		/* A file name was too long */
-		//printf("opr name too long 1\n");
 		return NULL;
 	}
 
@@ -336,24 +307,20 @@ static struct dir *dir_open_path_wrap(const char *path,
 		struct inode *ino = inode_open(e.inode_sector);
 		if(!inode_is_dir(ino)){
 			inode_close(ino);
-			//printf("inode wasn't a directory returned nULL\n");
 			return NULL;
 		}
 
 		struct dir *next_dir = dir_open(ino);
 		inode_close(ino);
 		if(*path == '\0'){
-			//printf("Returned next dir\n");
 			return next_dir;
 		}else{
 			struct dir *ret = dir_open_path_wrap(path, next_dir, false);
 			dir_close(next_dir);
-			//printf("opr returned from recursion!\n");
 			return ret;
 		}
 	}else{
 		lock_release(&start_dir->dir_lock);
-		//printf("opr return NULL\n");
 		return NULL;
 	}
 }
@@ -364,10 +331,8 @@ static struct dir *dir_open_path_wrap(const char *path,
    a trailing / will open the directory and set file_name to point to
    NULL.*/
 struct dir *dir_open_path(const char *path, const char **file_name){
-	//printf("dir open path %s \n", path);
 	uint32_t path_length;
 	if(path == NULL || (path_length = strlen(path)) == 0 || file_name == NULL){
-		//printf("Failed first\n");
 		return NULL;
 	}
 	char buf [path_length + 1];
@@ -384,38 +349,30 @@ struct dir *dir_open_path(const char *path, const char **file_name){
 	if(is_relative){
 		struct dir *cwd = thread_current()->process->cwd;
 		if(dir_path == NULL){
-			//printf("returned cwd %p %u pid %u\n", cwd, cwd->sector, thread_current()->process->pid);
 			return dir_reopen(cwd);
 		}else{
-			//printf("parsed path was %s\n", dir_path);
 			return dir_open_path_wrap(dir_path, cwd, false);
 		}
 	}else{
 		struct dir* root = dir_open_root();
 		if(dir_path == NULL){
-			//printf("returned root 1\n");
 			return root;
 		}else{
-			//printf("parsed path was %s\n", dir_path);
 			struct dir *ret = dir_open_path_wrap(dir_path, root, true);
 			if(ret == NULL){
 				dir_close(root);
-				//printf("returned null 2\n");
 				return NULL;
 			}
 			if(ret->inode->sector == root->inode->sector){
 				dir_close(ret);
-				//printf("returned root 2\n");
 				return root;
 			}else{
 				dir_close(root);
-				//printf("returned non root directory\n");
 				return ret;
 			}
 		}
 	}
 }
-
 
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
@@ -425,15 +382,12 @@ bool dir_lookup (struct dir *dir, const char *name, struct inode **inode){
 	if(dir == NULL|| name == NULL || inode== NULL){
 		return false;
 	}
-	//printf("dir lookup\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
 	if(lookup (dir, name, &e, NULL)){
 		*inode = inode_open (e.inode_sector);
-		//printf("inode sector %u\n", (*inode)->sector);
 	}else{
 		*inode = NULL;
-		//printf("inode was null\n");
 	}
 	lock_release(&dir->dir_lock);
 
@@ -449,7 +403,7 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 	if(dir == NULL || name == NULL || strlen(name) == 0){
 		return false;
 	}
-	//printf("dir add %p\n", dir);
+
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;
@@ -459,19 +413,15 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 
 	/* Check NAME for validity. */
 	if(*name == '\0' || strlen (name) > NAME_MAX){
-		//printf("Name invalid\n");
 		return false;
 	}
 
 	lock_acquire(&dir->dir_lock);
 
-	//printf("pre lookup\n");
 	/* Check that NAME is not in use. */
 	if(lookup (dir, name, NULL, NULL)){
-		//printf("Name existed\n");
 		goto done;
 	}
-
 
 	/* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
@@ -479,7 +429,6 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
      inode_read_at() will only return a short read at end of file.
      Otherwise, we'd need to verify that we didn't get a short
      read due to something intermittent such as low memory. */
-	//printf("pre read at loop\n");
 	for(ofs = 0; inode_read_at (dir->inode, &e, sizeof(struct dir_entry), ofs)
 			== sizeof(struct dir_entry);
 			ofs += sizeof(struct dir_entry)){
@@ -488,21 +437,15 @@ bool dir_add (struct dir *dir, const char *name, block_sector_t inode_sector){
 		}
 	}
 
-	//printf("pre strcpy\n");
 	/* Write slot. */
 	e.in_use = true;
 	strlcpy (e.name, name, sizeof(e.name));
 	e.inode_sector = inode_sector;
-	//printf("pre inode write at\n");
 	success = inode_write_at (dir->inode, &e, sizeof(struct dir_entry), ofs)
 			== sizeof(struct dir_entry);
-	if(!success){
-		//printf("write failed\n");
-	}
 	done:
 	lock_release(&dir->dir_lock);
 
-	//printf("added\n");
 	return success;
 }
 
@@ -514,7 +457,6 @@ static bool dir_remove_file(struct dir *dir, struct inode *inode,
 	ASSERT(lock_held_by_current_thread(&open_dirs_lock));
 	ASSERT(lock_held_by_current_thread(&dir->dir_lock));
 
-	//printf("removing a file\n");
 	lock_release(&open_dirs_lock);
 
 	bool success = true;
@@ -523,11 +465,9 @@ static bool dir_remove_file(struct dir *dir, struct inode *inode,
 	e->in_use = false;
 	e->inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off) != sizeof(struct dir_entry)){
-		//printf("Goto done 6\n");
 		success = false;
 	}
 
-	//dir_file_count(dir);
 	lock_release(&dir->dir_lock);
 	/* Remove inode. */
 	inode_remove (inode);
@@ -561,12 +501,10 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 		goto done;
 	}
 
-	//printf("trying to remove subdir at %u %u\n", inode->sector, e->inode_sector);
 	uint32_t file_count = dir_file_count(&sub_dir);
 
 	if(file_count != 2){
 		lock_release(&open_dirs_lock);
-		//printf("File count != 2 goto done %u\n", file_count);
 		goto done;
 	}
 
@@ -576,7 +514,6 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	   be put in the directory*/
 	if(!inode_remove_dir(inode)){
 		/* we failed to remove the dir so we need to write the old data back*/
-		//printf("failed to remove it \n");
 		lock_release(&open_dirs_lock);
 		goto done;
 	}
@@ -589,11 +526,9 @@ static bool dir_remove_folder(struct dir *dir, struct inode *inode,
 	e->in_use = false;
 	e->inode_sector = ZERO_SECTOR;
 	if(inode_write_at (dir->inode, e, sizeof(struct dir_entry), dir_off) != sizeof(struct dir_entry)){
-		//printf("Goto done 5\n");
 		goto done;
 	}
 
-	//printf("success removing\n");
 	success = true;
 done:
 	lock_release(&dir->dir_lock);
@@ -605,9 +540,7 @@ done:
    Returns true if successful, false on failure,
    which occurs only if there is no file with the given NAME. */
 bool dir_remove (struct dir *dir, const char *name){
-	//printf("dir remove in dir %u\n", dir->inode->sector);
 	if(dir == NULL || name == NULL || strlen(name) == 0){
-		//printf("invalid parameters\n");
 		return false;
 	}
 
@@ -624,10 +557,8 @@ bool dir_remove (struct dir *dir, const char *name){
 	   is in use */
 	lock_acquire(&open_dirs_lock);
 	lock_acquire(&dir->dir_lock);
-	//dir_file_count(dir);
 	/* Find directory entry. */
 	if(!lookup (dir, name, &e, &ofs)){
-		//printf("file doesn't exist\n");
 		lock_release(&open_dirs_lock);
 		lock_release(&dir->dir_lock);
 		return success;
@@ -636,7 +567,6 @@ bool dir_remove (struct dir *dir, const char *name){
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
 	if(inode == NULL){
-		//printf("inode is null\n");
 		lock_release(&open_dirs_lock);
 		lock_release(&dir->dir_lock);
 		return success;
@@ -668,7 +598,6 @@ bool dir_readdir (struct dir *dir, char name[NAME_MAX + 1], off_t *off){
 		return false;
 	}
 	memset(name, 0, NAME_MAX + 1);
-	//printf("dir readdir\n");
 	struct dir_entry e;
 	lock_acquire(&dir->dir_lock);
 	while(inode_read_at (dir->inode, &e, sizeof(struct dir_entry), *off)
@@ -688,7 +617,6 @@ uint32_t dir_file_count(struct dir *dir){
 	if(dir == NULL){
 		return 0;
 	}
-	//printf("dir file_count\n");
 	off_t off = 0;
 	uint32_t file_count = 0;
 	struct dir_entry e;
@@ -698,7 +626,6 @@ uint32_t dir_file_count(struct dir *dir){
 		off += sizeof(struct dir_entry);
 		if(e.in_use){
 			file_count ++;
-			//printf("file found %s %u\n", e.name, e.inode_sector);
 		}
 	}
 	return file_count;
