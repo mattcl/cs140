@@ -82,7 +82,7 @@ void bcache_init(void){
 		memset(&cache[i].data, 0, BLOCK_SECTOR_SIZE);
 		list_push_back(&eviction_lists[CACHE_DATA], &cache[i].eviction_elem);
 	}
-	//spawn_daemon_thread();
+	spawn_daemon_thread();
 }
 
 /* This function looks up the sector in our buffer cache, if it finds it it will
@@ -202,6 +202,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 			printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
 
+		ASSERT(c_entry->num_accessors == 0);
+
 		/* Check to see here if the item has been invalidated
 		   while we waited, should not have become valid if it
 		   was invalid before*/
@@ -227,6 +229,8 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		}
 
 		lock_release(&cache_lock);
+
+		printf("sector to save %u, init %u, valid %u, dirty %u, evicting %u\n", sector_to_save, (c_entry->flags & CACHE_E_INITIALIZED),is_valid , (c_entry->flags & CACHE_E_DIRTY), (c_entry->flags & CACHE_E_INVALID));
 
 		if((c_entry->flags & CACHE_E_INITIALIZED) &&
 			is_valid && (c_entry->flags & CACHE_E_DIRTY)){
@@ -261,6 +265,7 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		c_entry->flags &= ~(CACHE_E_DIRTY);   /*Dirty = false*/
 		c_entry->flags &= ~(CACHE_E_EVICTING);/*evicting = false*/
 		c_entry->flags |= CACHE_E_INITIALIZED;/*Initialized = true*/
+		c_entry->flags &= ~(CACHE_E_INVALID); /*invalid = false */
 
 		/* Wake up threads that might have found an empty evict list */
 		cond_broadcast(&evict_list_changed, &cache_lock);
@@ -435,9 +440,9 @@ static struct cache_entry *bcache_evict(void){
 	ASSERT(lock_held_by_current_thread(&cache_lock));
 
 	while(all_evict_lists_empty()){
-		printf("waiting %u\n", thread_current()->process->pid);
+		printf("waiting %u bc4\n", thread_current()->process->pid);
 		cond_wait(&evict_list_changed, &cache_lock);
-		printf("return from cond %u\n", thread_current()->process->pid);
+		printf("return from cond %u bc4\n", thread_current()->process->pid);
 	}
 
 	/* There is a non empty list we can evict
