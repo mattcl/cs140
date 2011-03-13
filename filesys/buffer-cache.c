@@ -114,9 +114,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		/* While this frame is in the middle of being switched
 		   wait, while(evicting == true)*/
 		while(c_entry->flags & CACHE_E_EVICTING){
-			printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
+			//printf("waiting bc1 %u on sector %u\n", thread_current()->process->pid, sector);
 			cond_wait(&c_entry->eviction_done, &cache_lock);
-			printf("return from cond bc1 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc1 %u\n", thread_current()->process->pid);
 		}
 
 		c_entry->num_accessors ++;
@@ -197,9 +197,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 
 		/* Wait until no one is accessing this cache entry anymore*/
 		while(c_entry->num_accessors != 0){
-			printf("waiting bc2 %u\n", thread_current()->process->pid);
+			//printf("waiting bc2 %u\n", thread_current()->process->pid);
 			cond_wait(&c_entry->num_accessors_dec, &cache_lock);
-			printf("return from cond bc2 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc2 %u\n", thread_current()->process->pid);
 		}
 
 		ASSERT(c_entry->num_accessors == 0);
@@ -223,9 +223,9 @@ struct cache_entry *bcache_get_and_lock(block_sector_t sector, enum meta_priorit
 		   in the middle of being written outm we will wait, because
 		   if we don't we may read in stale data from the disk*/
 		while(uint_set_is_member(&evicted_sectors, sector)){
-			printf("waiting bc3 %u\n", thread_current()->process->pid);
+			//printf("waiting bc3 %u\n", thread_current()->process->pid);
 			cond_wait(&evicted_sector_wait, &cache_lock);
-			printf("return from cond bc3 %u\n", thread_current()->process->pid);
+			//printf("return from cond bc3 %u\n", thread_current()->process->pid);
 		}
 
 		lock_release(&cache_lock);
