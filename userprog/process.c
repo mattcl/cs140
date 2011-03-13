@@ -375,7 +375,6 @@ void process_exit (void){
 
 	destroy_swap_table(&cur_process->swap_table);
 
-
 	intr_enable();
 
 	/* We Need to clear out the mmap table before exiting
